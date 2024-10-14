@@ -937,7 +937,7 @@ def arbitrary_reactions(
         return (
             len(frm_bnd_set_flat & rad_incl_set) +
             len(brk_bnd_set_flat & rad_incl_set))
- 
+
     inv_dct = {}
     frm_bnd_combo = ()
     brk_bnd_combo = ()
