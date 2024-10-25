@@ -30,6 +30,7 @@ from ._0core import reverse_without_recalculating
 from ._0core import mapping
 from ._0core import reactant_mappings
 from ._0core import product_mappings
+from ._0core import reagent_mappings
 from ._0core import reactant_graphs
 from ._0core import product_graphs
 from ._0core import reactants_graph
@@ -44,7 +45,6 @@ from ._0core import is_radical_radical
 from ._0core import unique
 # stereo-specific reactions
 from ._2stereo import expand_stereo
-from ._2stereo import expand_stereo_to_match_reagents
 from ._2stereo import reflect
 # finders
 from ._3find import trivial
@@ -142,6 +142,7 @@ __all__ = [
     'mapping',
     'reactant_mappings',
     'product_mappings',
+    'reagent_mappings',
     'reactant_graphs',
     'product_graphs',
     'reactants_graph',
@@ -156,7 +157,6 @@ __all__ = [
     'unique',
     # stereo-specific reactions
     'expand_stereo',
-    'expand_stereo_to_match_reagents',
     'reflect',
     # finders
     'trivial',

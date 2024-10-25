@@ -51,8 +51,11 @@ from ._3super_func_group import (
     SuperFunctionalGroup,
     classify_species,
 )
+
+# algorithm functions:
+# # isomorphisms and equivalence
 # submodules:
-from .base import ts, vmat
+from .base import equivalent_without_dummy_atoms, ts, vmat
 
 # # getters
 # # setters
@@ -191,8 +194,6 @@ from .base._00core import (
     zmatrix_conversion_info,
 )
 
-# algorithm functions:
-# # isomorphisms and equivalence
 # # algorithms
 # # branches and groups
 # # rings
@@ -370,45 +371,45 @@ from .base._11stereo import (
 from .base._func_group import (
     FunctionalGroup,
     alcohol_groups,
-    alkoxy_OC_groups,
     aldehyde_groups,
     alkane_sites,
     alkene_sites,
+    alkoxy_OC_groups,
     alkyne_sites,
-    propyne_sites,
     allene_sites,
+    allyl_groups,
+    allyl_groups_lowestspin,
     amide_groups,
+    aromatic_groups,
+    benzene_groups,
+    benzyl_groups,
     bonds_of_order,
     bonds_of_type,
+    c5h5o_groups,
     carboxylic_acid_groups,
     cyclic_ether_groups,
+    cyclopentadiene_groups,
+    cyclopentadienone_groups,
+    cyclopentadienyl_groups,
+    cyclopentenyl_groups,
     ester_groups,
     ether_groups,
+    fulvene_groups,
     functional_group_count_dct,
     functional_group_dct,
+    furan_groups,
     halide_groups,
     hydroperoxy_groups,
     is_hydrocarbon_species,
     is_radical_species,
     ketone_groups,
     methyl_groups,
-    aromatic_groups,
-    benzene_groups,
-    phenyl_groups,
-    benzyl_groups,
-    cyclopentadienyl_groups,
-    cyclopentadiene_groups,
-    cyclopentadienone_groups,
-    fulvene_groups,
-    phenoxy_groups,
-    allyl_groups,
-    allyl_groups_lowestspin,
-    cyclopentenyl_groups,
-    c5h5o_groups,
-    furan_groups,
     neighbors_of_type,
     nitro_groups,
     peroxy_groups,
+    phenoxy_groups,
+    phenyl_groups,
+    propyne_sites,
     radical_dissociation_products,
     radicals_of_type,
     ring_substituents,
@@ -554,6 +555,7 @@ __all__ = [
     "bonds_neighbor_bond_keys",
     # algorithm functions:
     # # isomorphisms and equivalence
+    "equivalent_without_dummy_atoms",
     "isomorphism",
     "isomorphic",
     "unique",

@@ -21,8 +21,10 @@ from ._00core import (
     atom_stereo_keys,
     atomic_numbers,
     bond_stereo_keys,
+    equivalent_without_dummy_atoms,
     frozen,
     has_atom_stereo,
+    has_stereo,
     invert_atom_stereo_parities,
     is_ts_graph,
     relabel,
@@ -69,20 +71,29 @@ from ._08canon import (
 
 
 # # core functions
-def expand_stereo(gra, symeq: bool = False, enant: bool = True, strained: bool = False):
-    """Obtain all possible stereoisomers of a graph, ignoring its assignments
+def expand_stereo(
+    gra,
+    symeq: bool = False,
+    enant: bool = True,
+    strained: bool = False,
+    rcts_gra: object | None = None,
+    prds_gra: object | None = None,
+):
+    """Obtain all possible stereoisomers of a graph, ignoring its assignments.
 
     :param gra: molecular graph
     :type gra: automol graph data structure
     :param symeq: Include symmetrically equivalent stereoisomers?
     :param enant: Include all enantiomers, or only canonical ones?
     :param strained: Include stereoisomers which are too strained to exist?
+    :param rcts_gra: For TS graphs, optionally specify a reactants graph to match
+    :param prds_gra: For TS graphs, optionally specify a products graph to match
     :returns: a series of molecular graphs for the stereoisomers
     """
     cand_dct = stereocenter_candidates(gra)
 
     # 1. Run the core stereo expansion algorithm
-    gps = _expand_stereo_core(gra, cand_dct)
+    gps = _expand_stereo_core(gra, cand_dct, rcts_gra=rcts_gra, prds_gra=prds_gra)
 
     # 2. If requested, filter out strained stereoisomers
     if not strained:
@@ -101,13 +112,20 @@ def expand_stereo(gra, symeq: bool = False, enant: bool = True, strained: bool =
     return sgras
 
 
-def _expand_stereo_core(gra, cand_dct):
-    """Obtain all possible stereoisomers of a graph, ignoring its assignments
+def _expand_stereo_core(
+    gra, cand_dct, rcts_gra: object | None = None, prds_gra: object | None = None
+):
+    """Obtain all possible stereoisomers of a graph, ignoring its assignments.
 
     :param gra: molecular graph
     :type gra: automol graph data structure
+    :param rcts_gra: For TS graphs, optionally specify a reactants graph to match
+    :param prds_gra: For TS graphs, optionally specify a products graph to match
     :returns: a series of molecular graphs for the stereoisomers
     """
+    rcts_gra = None if rcts_gra is None or not has_stereo(rcts_gra) else rcts_gra
+    prds_gra = None if prds_gra is None or not has_stereo(prds_gra) else prds_gra
+
     ts_ = is_ts_graph(gra)
 
     bools = (False, True)
@@ -141,6 +159,20 @@ def _expand_stereo_core(gra, cand_dct):
     else:
         gps = [(g, p) for g, p, _ in gprs]
 
+    if rcts_gra is not None:
+        gps = [
+            (g, p)
+            for g, p in gps
+            if equivalent_without_dummy_atoms(ts_reactants_graph(g), rcts_gra)
+        ]
+
+    if prds_gra is not None:
+        gps = [
+            (g, p)
+            for g, p in gps
+            if equivalent_without_dummy_atoms(ts_products_graph(g), prds_gra)
+        ]
+
     return gps
 
 
@@ -156,6 +188,9 @@ def _select_ts_canonical_direction_priorities(gprs):
 
 def _remove_strained_stereoisomers_from_expansion(gps, cand_dct):
     """Remove strained stereoisomers from an expansion"""
+    if not gps:
+        return gps
+
     gps0 = list(gps)
     gra = without_stereo(gps0[0][0])
     bhp_dct = stereoatom_bridgehead_pairs(gra, cand_dct)
