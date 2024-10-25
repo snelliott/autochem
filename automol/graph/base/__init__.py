@@ -170,6 +170,7 @@ from ._00core import bonds_neighbor_bond_keys
 
 # algorithm functions:
 # # isomorphisms and equivalence
+from ._00core import equivalent_without_dummy_atoms
 from ._02algo import isomorphism
 from ._02algo import isomorphic
 from ._02algo import unique
@@ -532,6 +533,7 @@ __all__ = [
     "bonds_neighbor_bond_keys",
     # algorithm functions:
     # # isomorphisms and equivalence
+    "equivalent_without_dummy_atoms",
     "isomorphism",
     "isomorphic",
     "unique",
