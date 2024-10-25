@@ -31,12 +31,13 @@ from .. import form, graph
 from ..const import ReactionClass
 from ..graph import ts
 from ._0core import (
+    Reaction,
     from_forward_reverse,
     reverse_without_recalculating,
     unique,
 )
 from ._1util import assert_is_valid_reagent_graph_list
-from ._2stereo import expand_stereo_to_match_reagents
+from ._2stereo import expand_stereo
 
 
 def trivial(rct_gras, prd_gras):
@@ -726,15 +727,17 @@ def _is_graph(gra):
     return False
 
 
-def find(rct_gras, prd_gras, stereo=False):
-    """find all reactions consistent with these reactants and products
+def find(
+    rct_gras, prd_gras, stereo: bool = False, enant: bool = True, strained: bool = True
+) -> tuple[Reaction, ...]:
+    """Find all reactions consistent with these reactants and products.
 
-    :param rct_gras: graphs for the reactants without overlapping keys
-    :param prd_gras: graphs for the products without overlapping keys
+    :param rct_gras: Graphs for the reactants
+    :param prd_gras: Graphs for the products
     :param stereo: Find stereo-specified reaction objects?
-    :type stereo: bool
-    :returns: a list of Reaction objects
-    :rtype: tuple[Reaction]
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
+    :returns: The reaction Reaction objects
     """
     if _is_graph(rct_gras):
         assert _is_graph(prd_gras)
@@ -780,8 +783,12 @@ def find(rct_gras, prd_gras, stereo=False):
             if not stereo:
                 all_rxns.append(rxn)
             else:
-                srxns = expand_stereo_to_match_reagents(
-                    rxn, rct_gras0, prd_gras0, shift_keys=True
+                srxns = expand_stereo(
+                    rxn,
+                    enant=enant,
+                    strained=strained,
+                    rct_gras=rct_gras0,
+                    prd_gras=prd_gras0,
                 )
                 all_rxns.extend(srxns)
     # Check for uniqueness *after* stereochemistry is assigned

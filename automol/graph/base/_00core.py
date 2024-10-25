@@ -3224,3 +3224,19 @@ def invert_atom_stereo_parities(gra):
     )
     gra = set_atom_stereo_parities(gra, atm_par_dct)
     return gra
+
+
+def equivalent_without_dummy_atoms(
+    gra1: object, gra2: object, shift_keys: bool = True
+) -> bool:
+    """Check whether two graphs are equivalent without dummy atoms.
+
+    :param gra1: First graph
+    :param gra2: Second graph
+    :param shift_keys: Shift the keys before comparing?
+    :return: `True` if they are, `False` if they aren't
+    """
+    gra1, gra2 = map(without_dummy_atoms, (gra1, gra2))
+    if shift_keys:
+        gra1, gra2 = map(standard_keys, (gra1, gra2))
+    return gra1 == gra2

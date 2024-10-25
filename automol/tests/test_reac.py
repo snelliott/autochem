@@ -72,41 +72,54 @@ def test__reactant_graphs():
     _test(["CO", "C[CH2]"], ["CCC", "[OH]"])
 
 
-def test__expand_stereo():
-    """Test reac.expand_stereo_for_reaction"""
+@pytest.mark.parametrize(
+    "rsmi,psmi,nexp1,nexp2",
+    [
+        ("FC=CF.[OH]", "F[CH]C(O)F", 2, 4),
+    ],
+)
+def test__expand_stereo(rsmi: str, psmi: str, nexp1: int, nexp2: int):
+    """Test reac.expand_stereo_for_reaction."""
+    print("Testing expand_stereo_for_reaction()")
+    print(f"{rsmi}>>{psmi}")
+    rct_smis = rsmi.split(".")
+    prd_smis = psmi.split(".")
+    rct_gras0 = tuple(map(smiles.graph, rct_smis))
+    prd_gras0 = tuple(map(smiles.graph, prd_smis))
+    rxn = reac.find(rct_gras0, prd_gras0, stereo=False)[0]
+    srxns = reac.expand_stereo(rxn, enant=False)
+    assert len(srxns) == nexp1
+    srxns = reac.expand_stereo(rxn, enant=True)
+    assert len(srxns) == nexp2
 
-    def _test(rct_smis, prd_smis, nexp1, nexp2):
-        print("Testing expand_stereo()")
-        print(f"{'.'.join(rct_smis)}>>{'.'.join(prd_smis)}")
-        rct_gras0 = tuple(map(smiles.graph, rct_smis))
-        prd_gras0 = tuple(map(smiles.graph, prd_smis))
-        rxn = reac.find(rct_gras0, prd_gras0, stereo=False)[0]
-        srxns = reac.expand_stereo(rxn, enant=False)
-        assert len(srxns) == nexp1
-        srxns = reac.expand_stereo(rxn, enant=True)
-        assert len(srxns) == nexp2
 
-    _test(["FC=CF", "[OH]"], ["F[CH]C(O)F"], 2, 4)
+@pytest.mark.parametrize(
+    "rsmi,psmi,enant,count",
+    [
+        ("F/C=C/F.[OH]", "F[CH][C@H](O)F", False, 1),
+        ("CCOCC.[OH]", "C[CH]OCC.O", True, 2),
+        ("CCOCC.[OH]", "C[CH]OCC.O", False, 1),
+        ("CCO[C@H](C)CC.[OH]", "C[CH]O[C@H](C)CC.O", True, 2),
+        ("CCO[C@H](C)CC.[OH]", "C[CH]O[C@H](C)CC.O", False, 2),
+    ],
+)
+def test__expand_stereo_for_reaction(rsmi: str, psmi: str, enant: bool, count: int):
+    """Test reac.expand_stereo_for_reaction."""
+    print("Testing expand_stereo_for_reaction()")
+    print(f"{rsmi}>>{psmi}")
+    rct_smis = rsmi.split(".")
+    prd_smis = psmi.split(".")
+    rct_gras0 = tuple(map(smiles.graph, rct_smis))
+    prd_gras0 = tuple(map(smiles.graph, prd_smis))
+    rxn = reac.find(rct_gras0, prd_gras0, stereo=False)[0]
+    srxns = reac.expand_stereo(rxn, enant=enant, rct_gras=rct_gras0, prd_gras=prd_gras0)
+    assert len(srxns) == count
 
-
-def test__expand_stereo_for_reaction():
-    """Test reac.expand_stereo_for_reaction"""
-
-    def _test(rct_smis, prd_smis):
-        print("Testing expand_stereo_for_reaction()")
-        print(f"{'.'.join(rct_smis)}>>{'.'.join(prd_smis)}")
-        rct_gras0 = tuple(map(smiles.graph, rct_smis))
-        prd_gras0 = tuple(map(smiles.graph, prd_smis))
-        rxn = reac.find(rct_gras0, prd_gras0, stereo=False)[0]
-        srxns = reac.expand_stereo_to_match_reagents(rxn, rct_gras0, prd_gras0)
-        assert len(srxns) == 1
-        (srxn,) = srxns
+    for srxn in srxns:
         rct_gras1 = reac.reactant_graphs(srxn, shift_keys=False)
         prd_gras1 = reac.product_graphs(srxn, shift_keys=False)
         assert rct_gras1 == rct_gras0
         assert prd_gras1 == prd_gras0
-
-    _test(["F/C=C/F", "[OH]"], ["F[CH][C@H](O)F"])
 
 
 def test__from_old_string():
@@ -516,5 +529,13 @@ if __name__ == "__main__":
     # test__end_to_end("CCCO[O]", "[CH2]CCOO")
     # test__end_to_end("C[C]1O[C@H]1COO", r"C/C([O])=C\COO")
     # test__end_to_end("CC1[C](O1)COO", "CC1C2(O1)CO2.[OH]")
+    # test__end_to_end("CC1[C](O1)COO", "CC1C2(O1)CO2.[OH]")
+    # test__end_to_end("CC1[C](OC1)CCOO", "CC1C2(OC1)CCO2.[OH]")
     # test__canonical_enantiomer()
-    test__from_geometries("C5H7O", C5H7O_RGEOS, C5H7O_PGEOS, 1)
+    # test__from_geometries("C5H7O", C5H7O_RGEOS, C5H7O_PGEOS, 1)
+    # test__expand_stereo_for_reaction("F/C=C/F.[OH]", "F[CH][C@H](O)F", False, 1)
+    # test__expand_stereo_for_reaction("CCOCC.[OH]", "C[CH]OCC.O", True, 2)
+    # test__expand_stereo_for_reaction("CCOCC.[OH]", "C[CH]OCC.O", False, 1)
+    # test__expand_stereo_for_reaction("CCO[C@H](C)CC.[OH]", "C[CH]O[C@H](C)CC.O", True, 2)
+    # test__expand_stereo_for_reaction("CCO[C@H](C)CC.[OH]", "C[CH]O[C@H](C)CC.O", False, 2)
+    test__expand_stereo("FC=CF.[OH]", "F[CH]C(O)F", 2, 4)
