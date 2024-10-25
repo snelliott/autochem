@@ -1,7 +1,7 @@
 """ Conversion functions
 """
 
-from typing import List
+from collections.abc import Sequence
 
 from .. import amchi, geom, graph
 from .. import chi as chi_
@@ -25,24 +25,26 @@ from ._4struc import with_structures
 
 # # constructors from data types
 def from_graphs(
-    rct_gras, prd_gras, stereo: bool = True, struc_typ: str = None
-) -> List[Reaction]:
-    """Get reaction objects from graphs
+    rct_gras: Sequence[object],
+    prd_gras: Sequence[object],
+    stereo: bool = True,
+    struc_typ: str | None = None,
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Get reaction objects from graphs.
 
     :param rct_gras: The reactant graphs
-    :type rct_gras: list of automol graphs
     :param prd_gras: The product graphs
-    :type prd_gras: list of automol graphs
     :param stereo: Include stereoassignments?
-    :type stereo: bool
     :param struc_typ: Add structures of this type; defaults to "geom"
-    :type struc_typ: str, optional
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
-    :rtype: List[Reaction]
     """
     rct_gras = tuple(map(graph.explicit, rct_gras))
     prd_gras = tuple(map(graph.explicit, prd_gras))
-    rxns = find(rct_gras, prd_gras, stereo=stereo)
+    rxns = find(rct_gras, prd_gras, stereo=stereo, enant=enant, strained=strained)
 
     if struc_typ is not None:
         rxns = tuple(with_structures(r, struc_typ) for r in rxns)
@@ -51,62 +53,82 @@ def from_graphs(
 
 
 def from_amchis(
-    rct_achs, prd_achs, stereo: bool = True, struc_typ: str = None
-) -> List[Reaction]:
-    """Get reaction objects from AMChIs
+    rct_achs: Sequence[str],
+    prd_achs: Sequence[str],
+    stereo: bool = True,
+    struc_typ: str | None = None,
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Get reaction objects from AMChIs.
 
     :param rct_achs: The reactant AMChI strings
-    :type rct_achs: list[str]
     :param prd_achs: The product AMChI strings
-    :type prd_achs: list[str]
     :param stereo: Include stereoassignments?
-    :type stereo: bool
     :param struc_typ: Add structures of this type; defaults to None
-    :type struc_typ: str, optional
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
-    :rtype: List[Reaction]
     """
-    return from_chis(rct_achs, prd_achs, stereo=stereo, struc_typ=struc_typ)
+    return from_chis(
+        rct_achs,
+        prd_achs,
+        stereo=stereo,
+        struc_typ=struc_typ,
+        enant=enant,
+        strained=strained,
+    )
 
 
 def from_inchis(
-    rct_ichs, prd_ichs, stereo: bool = True, struc_typ: str = None
-) -> List[Reaction]:
-    """Get reaction objects from InChIs
+    rct_ichs: Sequence[str],
+    prd_ichs: Sequence[str],
+    stereo: bool = True,
+    struc_typ: str | None = None,
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Get reaction objects from InChIs.
 
     :param rct_ichs: The reactant InChI strings
-    :type rct_ichs: list[str]
     :param prd_ichs: The product InChI strings
-    :type prd_ichs: list[str]
     :param stereo: Include stereoassignments?
-    :type stereo: bool
     :param struc_typ: Add structures of this type; defaults to None
-    :type struc_typ: str, optional
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
-    :rtype: List[Reaction]
     """
-    return from_chis(rct_ichs, prd_ichs, stereo=stereo, struc_typ=struc_typ)
+    return from_chis(
+        rct_ichs,
+        prd_ichs,
+        stereo=stereo,
+        struc_typ=struc_typ,
+        enant=enant,
+        strained=strained,
+    )
 
 
 def from_chis(
-    rct_chis, prd_chis, stereo: bool = True, struc_typ: str = None
-) -> List[Reaction]:
-    """Get reaction objects from ChIs
+    rct_chis: Sequence[str],
+    prd_chis: Sequence[str],
+    stereo: bool = True,
+    struc_typ: str | None = None,
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Get reaction objects from ChIs.
 
     :param rct_chis: The reactant ChI (InChI or AMChI) strings
-    :type rct_chis: list[str]
     :param prd_chis: The product ChI (InChI or AMChI) strings
-    :type prd_chis: list[str]
     :param stereo: Include stereoassignments?
-    :type stereo: bool
     :param struc_typ: Add structures of this type; defaults to None
-    :type struc_typ: str, optional
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
-    :rtype: List[Reaction]
     """
     rct_gras = tuple(map(graph.explicit, map(chi_.graph, rct_chis)))
     prd_gras = tuple(map(graph.explicit, map(chi_.graph, prd_chis)))
-    rxns = find(rct_gras, prd_gras, stereo=stereo)
+    rxns = find(rct_gras, prd_gras, stereo=stereo, enant=enant, strained=strained)
 
     if struc_typ is not None:
         rxns = tuple(with_structures(r, struc_typ) for r in rxns)
@@ -115,24 +137,26 @@ def from_chis(
 
 
 def from_smiles(
-    rct_smis, prd_smis, stereo: bool = True, struc_typ: str = None
-) -> List[Reaction]:
-    """Get reaction objects from SMILES
+    rct_smis: Sequence[str],
+    prd_smis: Sequence[str],
+    stereo: bool = True,
+    struc_typ: str | None = None,
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Get reaction objects from SMILES.
 
     :param rct_smis: The reactant SMILES strings
-    :type rct_smis: list[str]
     :param prd_smis: The product SMILES strings
-    :type prd_smis: list[str]
     :param stereo: Include stereoassignments?
-    :type stereo: bool
     :param struc_typ: Add structures of this type; defaults to None
-    :type struc_typ: str, optional
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
-    :rtype: List[Reaction]
     """
     rct_gras = tuple(map(graph.explicit, map(smiles_.graph, rct_smis)))
     prd_gras = tuple(map(graph.explicit, map(smiles_.graph, prd_smis)))
-    rxns = find(rct_gras, prd_gras, stereo=stereo)
+    rxns = find(rct_gras, prd_gras, stereo=stereo, enant=enant, strained=strained)
 
     if struc_typ is not None:
         rxns = tuple(with_structures(r, struc_typ) for r in rxns)
@@ -141,24 +165,26 @@ def from_smiles(
 
 
 def from_geometries(
-    rct_geos, prd_geos, stereo: bool = True, struc_typ: str = "geom"
-) -> List[Reaction]:
-    """Get reaction objects from geometries
+    rct_geos: Sequence[object],
+    prd_geos: Sequence[object],
+    stereo: bool = True,
+    struc_typ: str | None = "geom",
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Get reaction objects from geometries.
 
     :param rct_geos: The reactant geometries
-    :type rct_geos: list of automol geometries
     :param prd_geos: The product geometries
-    :type prd_geos: list of automol geometries
     :param stereo: Include stereoassignments?
-    :type stereo: bool
     :param struc_typ: Add structures of this type; defaults to "geom"
-    :type struc_typ: str, optional
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
-    :rtype: List[Reaction]
     """
     rct_gras = tuple(map(geom.graph, rct_geos))
     prd_gras = tuple(map(geom.graph, prd_geos))
-    rxns = find(rct_gras, prd_gras, stereo=stereo)
+    rxns = find(rct_gras, prd_gras, stereo=stereo, enant=enant, strained=strained)
 
     if struc_typ is not None:
         rxns = tuple(
@@ -171,24 +197,26 @@ def from_geometries(
 
 
 def from_zmatrices(
-    rct_zmas, prd_zmas, stereo: bool = True, struc_typ: str = "zmat"
-) -> List[Reaction]:
-    """Get reaction objects from z-matrices
+    rct_zmas: Sequence[object],
+    prd_zmas: Sequence[object],
+    stereo: bool = True,
+    struc_typ: str | None = "zmat",
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Get reaction objects from z-matrices.
 
     :param rct_zmas: The reactant z-matrices
-    :type rct_zmas: list of automol z-matrices
     :param prd_zmas: The product z-matrices
-    :type prd_zmas: list of automol z-matrices
     :param stereo: Include stereoassignments?
-    :type stereo: bool
     :param struc_typ: Add structures of this type; defaults to "zmat"
-    :type struc_typ: str, optional
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
-    :rtype: List[Reaction]
     """
     rct_gras = tuple(map(zmat_.graph, rct_zmas))
     prd_gras = tuple(map(zmat_.graph, prd_zmas))
-    rxns = find(rct_gras, prd_gras, stereo=stereo)
+    rxns = find(rct_gras, prd_gras, stereo=stereo, enant=enant, strained=strained)
 
     if struc_typ is not None:
         rxns = tuple(
@@ -202,7 +230,7 @@ def from_zmatrices(
 
 # # converters to various data types
 def graphs(rxn: Reaction, stereo: bool = True, shift_keys: bool = False):
-    """Convert the reaction object to graphs
+    """Convert the reaction object to graphs.
 
     :param rxn: the reaction object
     :param stereo: Include stereo? defaults to True
@@ -218,7 +246,7 @@ def graphs(rxn: Reaction, stereo: bool = True, shift_keys: bool = False):
 
 
 def amchis(rxn: Reaction, stereo: bool = True):
-    """Convert the reaction object to AMChIs
+    """Convert the reaction object to AMChIs.
 
     :param rxn: the reaction object
     :param stereo: Include stereo?
@@ -232,7 +260,7 @@ def amchis(rxn: Reaction, stereo: bool = True):
 
 
 def inchis(rxn: Reaction, stereo: bool = True):
-    """Convert the reaction object to InChIs
+    """Convert the reaction object to InChIs.
 
     :param rxn: the reaction object
     :param stereo: Include stereo?
@@ -248,7 +276,7 @@ def inchis(rxn: Reaction, stereo: bool = True):
 
 
 def chis(rxn: Reaction, stereo: bool = True):
-    """Convert the reaction object to ChIs
+    """Convert the reaction object to ChIs.
 
     :param rxn: the reaction object
     :param stereo: Include stereo?
@@ -264,7 +292,7 @@ def chis(rxn: Reaction, stereo: bool = True):
 
 
 def smiles(rxn: Reaction, stereo=True, res_stereo=True, exp_singles=False):
-    """Convert the reaction object to SMILESs
+    """Convert the reaction object to SMILESs.
 
     :param rxn: the reaction object
     :param stereo: Include stereo?
@@ -288,7 +316,7 @@ def smiles(rxn: Reaction, stereo=True, res_stereo=True, exp_singles=False):
 
 
 def geometries(rxn: Reaction):
-    """Convert the reaction object to geometries
+    """Convert the reaction object to geometries.
 
     :param rxn: the reaction object
     :returns: geometries for the reactants and products
@@ -307,7 +335,7 @@ def geometries(rxn: Reaction):
 
 
 def zmatrices(rxn: Reaction):
-    """Convert the reaction object to z-matrices
+    """Convert the reaction object to z-matrices.
 
     :param rxn: the reaction object
     :returns: z-matrices for the reactants and products
@@ -327,7 +355,7 @@ def zmatrices(rxn: Reaction):
 
 # # additional data types
 def ts_amchi(rxn: Reaction, stereo: bool = True) -> str:
-    """Get the AMChI for the reaction TS
+    """Get the AMChI for the reaction TS.
 
     :param rxn: The reaction object
     :type rxn: Reaction
@@ -345,7 +373,7 @@ def ts_amchi(rxn: Reaction, stereo: bool = True) -> str:
 
 
 def reaction_smiles(rxn) -> str:
-    """Convert the Reaction object to a reaction SMILES string
+    """Convert the Reaction object to a reaction SMILES string.
 
     :param rxn: The reaction object
     :type rxn: Reaction
@@ -358,7 +386,7 @@ def reaction_smiles(rxn) -> str:
 
 
 def display(rxn: Reaction, stereo=True, exp=False, label=False, label_dct=None):
-    """Display reaction object to IPython using the RDKit visualizer
+    """Display reaction object to IPython using the RDKit visualizer.
 
     :param rxn: the reaction object
     :param stereo: Include stereochemistry information?
