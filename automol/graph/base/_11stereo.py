@@ -448,6 +448,13 @@ def stereo_corrected_geometry(
     geo = geometry_correct_linear_vinyls(gra, geo, excl_keys=excl_keys)
     geo = geometry_correct_nonplanar_pi_bonds(gra, geo, excl_keys=excl_keys)
 
+    # 2. If there is a single, wrong atom stereocenter, simply reflect the geometry
+    if len(atm_keys) == 1:
+        atm_key, = atm_keys
+        curr_par = geometry_atom_parity(gra, geo, atm_key)
+        if curr_par != par_dct[atm_key]:
+            geo = geom_base.reflect_coordinates(geo)
+
     # 3. Loop over stereo-sites making corrections where needed
     for bnd_key in bnd_keys:
         curr_par = geometry_bond_parity(gra, geo, bnd_key)
