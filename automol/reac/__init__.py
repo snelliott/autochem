@@ -59,6 +59,7 @@ from ._3find import substitutions
 from ._3find import find
 from ._3find import arbitrary_reactions
 # TS geometries
+from ._4struc import clean_ts_structure
 from ._4struc import with_structures
 from ._4struc import reverse
 # TS zmatrices
@@ -171,6 +172,7 @@ __all__ = [
     'find',
     'arbitrary_reactions',
     # TS geometries
+    'clean_ts_structure',
     'with_structures',
     'reverse',
     # TS zmatrices
