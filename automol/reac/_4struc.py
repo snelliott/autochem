@@ -1,5 +1,6 @@
 """ TS geometries for specific reaction classes
 """
+
 from typing import List
 
 from .. import geom, graph, zmat
@@ -26,6 +27,25 @@ from ._0core import (
     without_dummy_atoms,
     without_structures,
 )
+
+
+def clean_ts_structure(rxn, ts_struc, struc_typ: str) -> object:
+    """Clean a TS structure based on a Reaction object.
+
+    :param rxn: The reaction object
+    :param ts_struc: The TS structure to clean
+    :param struc_typ: The structure type, "geom" or "zmat"
+    :return: The cleaned TS structure
+    """
+    xrxn = with_structures(rxn, struc_typ=struc_typ)
+    xrxn = update_structures(xrxn, ts_struc=ts_struc)
+    grxn = with_structures(xrxn, "geom")
+    ts_gra = ts_graph(grxn)
+    ts_geo = ts_structure(grxn)
+    ts_geo = graph.clean_ts_geometry(ts_gra, ts_geo=ts_geo)
+    grxn = update_structures(grxn, ts_struc=ts_geo)
+    xrxn = with_structures(grxn, struc_typ=struc_typ)
+    return ts_structure(xrxn)
 
 
 def with_structures(
