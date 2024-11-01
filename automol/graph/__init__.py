@@ -34,6 +34,7 @@ from ._1rmg import (
 # # conversions
 from ._2conv import (
     chi,
+    clean_ts_geometry,
     display,
     display_reaction,
     geometry,
@@ -769,6 +770,7 @@ __all__ = [
     # # conversions
     "geometry",
     "ts_geometry_from_reactants",
+    "clean_ts_geometry",
     "inchi",
     "chi",
     "rdkit_molecule",
