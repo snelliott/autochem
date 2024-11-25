@@ -55,12 +55,14 @@ class ReactionClass(str, enum.Enum):
             cls.HOMOLYT_SCISSION: None,
             cls.RING_FORM_SCISSION: None,
             cls.ELIMINATION: cls.INSERTION,
+            cls.UNCLASSIFIED_UNIMOL: cls.UNCLASSIFIED_UNIMOL,
             # Bimolecular reactions
             cls.HYDROGEN_ABSTRACTION: cls.HYDROGEN_ABSTRACTION,
             cls.ADDITION: cls.BETA_SCISSION,
             cls.INSERTION: cls.ELIMINATION,
             cls.DOUBLE_INSERTION: None,
             cls.SUBSTITUTION: cls.SUBSTITUTION,
+            cls.UNCLASSIFIED_BIMOL: None,
         }
         return reverse_dct[cls(value)]
 
