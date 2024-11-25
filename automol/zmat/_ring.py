@@ -172,7 +172,7 @@ def ring_distances_reasonable(zma, rng_atoms, dist_value_dct, thresh=0.3):
 
 
 def ring_dihedrals(zma, rng_atoms):
-    """Get ring dihedral names and their angle values
+    """Get N-3 ring dihedral names and their angle values
 
     :param zma: Z-Matrix
     :type zma: automol.zmat object
@@ -257,14 +257,15 @@ def samples_avg_dih(zma, geo, tors_dcts, average_dih,ring_tors_dct,dih_remover):
 
             for at in ring_atoms[3:]:
                 dih=f"D{at}"
-                if dih not in [b for a,b in dih_remover if a != key_dct]:
-                    if dih not in all_sampled_torsions:
-                        changed_dh.append(dih)
-                        idx = ring_atoms.index(at)
-                        keymat[at] = [ring_atoms[idx-1], \
-                                      ring_atoms[idx-2], ring_atoms[idx-3]]
+                if dih in dihedral_angle_names(zma):
+                    if dih not in [b for a,b in dih_remover if a != key_dct]:
+                        if dih not in all_sampled_torsions:
+                            changed_dh.append(dih)
+                            idx = ring_atoms.index(at)
+                            keymat[at] = [ring_atoms[idx-1], \
+                                            ring_atoms[idx-2], ring_atoms[idx-3]]
 
-                        ring_tors_dct[key_dct].update({dih:(0.,0.)})
+                            ring_tors_dct[key_dct].update({dih:(0.,0.)})
 
             zma = set_key_matrix(zma, keymat)
 
