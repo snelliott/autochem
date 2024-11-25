@@ -188,7 +188,7 @@ def _clean_and_validate_connected_geometry(
     return geo if matches or not check else None
 
 
-def inchi(gra, stereo: bool=True, local_stereo: bool=False):
+def inchi(gra, stereo: bool = True, local_stereo: bool = False):
     """Generate an InChI string from a molecular graph.
 
     :param gra: molecular graph
@@ -491,6 +491,63 @@ def ts_geometry_from_reactants(
         none_if_failed=False,
         geos=rct_geos,
         geos_keys=rcts_keys,
+        relax_angles=ts.has_reacting_ring(tsg),
+        log=log,
+    )
+
+    if log:
+        print(f"TS geometry after cleaning:\n{ts_geo}")
+
+    if check and not geometry_matches(tsg, ts_geo, local_stereo=True, log=log):
+        raise error.FailedGeometryGenerationError(f"Failed TS graph:\n{string(tsg0)}")
+
+    return ts_geo
+
+
+def clean_ts_geometry(
+    tsg,
+    ts_geo,
+    geo_idx_dct: Dict[int, int] | None = None,
+    check: bool = True,
+    log: bool = False,
+) -> Any:
+    """Clean a TS geometry based on its graph.
+
+    :param tsg: TS graph
+    :type tsg: automol graph data structure
+    :param rct_geos: Reactant geometries
+    :type rct_geos: List[automol geom data structure]
+    :param geo_idx_dct: If they don't already match, specify which graph
+        keys correspond to which geometry indices, defaults to None
+    :param check: Check stereo and connectivity? defaults to True
+    :param log: Print optimization log?, defaults to False
+    :return: TS geometry
+    :rtype: automol geom data structure
+    """
+    assert not has_dummy_atoms(
+        tsg
+    ), f"Cannot convert graph->geom with dummy atoms:\n{tsg}"
+
+    # 1. Align the graph and the geometry keys/indices
+    tsg, ts_geo, *_ = align_with_geometry(tsg, ts_geo, (), geo_idx_dct)
+
+    # 2. Convert to local stereo
+    tsg0 = tsg
+    tsg = to_local_stereo(tsg)
+
+    # 3. Correct the stereochemistry against the TS graph, so it is consistent with
+    # both reactants and products
+    ts_geo = stereo_corrected_geometry(tsg, ts_geo, local_stereo=True)
+
+    if log:
+        print(f"Raw TS stereo-corrected geometry before cleaning:\n{ts_geo}")
+
+    # 4. Clean the geometry
+    ts_geo = clean_geometry(
+        tsg,
+        ts_geo,
+        local_stereo=True,
+        none_if_failed=False,
         relax_angles=ts.has_reacting_ring(tsg),
         log=log,
     )

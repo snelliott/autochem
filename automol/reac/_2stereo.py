@@ -1,6 +1,8 @@
 """ stereo functionality for reaction objects
 """
 
+from collections.abc import Sequence
+
 import yaml
 
 from .. import graph
@@ -12,6 +14,7 @@ from ._0core import (
     products_keys,
     reactant_graphs,
     reactants_keys,
+    reagent_mappings,
     set_products_keys,
     set_reactants_keys,
     set_ts_graph,
@@ -20,7 +23,12 @@ from ._0core import (
 
 
 def expand_stereo(
-    rxn: Reaction, symeq: bool = False, enant: bool = True, strained: bool = False
+    rxn: Reaction,
+    symeq: bool = False,
+    enant: bool = True,
+    strained: bool = False,
+    rct_gras: Sequence[object] | None = None,
+    prd_gras: Sequence[object] | None = None,
 ) -> tuple[Reaction, ...]:
     """Expand all possible stereo assignments for the reactants and products of
     this reaction. Only includes possibilities that are mutually consistent
@@ -30,44 +38,39 @@ def expand_stereo(
     :param symeq: Include symmetrically equivalent TS stereoisomers?
     :param enant: Include all TS enantiomers, or only canonical ones?
     :param strained: Include stereoisomers which are highly strained?
+    :param rct_gras: Optionally, expand stereo to match these reactant graphs
+    :param rct_gras: Optionally, expand stereo to match these product graphs
     :returns: a sequence of reaction objects with stereo assignments
     """
+
+    def _combined_reagents_graph(gras: Sequence[object], prod: bool = False) -> object:
+        """Form a combined reactants or products graph from individual components.
+
+        The resulting graph will match the atom keys of the TS, but will not contain any
+        dummy atoms. These are not needed by the stereoexpansion filter, which removes
+        them for comparison.
+
+        :param gras: The reactant or product graphs
+        :param prod: Do this for the products?, defaults to False
+        :return: The combined reactants or products graph
+        """
+        # If none of the graphs have stereo, don't try to match them
+        if not any(map(graph.has_stereo, gras)):
+            return None
+
+        gras = [graph.standard_keys(graph.without_dummy_atoms(g)) for g in gras]
+        maps = reagent_mappings(rxn, prod=prod, shift_keys=False, dummy=False)
+        gras = [graph.relabel(g, m) for g, m in zip(gras, maps, strict=True)]
+        return graph.union_from_sequence(gras, check=True)
+
+    rgra = None if rct_gras is None else _combined_reagents_graph(rct_gras, prod=False)
+    pgra = None if prd_gras is None else _combined_reagents_graph(prd_gras, prod=True)
+
     tsg = graph.without_stereo(ts_graph(rxn))
-    stsgs = graph.expand_stereo(tsg, symeq=symeq, enant=enant, strained=strained)
+    stsgs = graph.expand_stereo(
+        tsg, symeq=symeq, enant=enant, strained=strained, rcts_gra=rgra, prds_gra=pgra
+    )
     srxns = tuple(set_ts_graph(rxn, stsg) for stsg in stsgs)
-    return srxns
-
-
-def expand_stereo_to_match_reagents(
-    rxn: Reaction, rct_gras, prd_gras, shift_keys: bool = False
-):
-    """Expand stereo to be consistent with the reactants and products
-
-    If neither graph contains stereo assignments, a full expansion will be performed
-
-    :param rxn: The reaction object
-    :type rxn: Reaction
-    :param rcts_gra: A graph of the reactants, with stereoassignments to be matched
-    :type rcts_gra: automol graph data structure
-    :param prds_gra: A graph of the products, with stereoassignments to be matched
-    :type prds_gra: automol graph data structure
-    :param shift_keys: Shift keys after first reagent, to prevent overlap? default False
-        (Only has an effect on 'R' keys)
-    :type shift_keys: bool, optional
-    """
-    rct_gras, prd_gras = map(tuple, (rct_gras, prd_gras))
-    stereo = any(map(graph.has_stereo, rct_gras + prd_gras))
-
-    if stereo:
-        srxns = []
-        for srxn in expand_stereo(rxn, symeq=True, enant=True, strained=True):
-            rct_gras_ = reactant_graphs(srxn, shift_keys=shift_keys)
-            prd_gras_ = product_graphs(srxn, shift_keys=shift_keys)
-            if rct_gras_ == rct_gras and prd_gras_ == prd_gras:
-                srxns.append(srxn)
-    else:
-        srxns = expand_stereo(rxn)
-
     return srxns
 
 
@@ -86,13 +89,19 @@ def from_string_transitional(rxn_str):
     return rxn
 
 
-def from_old_string(rxn_str, one_indexed=True, stereo=False):
-    """Write a reaction object to a string
+def from_old_string(
+    rxn_str: str,
+    one_indexed: bool = True,
+    stereo: bool = False,
+    enant: bool = True,
+    strained: bool = True,
+) -> Reaction:
+    """Write a reaction object to a string.
 
     :param rxn_str: string containing the reaction object
-    :type rxn_str: str
     :param one_indexed: parameter to store keys in one-indexing
-    :type one_indexed: bool
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
     :rtype: Reaction
     """
     yaml_dct = yaml.load(rxn_str, Loader=yaml.FullLoader)
@@ -153,7 +162,13 @@ def from_old_string(rxn_str, one_indexed=True, stereo=False):
         rct_gras = [graph.subgraph(rcts_gra, ks, stereo=True) for ks in rcts_keys]
         prd_gras = [graph.subgraph(prds_gra, ks, stereo=True) for ks in prds_keys]
         # Now, work out the combined stereochemistry
-        rxns = expand_stereo_to_match_reagents(rxn, rct_gras, prd_gras, shift_keys=True)
+        rxns = expand_stereo(
+            rxn,
+            enant=enant,
+            strained=strained,
+            rct_gras=rct_gras,
+            prd_gras=prd_gras,
+        )
         rxn, *_ = rxns
 
     return rxn
