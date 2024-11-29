@@ -261,7 +261,9 @@ def ts_direction_representation(tsg, pri_dct: dict):
         sorted(sorted(map(pri_dct.get, k)) for k in frm_keys),
         sorted(sorted(map(pri_dct.get, k)) for k in brk_keys),
     )
-    rep = (rxn_rep1, rxn_rep2)
+    # Rep value 3: Stereo assignment
+    ste_rep = stereo_assignment_representation(tsg, pri_dct)
+    rep = (rxn_rep1, rxn_rep2, ste_rep)
     return rep
 
 
