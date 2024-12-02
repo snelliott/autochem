@@ -1,8 +1,9 @@
 """ test automol.amchi
 """
 
-import numpy
 import automol
+import numpy
+import pytest
 from automol import amchi
 
 # Note: Many of these are not canonical AMChIs. I just copied the InChIs over
@@ -261,38 +262,39 @@ def test__join():
     assert amchi.join(amchi.split(chi)) == chi
 
 
-def test__graph():
-    """test amchi.graph"""
-    chis = [
+@pytest.mark.parametrize(
+    "chi",
+    [
         "AMChI=1/C3H3Cl2F3/c4-2(7)1(6)3(5)8/h1-3H/t1-,2-,3+",
         "AMChI=1/C3H5N3/c4-1-3(6)2-5/h1-2,4-6H/b4-1-,5-2+,6-3-",
         "AMChI=1/C10H14ClFO/c1-8(9(5-12)10(13)6-11)7-3-2-4-7/"
         "h2-4,8-10,13H,5-6H2,1H3",
         "AMChI=1/C3H3Cl2F3/c4-2(7)1(6)3(5)8/h1-3H/t2-,3-/m0/s1",
         "AMChI=1/C6H11O/c1-3-4-6-5(2)7-6/h5-6H,1,3-4H2,2H3/t5-,6+/m0/s1",
-    ]
+    ],
+)
+def test__graph(chi):
+    """test amchi.graph"""
+    print("---")
+    print(chi)
+    gra = amchi.graph(chi)
 
-    for chi in chis:
-        print("---")
+    natms = len(automol.graph.atom_keys(gra))
+
+    for _ in range(5):
+        print()
+        pmt = list(map(int, numpy.random.permutation(natms)))
+        pmt_gra = automol.graph.relabel(gra, dict(enumerate(pmt)))
+        pmt_chi = automol.graph.amchi(pmt_gra)
+        print(automol.graph.string(pmt_gra))
         print(chi)
-        gra = amchi.graph(chi)
-
-        natms = len(automol.graph.atom_keys(gra))
-
-        for _ in range(5):
-            print()
-            pmt = list(map(int, numpy.random.permutation(natms)))
-            pmt_gra = automol.graph.relabel(gra, dict(enumerate(pmt)))
-            pmt_chi = automol.graph.amchi(pmt_gra)
-            print(automol.graph.string(pmt_gra))
-            print(chi)
-            print(pmt_chi)
-            assert pmt_chi == chi
+        print(pmt_chi)
+        assert pmt_chi == chi
 
 
-def test__smiles():
-    """test amchi.smiles"""
-    chis = [
+@pytest.mark.parametrize(
+    "chi0",
+    [
         "AMChI=1/CH3.H2O/h1H3;1H2",
         "AMChI=1/C3H3Cl2F3/c4-2(7)1(6)3(5)8/h1-3H/t1-,2-,3+",
         "AMChI=1/C3H5N3/c4-1-3(6)2-5/h1-2,4-6H/b4-1-,5-2+,6-3-",
@@ -301,16 +303,17 @@ def test__smiles():
         "AMChI=1/C6H11O/c1-3-4-6-5(2)7-6/h5-6H,1,3-4H2,2H3/t5-,6+/m0/s1",
         "AMChI=1/C10H14ClFO/c1-8(9(5-12)10(13)6-11)7-3-2-4-7/"
         "h2-4,8-10,13H,5-6H2,1H3",
-    ]
-
-    for ref_chi in chis:
-        smi = amchi.smiles(ref_chi)
-        print(smi)
-        chi = automol.smiles.amchi(smi)
-        print(chi)
-        print(ref_chi)
-        assert chi == ref_chi
-        print()
+    ],
+)
+def test__smiles(chi0):
+    """test amchi.smiles"""
+    smi = amchi.smiles(chi0)
+    print(smi)
+    chi = automol.smiles.amchi(smi)
+    print(chi)
+    print(chi0)
+    assert chi == chi0
+    print()
 
 
 def test__racemic():
@@ -330,8 +333,8 @@ if __name__ == "__main__":
     # test__atom_stereo_parities()
     # test__bond_stereo_parities()
     # test__is_inverted_enantiomer()
-    test__graph()
-    # test__smiles()
+    # test__graph()
+    test__smiles("AMChI=1/C3H3Cl2F3/c4-2(7)1(6)3(5)8/h1-3H/t1-,2-,3+/m0/s1")
     # test__racemic()
     # test__graph()
     # test__smiles()
