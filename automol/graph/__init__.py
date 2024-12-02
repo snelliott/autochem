@@ -303,6 +303,7 @@ from .base._05stereo import (
     parity_evaluator_flip_from_graph,
     parity_evaluator_measure_from_geometry_,
     parity_evaluator_read_from_graph,
+    stereoatom_bridgehead_pairs,
     stereocenter_candidates,
     unassigned_stereocenter_keys_from_candidates,
 )
@@ -647,6 +648,7 @@ __all__ = [
     "strict_rigid_planar_bond_keys",
     "possible_rigid_planar_bond_keys",
     "stereocenter_candidates",
+    "stereoatom_bridgehead_pairs",
     "atom_centered_cumulene_keys",
     "bond_centered_cumulene_keys",
     # structural heuristics:

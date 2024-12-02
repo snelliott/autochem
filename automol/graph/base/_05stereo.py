@@ -208,11 +208,11 @@ def stereocenter_candidates_grouped(
 
 
 def stereoatom_bridgehead_pairs(
-    gra, cand_dct: Optional[CenterNeighborDict] = None
-) -> Dict[
-    AtomKey, Tuple[Tuple[AtomKey, AtomKey, AtomKey], Tuple[AtomKey, AtomKey, AtomKey]]
+    gra, cand_dct: CenterNeighborDict | None = None
+) -> dict[
+    AtomKey, tuple[tuple[AtomKey, AtomKey, AtomKey], tuple[AtomKey, AtomKey, AtomKey]]
 ]:
-    r"""Identify pairs of interdependent bridgehead stereoatoms, if any
+    r"""Identify pairs of interdependent bridgehead stereoatoms, if any.
 
     Bridgehead stereoatoms sharing the same three bridges are interdependent -- the
     configuration of one dictates that of the other (they must be opposite).
@@ -238,7 +238,7 @@ def stereoatom_bridgehead_pairs(
 
     bhp_dct = {}
     for key1, key2 in itertools.combinations(cand_atm_dct.keys(), r=2):
-        paths = simple_paths_between_atoms(gra, key1, key2)
+        paths = simple_paths_between_atoms(gra, key1, key2, overlap=False)
         conn_dct = {p[1]: p[-2] for p in paths}
         if len(set(conn_dct.keys())) == len(set(conn_dct.values())) == 3:
             conn_nkeys1, conn_nkeys2 = zip(*sorted(conn_dct.items()), strict=True)

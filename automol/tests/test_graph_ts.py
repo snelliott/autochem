@@ -1517,6 +1517,16 @@ def test__zmatrix():
     automol.graph.zmatrix_matches(ts_zgra, ts_zma)
 
 
+@pytest.mark.parametrize(
+    "tsg, bh_dct0",
+    [(C5H7O_B_TSG, {(1, 0): ((2, 3, 8), (4, 3, 8)), (3, 4): ((0, 1, 5), (0, 2, 5))})],
+)
+def test__stereoatom_bridgehead_pairs(tsg, bh_dct0):
+    """Test bridgehead pair detection."""
+    bh_dct = automol.graph.stereoatom_bridgehead_pairs(tsg)
+    assert bh_dct == bh_dct0, f"{bh_dct} != {bh_dct0}"
+
+
 if __name__ == "__main__":
     # test__set_stereo_from_geometry()
     # test__to_local_stereo()
@@ -1532,6 +1542,9 @@ if __name__ == "__main__":
     # test__zmatrix()
     # test__ts__expand_reaction_stereo("C5H6O", C5H6O_TSG, [1, 1])
     # test__ts__expand_reaction_stereo("C5H7O3", C5H7O3_TSG, [1, 1, 1, 1])
-    test__ts__reagents_graph(
-        "C5H7O_B", C5H7O_B_TSG, {3: True, 4: False}, {3: False, 4: True}
+    # test__ts__reagents_graph(
+    #     "C5H7O_B", C5H7O_B_TSG, {3: True, 4: False}, {3: False, 4: True}
+    # )
+    test__stereoatom_bridgehead_pairs(
+        C5H7O_B_TSG, {(1, 0): ((2, 3, 8), (4, 3, 8)), (3, 4): ((0, 1, 5), (0, 2, 5))}
     )

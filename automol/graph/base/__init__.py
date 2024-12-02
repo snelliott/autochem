@@ -268,6 +268,7 @@ from ._03kekule import rigid_planar_bond_keys
 from ._03kekule import strict_rigid_planar_bond_keys
 from ._03kekule import possible_rigid_planar_bond_keys
 from ._05stereo import stereocenter_candidates
+from ._05stereo import stereoatom_bridgehead_pairs
 from ._03kekule import atom_centered_cumulene_keys
 from ._03kekule import bond_centered_cumulene_keys
 
@@ -626,6 +627,7 @@ __all__ = [
     "strict_rigid_planar_bond_keys",
     "possible_rigid_planar_bond_keys",
     "stereocenter_candidates",
+    "stereoatom_bridgehead_pairs",
     "atom_centered_cumulene_keys",
     "bond_centered_cumulene_keys",
     # structural heuristics:
