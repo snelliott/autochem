@@ -531,13 +531,15 @@ def shortest_path_between_atoms(gra, key1, key2):
     return shortest_path_between_groups(gra, [key1], [key2])
 
 
-def simple_paths_between_atoms(gra, key1, key2):
+def simple_paths_between_atoms(gra, key1, key2, overlap: bool = False):
     """shortest paths between any two atoms in the graph
 
+    :param overlap: Whether to include overlapping paths. If not, the shortest one is
+        retained.
     :returns: a 2d dictionary keyed by pairs of atoms
     """
     nxg = _01networkx.from_graph(gra)
-    return _01networkx.simple_paths(nxg, key1, key2)
+    return _01networkx.simple_paths(nxg, key1, key2, overlap=overlap)
 
 
 def shortest_path_between_groups(gra, keys1, keys2):

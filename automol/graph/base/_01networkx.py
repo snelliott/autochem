@@ -69,9 +69,24 @@ def all_pairs_shortest_path(nxg):
     return networkx.all_pairs_shortest_path(nxg)
 
 
-def simple_paths(nxg, key1, key2):
-    """simple paths between any two vertices in the graph"""
-    return tuple(map(tuple, networkx.all_simple_paths(nxg, source=key1, target=key2)))
+def simple_paths(nxg, key1, key2, overlap: bool = False):
+    """Find simple paths between any two vertices in the graph.
+
+    :param overlap: Whether to include overlapping paths. If not, the shortest one is
+        retained.
+    """
+
+    def _are_overlapping(path1, path2):
+        return set(path1[1:-2]) & set(path2[1:-2])
+
+    paths = tuple(map(tuple, networkx.all_simple_paths(nxg, source=key1, target=key2)))
+    if not overlap:
+        paths = tuple(
+            min(ps, key=len)
+            for ps in util.equivalence_partition(paths, _are_overlapping)
+        )
+
+    return paths
 
 
 def all_isomorphisms(nxg1, nxg2):
