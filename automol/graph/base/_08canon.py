@@ -10,7 +10,6 @@ import itertools
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy
-
 from phydat import ptab
 
 from ...util import dict_
@@ -55,6 +54,7 @@ from ._05stereo import (
     parity_evaluator_flip_from_graph,
     parity_evaluator_read_from_graph,
     stereocenter_candidates,
+    stereocenter_candidates_grouped,
     unassigned_stereocenter_keys_from_candidates,
 )
 
@@ -159,7 +159,9 @@ def canonical_amchi_graph_with_numbers(
     is_can_enant = None
     if len(atm_ste_keys) == 1:
         rgra = invert_atom_stereo_parities(gra)
-        is_can_enant = is_canonical_enantiomer(gra, pri_dct, rgra, pri_dct)
+        is_can_enant = is_canonical_enantiomer(
+            gra, pri_dct, rgra, pri_dct, cand_dct=cand_dct
+        )
         gra = rgra if is_can_enant is False else gra
     elif len(atm_ste_keys) > 1:
         par_eval_ = parity_evaluator_flip_from_graph
@@ -167,7 +169,9 @@ def canonical_amchi_graph_with_numbers(
         rloc_gra = invert_atom_stereo_parities(loc_gra)
         rgra, _, rpri_dct, _ = calculate_stereo(rloc_gra, par_eval_=par_eval_)
 
-        is_can_enant = is_canonical_enantiomer(gra, pri_dct, rgra, rpri_dct)
+        is_can_enant = is_canonical_enantiomer(
+            gra, pri_dct, rgra, rpri_dct, cand_dct=cand_dct
+        )
 
         gra = rgra if is_can_enant is False else gra
         pri_dct = rpri_dct if is_can_enant is False else pri_dct
@@ -216,29 +220,36 @@ def smiles_graph(
     return kgr
 
 
-def stereo_assignment_representation(gra, pri_dct: dict):
+def stereo_assignment_representation(gra, pri_dct: dict, cand_dct: dict | None = None):
     """Generate a representation of a stereo assignment, for checking for
-    symmetric equivalence or for determining a canonical enantiomer
+    symmetric equivalence or for determining a canonical enantiomer.
 
     :param gra: molecular graph
-    :type gra: automol graph data structure
     :param pri_dct: A dictionary mapping atom keys to priorities
-    :type pri_dct: dict
+    :param cand_dct: A dictionary mapping stereocenter candidates to their neighbor keys
     :returns: A canonical representation of the assignment
     """
+    cand_dct = stereocenter_candidates(gra) if cand_dct is None else cand_dct
+
     atm_keys = sorted(atom_stereo_keys(gra), key=pri_dct.get)
     bnd_keys = sorted(bond_stereo_keys(gra), key=lambda x: sorted(map(pri_dct.get, x)))
 
-    rep = tuple(
-        dict_.values_by_key(atom_stereo_parities(gra), atm_keys)
-        + dict_.values_by_key(bond_stereo_parities(gra), bnd_keys)
-    )
+    atm_nkeys_dct, bnd_nkeys_dct = stereocenter_candidates_grouped(cand_dct, pri_dct)
+
+    atm_pars = dict_.values_by_key(atom_stereo_parities(gra), atm_keys)
+    bnd_pars = dict_.values_by_key(bond_stereo_parities(gra), bnd_keys)
+    atm_pris = tuple(map(pri_dct.get, atm_keys))
+    bnd_pris = tuple(map(pri_dct.get, bnd_keys))
+    atm_npris = tuple(tuple(map(pri_dct.get, atm_nkeys_dct[k])) for k in atm_keys)
+    bnd_npris = tuple(tuple(map(pri_dct.get, bnd_nkeys_dct[k])) for k in bnd_keys)
+
+    rep = (atm_pars, bnd_pars, atm_pris, bnd_pris, atm_npris, bnd_npris)
     return rep
 
 
-def ts_direction_representation(tsg, pri_dct: dict):
+def ts_direction_representation(tsg, pri_dct: dict, cand_dct: dict | None = None):
     """Generate a representation of the reaction direction to determine the
-    canonical direction of a TS graph
+    canonical direction of a TS graph.
 
     The reaction representation consists of two pieces:
 
@@ -247,9 +258,8 @@ def ts_direction_representation(tsg, pri_dct: dict):
     2. Canonical representations of the stereo assignments.
 
     :param tsg: A TS graph
-    :type tsg: automol graph data structure
     :param pri_dct: A dictionary mapping atom keys to priorities
-    :type pri_dct: dict
+    :param cand_dct: A dictionary mapping stereocenter candidates to their neighbor keys
     :returns: A canonical representation of the TS reaction
     """
     frm_keys = ts_forming_bond_keys(tsg)
@@ -262,13 +272,15 @@ def ts_direction_representation(tsg, pri_dct: dict):
         sorted(sorted(map(pri_dct.get, k)) for k in brk_keys),
     )
     # Rep value 3: Stereo assignment
-    ste_rep = stereo_assignment_representation(tsg, pri_dct)
+    ste_rep = stereo_assignment_representation(tsg, pri_dct, cand_dct=cand_dct)
     rep = (rxn_rep1, rxn_rep2, ste_rep)
     return rep
 
 
-def is_canonical_enantiomer(ugra, upri_dct, rgra, rpri_dct):
-    """Is this enantiomer the canonical one?
+def is_canonical_enantiomer(
+    ugra, upri_dct, rgra, rpri_dct, cand_dct: dict | None = None
+):
+    """Determine whether this enantiomer is the canonical one.
 
     :param ugra: An unreflected molecular graph
     :type ugra: automol graph data structure
@@ -281,13 +293,22 @@ def is_canonical_enantiomer(ugra, upri_dct, rgra, rpri_dct):
     :returns: `True` if it is, `False` if it isn't, and `None` if it isn't an
         enantiomer
     """
-    urep = stereo_assignment_representation(ugra, upri_dct)
-    rrep = stereo_assignment_representation(rgra, rpri_dct)
+    cand_dct = stereocenter_candidates(ugra) if cand_dct is None else cand_dct
+
+    urep = stereo_assignment_representation(ugra, upri_dct, cand_dct=cand_dct)
+    rrep = stereo_assignment_representation(rgra, rpri_dct, cand_dct=cand_dct)
     return True if (urep < rrep) else False if (urep > rrep) else None
 
 
-def is_canonical_direction(ftsg, fpri_dct, rtsg, rpri_dct):
-    """Is this TS direction the canonical one?
+def is_canonical_direction(
+    ftsg,
+    fpri_dct,
+    rtsg,
+    rpri_dct,
+    fcand_dct: dict | None = None,
+    rcand_dct: dict | None = None,
+):
+    """Determine whether this TS direction is the canonical one.
 
     :param ftsg: A TS graph in the forward direction
     :type ftsg: automol graph data structure
@@ -301,8 +322,8 @@ def is_canonical_direction(ftsg, fpri_dct, rtsg, rpri_dct):
     :type rpri_dct: dict
     :returns: A canonical representation of the TS reaction
     """
-    frep = ts_direction_representation(ftsg, fpri_dct)
-    rrep = ts_direction_representation(rtsg, rpri_dct)
+    frep = ts_direction_representation(ftsg, fpri_dct, cand_dct=fcand_dct)
+    rrep = ts_direction_representation(rtsg, rpri_dct, cand_dct=rcand_dct)
     return True if (frep < rrep) else False if (frep > rrep) else None
 
 
@@ -395,7 +416,9 @@ def _calculate_ts_stereo(
     )
 
     # 3. Determine which direction is canonical
-    is_can_dir = is_canonical_direction(can_tsg, pri_dct, rcan_tsg, rpri_dct)
+    is_can_dir = is_canonical_direction(
+        can_tsg, pri_dct, rcan_tsg, rpri_dct, fcand_dct=cand_dct
+    )
     if is_can_dir is False:
         tsg = ts_reverse(rtsg)
         can_tsg = ts_reverse(rcan_tsg)

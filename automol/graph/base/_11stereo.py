@@ -9,7 +9,6 @@ from typing import Dict, Optional, Tuple
 
 import more_itertools as mit
 import numpy
-
 from phydat import phycon
 
 from ... import util
@@ -91,21 +90,24 @@ def expand_stereo(
     :returns: a series of molecular graphs for the stereoisomers
     """
     cand_dct = stereocenter_candidates(gra)
+    rcand_dct = stereocenter_candidates(ts_reverse(gra))
 
     # 1. Run the core stereo expansion algorithm
-    gps = _expand_stereo_core(gra, cand_dct, rcts_gra=rcts_gra, prds_gra=prds_gra)
+    gps = _expand_stereo_core(
+        gra, cand_dct, rcand_dct=rcand_dct, rcts_gra=rcts_gra, prds_gra=prds_gra
+    )
 
     # 2. If requested, filter out strained stereoisomers
     if not strained:
-        gps = _remove_strained_stereoisomers_from_expansion(gps, cand_dct)
+        gps = _remove_strained_stereoisomers_from_expansion(gps, cand_dct=cand_dct)
 
     # 3. If requested, filter out non-canonical enantiomers
     if not enant:
-        gps = _remove_noncanonical_enantiomers_from_expansion(gps)
+        gps = _remove_noncanonical_enantiomers_from_expansion(gps, cand_dct=cand_dct)
 
     # 4. If requested, filter out symmetry equivalents
     if not symeq:
-        gps = _remove_symmetry_equivalents_from_expansion(gps)
+        gps = _remove_symmetry_equivalents_from_expansion(gps, cand_dct=cand_dct)
 
     sgras = [sgra for sgra, _ in gps]
     sgras = tuple(sorted(sgras, key=frozen))
@@ -113,7 +115,11 @@ def expand_stereo(
 
 
 def _expand_stereo_core(
-    gra, cand_dct, rcts_gra: object | None = None, prds_gra: object | None = None
+    gra,
+    cand_dct,
+    rcand_dct: dict | None = None,
+    rcts_gra: object | None = None,
+    prds_gra: object | None = None,
 ):
     """Obtain all possible stereoisomers of a graph, ignoring its assignments.
 
@@ -155,7 +161,9 @@ def _expand_stereo_core(
                 gprs.append((gra, pri_dct, rpri_dct))
 
     if ts_:
-        gps = _select_ts_canonical_direction_priorities(gprs)
+        gps = _select_ts_canonical_direction_priorities(
+            gprs, fcand_dct=cand_dct, rcand_dct=rcand_dct
+        )
     else:
         gps = [(g, p) for g, p, _ in gprs]
 
@@ -176,12 +184,14 @@ def _expand_stereo_core(
     return gps
 
 
-def _select_ts_canonical_direction_priorities(gprs):
+def _select_ts_canonical_direction_priorities(gprs, fcand_dct: dict, rcand_dct: dict):
     """Select select priorities for the canonical directions of each TS"""
     gps = []
     for ts_gra, pri_dct, rpri_dct in gprs:
         ts_rgra = ts_reverse(ts_gra)
-        is_can_dir = is_canonical_direction(ts_gra, pri_dct, ts_rgra, rpri_dct)
+        is_can_dir = is_canonical_direction(
+            ts_gra, pri_dct, ts_rgra, rpri_dct, fcand_dct=fcand_dct, rcand_dct=rcand_dct
+        )
         gps.append((ts_gra, pri_dct if is_can_dir else rpri_dct))
     return gps
 
@@ -224,8 +234,8 @@ def _remove_strained_stereoisomers_from_expansion(gps, cand_dct):
     return gps
 
 
-def _remove_noncanonical_enantiomers_from_expansion(gps):
-    """Remove non-canonical enantiomers from an expansion"""
+def _remove_noncanonical_enantiomers_from_expansion(gps, cand_dct: dict):
+    """Remove non-canonical enantiomers from an expansion."""
     gps = list(gps)
 
     # a. Augment the list of graphs and priorities with local stereo graphs
@@ -236,7 +246,9 @@ def _remove_noncanonical_enantiomers_from_expansion(gps):
         ugra, upri_dct, uloc_gra = ugpl
         rgra, rpri_dct, rloc_gra = rgpl
         if rloc_gra == invert_atom_stereo_parities(uloc_gra):
-            is_can = is_canonical_enantiomer(ugra, upri_dct, rgra, rpri_dct)
+            is_can = is_canonical_enantiomer(
+                ugra, upri_dct, rgra, rpri_dct, cand_dct=cand_dct
+            )
 
             if is_can is True:
                 gps.remove((rgra, rpri_dct))
@@ -246,13 +258,13 @@ def _remove_noncanonical_enantiomers_from_expansion(gps):
     return gps
 
 
-def _remove_symmetry_equivalents_from_expansion(gps):
-    """Remove symmetry-equivalent stereoisomers from an expansion"""
+def _remove_symmetry_equivalents_from_expansion(gps, cand_dct: dict):
+    """Remove symmetry-equivalent stereoisomers from an expansion."""
     gps0 = gps
     gps = []
     seen_reps = []
     for gra, pri_dct in gps0:
-        rep = stereo_assignment_representation(gra, pri_dct)
+        rep = stereo_assignment_representation(gra, pri_dct, cand_dct=cand_dct)
         if rep not in seen_reps:
             gps.append((gra, pri_dct))
             seen_reps.append(rep)
@@ -450,7 +462,7 @@ def stereo_corrected_geometry(
 
     # 2. If there is a single, wrong atom stereocenter, simply reflect the geometry
     if len(atm_keys) == 1:
-        atm_key, = atm_keys
+        (atm_key,) = atm_keys
         curr_par = geometry_atom_parity(gra, geo, atm_key)
         if curr_par != par_dct[atm_key]:
             geo = geom_base.reflect_coordinates(geo)

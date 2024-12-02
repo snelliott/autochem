@@ -7,6 +7,7 @@ ignored-modules=pyx2z, rdkit
 disable=
     too-few-public-methods,
     too-many-arguments,
+    too-many-positional-arguments,
     too-many-lines,
     too-many-locals,
     too-many-statements,

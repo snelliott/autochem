@@ -873,9 +873,9 @@ C5H7O3_TSG = (
 C5H7O_B_TSG = (
     {
         0: ("C", 0, False),
-        1: ("C", 0, True),
+        1: ("C", 0, False),
         2: ("C", 0, None),
-        3: ("C", 0, True),
+        3: ("C", 0, False),
         4: ("C", 0, False),
         5: ("O", 0, None),
         6: ("H", 0, None),
@@ -1532,4 +1532,6 @@ if __name__ == "__main__":
     # test__zmatrix()
     # test__ts__expand_reaction_stereo("C5H6O", C5H6O_TSG, [1, 1])
     # test__ts__expand_reaction_stereo("C5H7O3", C5H7O3_TSG, [1, 1, 1, 1])
-    test__ts__reagents_graph("C5H7O_B", C5H7O_B_TSG, {3: True, 4: False}, {3: False, 4: True})
+    test__ts__reagents_graph(
+        "C5H7O_B", C5H7O_B_TSG, {3: True, 4: False}, {3: False, 4: True}
+    )
