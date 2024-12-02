@@ -137,7 +137,6 @@ def to_geometry(rdm):
     :type rdm: RDKit molecule object
     :rtype: automol geometry data structure
     """
-
     rdm = rdkit.Chem.AddHs(rdm)
     atms = rdm.GetAtoms()
     natms = len(rdm.GetAtoms())
@@ -145,7 +144,10 @@ def to_geometry(rdm):
         syms = [str(atms[0].GetSymbol()).title()]
         xyzs = [(0.0, 0.0, 0.0)]
     else:
-        AllChem.EmbedMolecule(rdm)
+        ret = AllChem.EmbedMolecule(rdm, maxAttempts=10000)
+        if ret < 0:
+            ret = AllChem.EmbedMolecule(rdm, maxAttempts=10000, useRandomCoords=True)
+
         AllChem.MMFFOptimizeMolecule(rdm)
         syms = tuple(str(rda.GetSymbol()).title() for rda in atms)
         xyzs = tuple(map(tuple, rdm.GetConformer(0).GetPositions()))
