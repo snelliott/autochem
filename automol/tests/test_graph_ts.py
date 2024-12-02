@@ -1,10 +1,9 @@
 """ test graph.ts
 """
 
+import automol
 import numpy
 import pytest
-
-import automol
 from automol import graph
 
 # Sn2 Atom Stereo
@@ -866,6 +865,47 @@ C5H7O3_TSG = (
 )
 
 
+# Double Bridgehead Pair with Bridgehead Transfer
+# C1CC2[CH]C1O2 => [CH]1CC2CC1O2
+# ^  *  ^  *        ^    * ^*
+# [* marks the first pair of bridgehead stereo atoms]
+# [^ marks the first pair of bridgehead stereo atoms]
+C5H7O_B_TSG = (
+    {
+        0: ("C", 0, False),
+        1: ("C", 0, True),
+        2: ("C", 0, None),
+        3: ("C", 0, True),
+        4: ("C", 0, False),
+        5: ("O", 0, None),
+        6: ("H", 0, None),
+        7: ("H", 0, None),
+        8: ("H", 0, None),
+        9: ("H", 0, None),
+        10: ("H", 0, None),
+        11: ("H", 0, None),
+        12: ("H", 0, None),
+    },
+    {
+        frozenset({0, 6}): (1, None),
+        frozenset({1, 7}): (1, None),
+        frozenset({1, 2}): (1, None),
+        frozenset({0, 3}): (1, None),
+        frozenset({4, 5}): (1, None),
+        frozenset({2, 10}): (1, None),
+        frozenset({4, 12}): (1, None),
+        frozenset({0, 4}): (1, None),
+        frozenset({2, 4}): (1, None),
+        frozenset({8, 1}): (0.9, None),
+        frozenset({3, 5}): (1, None),
+        frozenset({11, 3}): (1, None),
+        frozenset({1, 3}): (1, None),
+        frozenset({9, 2}): (1, None),
+        frozenset({0, 8}): (0.1, None),
+    },
+)
+
+
 @pytest.mark.parametrize(
     "formula,tsg,geo,npars1,npars2",
     [
@@ -1016,71 +1056,75 @@ def test__ts__fleeting_stereocenter_keys():
     _test("C8H14", C8H14_TSG, frozenset(), frozenset())
 
 
-def test__ts__reagents_graph():
+@pytest.mark.parametrize(
+    "formula, tsg, rcts_par_dct_ref, prds_par_dct_ref",
+    [
+        ("CH4CLFNO", CH4CLFNO_TSG, {0: False}, {0: True}),
+        ("C4H11O2", C4H11O2_TSG, {}, {}),
+        ("C2H3O4", C2H3O4_TSG, {}, {}),
+        ("C4H9O3", C4H9O3_TSG, {3: True}, {3: True}),
+        ("C2H3F2O", C2H3F2O_TSG, {frozenset({0, 1}): True}, {0: False}),
+        (
+            "C4H5F3O2",
+            C4H5F3O2_TSG,
+            {2: False, 3: True, frozenset({0, 1}): False},
+            {0: False, 2: False, 3: True},
+        ),
+        ("C4H9O2", C4H9O2_TSG, {3: True}, {frozenset({2, 3}): True}),
+        ("C2H4O2", C2H4O2_TSG, {frozenset({0, 1}): False}, {frozenset({0, 1}): True}),
+        (
+            "C4H4F2",
+            C4H4F2_TSG,
+            {frozenset({1, 2}): True, frozenset({6, 7}): True},
+            {frozenset({1, 2}): False, frozenset({6, 7}): False},
+        ),
+        ("C6H9", C6H9_TSG, {frozenset({2, 4}): False}, {}),
+        ("C6H11O2", C6H11O2_TSG, {5: False, frozenset({3, 4}): False}, {5: False}),
+        ("C6H11O2b", C6H11O2b_TSG, {2: False}, {2: False, frozenset({0, 1}): True}),
+        ("C8H14", C8H14_TSG, {frozenset({1, 6}): True}, {1: True, 6: True}),
+        ("C5H7O", C5H7O_TSG, {}, {frozenset({2, 3}): True}),
+        ("C5H7O_B", C5H7O_B_TSG, {3: True, 4: False}, {3: False, 4: True}),
+    ],
+)
+def test__ts__reagents_graph(formula, tsg, rcts_par_dct_ref, prds_par_dct_ref):
     """test graph.ts.reactants_graph and graph.ts.products_graph"""
 
-    def _test(formula, tsg, rcts_par_dct_ref, prds_par_dct_ref):
-        print(f"{formula}: testing reactants_graph")
-        rcts_gra = automol.graph.ts.reactants_graph(tsg)
-        rcts_par_dct = automol.util.dict_.filter_by_value(
-            automol.graph.stereo_parities(rcts_gra), lambda x: x is not None
-        )
-        print(f"asserting {rcts_par_dct} == {rcts_par_dct_ref}")
-        assert rcts_par_dct == rcts_par_dct_ref
-
-        print(f"{formula}: testing products_graph")
-        prds_gra = automol.graph.ts.products_graph(tsg)
-        prds_par_dct = automol.util.dict_.filter_by_value(
-            automol.graph.stereo_parities(prds_gra), lambda x: x is not None
-        )
-        print(f"asserting {prds_par_dct} == {prds_par_dct_ref}")
-        assert prds_par_dct == prds_par_dct_ref
-
-        print("Re-testing with implicit graphs...")
-        tsg = automol.graph.implicit(tsg)
-
-        print(f"{formula}: testing reactants_graph")
-        rcts_gra = automol.graph.ts.reactants_graph(tsg)
-        rcts_par_dct = automol.util.dict_.filter_by_value(
-            automol.graph.stereo_parities(rcts_gra), lambda x: x is not None
-        )
-        print(f"asserting {rcts_par_dct} == {rcts_par_dct_ref}")
-        assert rcts_par_dct == rcts_par_dct_ref
-
-        print(f"{formula}: testing products_graph")
-        prds_gra = automol.graph.ts.products_graph(tsg)
-        prds_par_dct = automol.util.dict_.filter_by_value(
-            automol.graph.stereo_parities(prds_gra), lambda x: x is not None
-        )
-        print(f"asserting {prds_par_dct} == {prds_par_dct_ref}")
-        assert prds_par_dct == prds_par_dct_ref
-
-        print("---")
-
-    _test("CH4CLFNO", CH4CLFNO_TSG, {0: False}, {0: True})
-    _test("C4H11O2", C4H11O2_TSG, {}, {})
-    _test("C2H3O4", C2H3O4_TSG, {}, {})
-    _test("C4H9O3", C4H9O3_TSG, {3: True}, {3: True})
-    _test("C2H3F2O", C2H3F2O_TSG, {frozenset({0, 1}): True}, {0: False})
-    _test(
-        "C4H5F3O2",
-        C4H5F3O2_TSG,
-        {2: False, 3: True, frozenset({0, 1}): False},
-        {0: False, 2: False, 3: True},
+    print(f"{formula}: testing reactants_graph")
+    rcts_gra = automol.graph.ts.reactants_graph(tsg)
+    rcts_par_dct = automol.util.dict_.filter_by_value(
+        automol.graph.stereo_parities(rcts_gra), lambda x: x is not None
     )
-    _test("C4H9O2", C4H9O2_TSG, {3: True}, {frozenset({2, 3}): True})
-    _test("C2H4O2", C2H4O2_TSG, {frozenset({0, 1}): False}, {frozenset({0, 1}): True})
-    _test(
-        "C4H4F2",
-        C4H4F2_TSG,
-        {frozenset({1, 2}): True, frozenset({6, 7}): True},
-        {frozenset({1, 2}): False, frozenset({6, 7}): False},
+    print(f"asserting {rcts_par_dct} == {rcts_par_dct_ref}")
+    assert rcts_par_dct == rcts_par_dct_ref
+
+    print(f"{formula}: testing products_graph")
+    prds_gra = automol.graph.ts.products_graph(tsg)
+    prds_par_dct = automol.util.dict_.filter_by_value(
+        automol.graph.stereo_parities(prds_gra), lambda x: x is not None
     )
-    _test("C6H9", C6H9_TSG, {frozenset({2, 4}): False}, {})
-    _test("C6H11O2", C6H11O2_TSG, {5: False, frozenset({3, 4}): False}, {5: False})
-    _test("C6H11O2b", C6H11O2b_TSG, {2: False}, {2: False, frozenset({0, 1}): True})
-    _test("C8H14", C8H14_TSG, {frozenset({1, 6}): True}, {1: True, 6: True})
-    _test("C5H7O", C5H7O_TSG, {}, {frozenset({2, 3}): True})
+    print(f"asserting {prds_par_dct} == {prds_par_dct_ref}")
+    assert prds_par_dct == prds_par_dct_ref
+
+    print("Re-testing with implicit graphs...")
+    tsg = automol.graph.implicit(tsg)
+
+    print(f"{formula}: testing reactants_graph")
+    rcts_gra = automol.graph.ts.reactants_graph(tsg)
+    rcts_par_dct = automol.util.dict_.filter_by_value(
+        automol.graph.stereo_parities(rcts_gra), lambda x: x is not None
+    )
+    print(f"asserting {rcts_par_dct} == {rcts_par_dct_ref}")
+    assert rcts_par_dct == rcts_par_dct_ref
+
+    print(f"{formula}: testing products_graph")
+    prds_gra = automol.graph.ts.products_graph(tsg)
+    prds_par_dct = automol.util.dict_.filter_by_value(
+        automol.graph.stereo_parities(prds_gra), lambda x: x is not None
+    )
+    print(f"asserting {prds_par_dct} == {prds_par_dct_ref}")
+    assert prds_par_dct == prds_par_dct_ref
+
+    print("---")
 
 
 @pytest.mark.parametrize(
@@ -1484,7 +1528,8 @@ if __name__ == "__main__":
     # test__ts__fleeting_stereocenter_keys()
     # test__linear_atom_keys()
     # test__radical_atom_keys()
-    test__geometry()
+    # test__geometry()
     # test__zmatrix()
     # test__ts__expand_reaction_stereo("C5H6O", C5H6O_TSG, [1, 1])
     # test__ts__expand_reaction_stereo("C5H7O3", C5H7O3_TSG, [1, 1, 1, 1])
+    test__ts__reagents_graph("C5H7O_B", C5H7O_B_TSG, {3: True, 4: False}, {3: False, 4: True})
