@@ -10,7 +10,7 @@ def from_data(temps, press, rates):
     Construct a KTP DataArray from data
     """
 
-    ktp = xarray.DataArray(rates, [("pres", press), ("temp", temps)])
+    ktp = xarray.DataArray(rates, (("pres", press), ("temp", temps)))
 
     return ktp
 
@@ -88,5 +88,5 @@ def set_rates(ktp, rates, pres, temp):
     Sets the KTP values
     """
 
-    ktp.loc[dict(pres=pres, temp=temp)] = rates
+    ktp.loc[{"pres": pres, "temp": temp}] = rates
     return ktp
