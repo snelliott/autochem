@@ -5,9 +5,9 @@ represented as dict[atom symbol: atom number].
 import collections
 import functools
 import itertools
+from collections.abc import Sequence
 
 import pyparsing as pp
-from _collections_abc import Sequence
 from pyparsing import pyparsing_common as ppc
 
 from phydat import ptab
@@ -112,12 +112,10 @@ def add_element(fml: Formula, symb: str, num: int = 1) -> Formula:
 
     symb = ptab.to_symbol(symb)
     fml = fml.copy()
-    if symb in fml:
-        fml[symb] += num
+    if fml.get(symb) is not None:
+        fml[symb] += num if num is not None else 0
     else:
         fml[symb] = num
-
-    assert fml[symb] > 0
 
     return fml
 
