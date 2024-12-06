@@ -7,6 +7,7 @@ import functools
 import itertools
 from collections.abc import Sequence
 
+import more_itertools as mit
 import pyparsing as pp
 from pyparsing import pyparsing_common as ppc
 
@@ -71,17 +72,28 @@ def element_count(fml: Formula, symb: str) -> int:
     return fml[symb] if symb in fml else 0
 
 
-def without(fml: dict[str, int], symbs: tuple = ()) -> dict[str, int]:
+def without(fml: Formula, symbs: Sequence = ()) -> Formula:
     """Return a formula without hydrogen.
 
-    :param fml: Chemical formula, without hydrogen
+    :param fml: A chemical formula
     :symbs: Chemical symbols
     :return: Dictionary with new formula, without hydrogen
     """
     return {k: v for k, v in fml.items() if k not in symbs}
 
 
-def match(fml1: dict[str, int], fml2: dict[str, int]) -> bool:
+def normalized(fml: Formula) -> Formula:
+    """Return a formula without `None` or 0 values.
+
+    :param fml: A chemical formula
+    :return: The formula, without `None` values
+    """
+    fml = {ptab.to_symbol(k): int(v) for k, v in fml.items() if v}
+    assert all(v > 0 for v in fml.values()), f"Invalid formula: {fml}"
+    return fml
+
+
+def match(fml1: Formula, fml2: Formula) -> bool:
     """Check for a match between two formulas, allowing wildcard values.
 
     A stoichiometry of -1 indicates a wildcard value
@@ -143,13 +155,32 @@ def join_sequence(fmls: Formula) -> int:
     return functools.reduce(join, fmls)
 
 
-def sorted_symbols_in_sequence(fmls: list[dict]) -> list[dict]:
+def sorted_symbols_in_sequence(fmls: Sequence[Formula]) -> tuple[str, ...]:
     """Sort a sequence of formulas based on Hill-sorting.
 
     :param fmls: A sequence of formulas
-    :return: The same sequence, but sorted
+    :return: The sorted symbols in the sequence
     """
     return sorted_symbols(join_sequence(fmls).keys())
+
+
+def unique(fmls: Sequence[Formula]) -> list[Formula]:
+    """Get the unique formulas in a list.
+
+    :param fmls: A sequence of formulas
+    :return: The unique formulas in the sequence
+    """
+    return list(map(from_string, mit.unique_everseen(map(string, fmls))))
+
+
+def equal(fml1: Formula, fml2: Formula) -> bool:
+    """Determine whether two formulas are equal.
+
+    :param fml1: A formula
+    :param fml2: Another formula
+    :return: `True` if they are, `False` if the are not
+    """
+    return normalized(fml1) == normalized(fml2)
 
 
 # Str<->Dict Converters
@@ -161,6 +192,8 @@ def string(fml: Formula, hyd: bool = True) -> str:
     :param hyd: include hydrogens?
     :return: True if formula includes hydrogen, False if no hydrogen
     """
+    fml = normalized(fml)
+
     fml_lst = [
         (symb, fml[symb]) for symb in sorted_symbols(fml.keys()) if symb != "H" or hyd
     ]

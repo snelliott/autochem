@@ -9,6 +9,7 @@ from ._form import (
     atom_count,
     electron_count,
     element_count,
+    equal,
     from_string,
     heavy_atom_count,
     join,
@@ -19,6 +20,7 @@ from ._form import (
     sorted_symbols_in_sequence,
     string,
     string2,
+    unique,
     without,
 )
 
@@ -33,6 +35,8 @@ __all__ = [
     "join",
     "join_sequence",
     "sorted_symbols_in_sequence",
+    "unique",
+    "equal",
     "string",
     "string2",
     "from_string",
