@@ -9,6 +9,7 @@ from typing import Dict, Optional, Tuple
 
 import more_itertools as mit
 import numpy
+
 from phydat import phycon
 
 from ... import util
@@ -646,7 +647,12 @@ def geometry_pseudorotate_atom(
     # forming ring
     if nkey1 in rot_keys or nkey2 in rot_keys:
         rot_keys = set(
-            itertools.chain(*(branch_atom_keys(gra_reac, key, k) for k in rot_nkeys))
+            itertools.chain(
+                *(
+                    branch_atom_keys(gra_reac, key, k, return_missing_neighbor=True)
+                    for k in rot_nkeys
+                )
+            )
         )
 
     geo = geom_base.rotate(geo, rot_axis, ang, orig_xyz=xyz, idxs=rot_keys)

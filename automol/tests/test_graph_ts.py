@@ -1,9 +1,10 @@
 """ test graph.ts
 """
 
-import automol
 import numpy
 import pytest
+
+import automol
 from automol import graph
 
 # Sn2 Atom Stereo
@@ -906,6 +907,54 @@ C5H7O_B_TSG = (
 )
 
 
+# Simple Bridgehead Transfer
+C5H7_TSG = (
+    {
+        0: ("C", 0, True),
+        1: ("C", 0, None),
+        2: ("H", 0, None),
+        3: ("C", 0, False),
+        4: ("H", 0, None),
+        5: ("C", 0, None),
+        6: ("H", 0, None),
+        7: ("H", 0, None),
+        8: ("C", 0, None),
+        9: ("H", 0, None),
+        10: ("H", 0, None),
+        11: ("H", 0, None),
+    },
+    {
+        frozenset({1, 4}): (1, None),
+        frozenset({8, 11}): (1, None),
+        frozenset({0, 6}): (0.1, None),
+        frozenset({3, 7}): (1, None),
+        frozenset({0, 1}): (1, None),
+        frozenset({0, 2}): (1, None),
+        frozenset({3, 6}): (0.9, None),
+        frozenset({3, 5}): (1, None),
+        frozenset({10, 5}): (1, None),
+        frozenset({8, 5}): (1, None),
+        frozenset({1, 3}): (1, None),
+        frozenset({9, 5}): (1, None),
+        frozenset({0, 8}): (1, None),
+    },
+)
+C5H7_TS_GEO = (
+    ("C", (2.411517, 0.003628, 0.0)),
+    ("C", (0.9272, -2.162191, 0.0)),
+    ("H", (4.474794, 0.007151, -0.0)),
+    ("C", (-1.830041, -1.468223, -0.0)),
+    ("H", (1.626336, -4.101193, 0.0)),
+    ("C", (-1.834561, 1.463071, 0.0)),
+    ("H", (-2.817187, -2.252453, -1.662617)),
+    ("H", (-2.81719, -2.252455, 1.662611)),
+    ("C", (0.920338, 2.16457, -0.0)),
+    ("H", (-2.82419, 2.244254, 1.66257)),
+    ("H", (-2.824192, 2.244256, -1.662566)),
+    ("H", (1.614892, 4.105309, -2e-06)),
+)
+
+
 @pytest.mark.parametrize(
     "formula,tsg,geo,npars1,npars2",
     [
@@ -1527,6 +1576,16 @@ def test__stereoatom_bridgehead_pairs(tsg, bh_dct0):
     assert bh_dct == bh_dct0, f"{bh_dct} != {bh_dct0}"
 
 
+@pytest.mark.parametrize("tsg0, ts_geo0", [(C5H7_TSG, C5H7_TS_GEO)])
+def test__stereo_corrected_geometry(tsg0, ts_geo0):
+    # Invert the stereochemistry so that correction of atoms is required
+    ts_geo0 = automol.geom.reflect_coordinates(ts_geo0)
+
+    ts_geo = automol.graph.stereo_corrected_geometry(tsg0, ts_geo0)
+    tsg = automol.graph.set_stereo_from_geometry(tsg0, ts_geo)
+    assert tsg == tsg0, f"   {tsg}\n!= {tsg0}"
+
+
 if __name__ == "__main__":
     # test__set_stereo_from_geometry()
     # test__to_local_stereo()
@@ -1545,6 +1604,7 @@ if __name__ == "__main__":
     # test__ts__reagents_graph(
     #     "C5H7O_B", C5H7O_B_TSG, {3: True, 4: False}, {3: False, 4: True}
     # )
-    test__stereoatom_bridgehead_pairs(
-        C5H7O_B_TSG, {(1, 0): ((2, 3, 8), (4, 3, 8)), (3, 4): ((0, 1, 5), (0, 2, 5))}
-    )
+    # test__stereoatom_bridgehead_pairs(
+    #     C5H7O_B_TSG, {(1, 0): ((2, 3, 8), (4, 3, 8)), (3, 4): ((0, 1, 5), (0, 2, 5))}
+    # )
+    test__stereo_corrected_geometry(C5H7_TSG, C5H7_TS_GEO)
