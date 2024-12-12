@@ -707,9 +707,16 @@ def branch_dict(gra, atm_key, keep_root=False, stereo=False):
     return bnch_dct
 
 
-def branch(gra, atm_key, branch_key, keep_root=False, stereo=False):
+def branch(
+    gra,
+    atm_key,
+    branch_key,
+    keep_root: bool = False,
+    stereo: bool = False,
+    return_missing_neighbor: bool = False,
+):
     """Get the atom keys for a branch off of an atom extending a long a
-    specific neighboring atom or bond
+    specific neighboring atom or bond.
 
     :param gra: molecular graph
     :type gra: automol graph data structure
@@ -718,9 +725,9 @@ def branch(gra, atm_key, branch_key, keep_root=False, stereo=False):
     :param branch_key: the adjacent atom or bond key that begins the branch
     :type branch_key: int or frozenset[int]
     :param keep_root: Keep root atom as part of branch? defaults to False
-    :type keep_root: bool, optional
     :param stereo: Keep stereochemistry in the subgraph? defaults to False
-    :type stereo: bool, optional
+    :param return_missing_neighbor: If the branch key is not a neighbor, return it as a
+        one-atom branch?
     :return: The branch atom keys
     :rtype: frozenset[int]
     """
@@ -734,10 +741,19 @@ def branch(gra, atm_key, branch_key, keep_root=False, stereo=False):
         f"Input graph:\n{string(gra)}"
     )
     bnch_dct = branch_dict(gra, atm_key, keep_root=keep_root, stereo=stereo)
+    if return_missing_neighbor:
+        return bnch_dct.get(branch_key, subgraph_(gra, {branch_key}, stereo=stereo))
+
     return bnch_dct[branch_key]
 
 
-def branch_atom_keys(gra, atm_key, branch_key, keep_root=False):
+def branch_atom_keys(
+    gra,
+    atm_key,
+    branch_key,
+    keep_root: bool = False,
+    return_missing_neighbor: bool = False,
+):
     """Get the atom keys for a branch off of an atom extending a long a
     specific neighboring atom or bond
 
@@ -748,11 +764,20 @@ def branch_atom_keys(gra, atm_key, branch_key, keep_root=False):
     :param branch_key: the adjacent atom or bond key that begins the branch
     :type branch_key: int or frozenset[int]
     :param keep_root: Keep root atom as part of branch? defaults to False
-    :type keep_root: bool, optional
+    :param return_missing_neighbor: If the branch key is not a neighbor, return it as a
+        one-atom branch?
     :return: The branch atom keys
     :rtype: frozenset[int]
     """
-    return atom_keys(branch(gra, atm_key, branch_key, keep_root=keep_root))
+    return atom_keys(
+        branch(
+            gra,
+            atm_key,
+            branch_key,
+            keep_root=keep_root,
+            return_missing_neighbor=return_missing_neighbor,
+        )
+    )
 
 
 def is_branched(gra):

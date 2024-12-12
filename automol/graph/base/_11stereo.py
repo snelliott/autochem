@@ -9,6 +9,7 @@ from typing import Dict, Optional, Tuple
 
 import more_itertools as mit
 import numpy
+
 from phydat import phycon
 
 from ... import util
@@ -98,8 +99,11 @@ def expand_stereo(
     )
 
     # 2. If requested, filter out strained stereoisomers
-    if not strained:
-        gps = _remove_strained_stereoisomers_from_expansion(gps, cand_dct=cand_dct)
+    # (If not, filter out only strained ring H-migrations, which are guaranteed to cause
+    # problems)
+    gps = _remove_strained_stereoisomers_from_expansion(
+        gps, cand_dct=cand_dct, migration_only=strained
+    )
 
     # 3. If requested, filter out non-canonical enantiomers
     if not enant:
@@ -196,14 +200,19 @@ def _select_ts_canonical_direction_priorities(gprs, fcand_dct: dict, rcand_dct: 
     return gps
 
 
-def _remove_strained_stereoisomers_from_expansion(gps, cand_dct):
-    """Remove strained stereoisomers from an expansion"""
+def _remove_strained_stereoisomers_from_expansion(
+    gps, cand_dct, migration_only: bool = False
+):
+    """Remove strained stereoisomers from an expansion.
+
+    :param migration_only: Only remove strained H-migration bridgeheads?
+    """
     if not gps:
         return gps
 
     gps0 = list(gps)
     gra = without_stereo(gps0[0][0])
-    bhp_dct = stereoatom_bridgehead_pairs(gra, cand_dct)
+    bhp_dct = stereoatom_bridgehead_pairs(gra, cand_dct, migration_only=migration_only)
 
     gps = gps0.copy()
     for gra, pri_dct in gps0:
@@ -646,7 +655,12 @@ def geometry_pseudorotate_atom(
     # forming ring
     if nkey1 in rot_keys or nkey2 in rot_keys:
         rot_keys = set(
-            itertools.chain(*(branch_atom_keys(gra_reac, key, k) for k in rot_nkeys))
+            itertools.chain(
+                *(
+                    branch_atom_keys(gra_reac, key, k, return_missing_neighbor=True)
+                    for k in rot_nkeys
+                )
+            )
         )
 
     geo = geom_base.rotate(geo, rot_axis, ang, orig_xyz=xyz, idxs=rot_keys)
