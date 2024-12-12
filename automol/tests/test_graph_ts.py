@@ -1063,6 +1063,7 @@ def test__from_local_stereo():
         ("C8H14", C8H14_TSG, [1, 1, 1, 1]),
         ("C5H7O2", C5H7O2_TSG, [1, 1]),
         ("C5H7O3", C5H7O3_TSG, [1, 1, 1, 1]),
+        ("C5H7", C5H7_TSG, [2]),
     ],
 )
 def test__ts__expand_reaction_stereo(formula, ts_gra, ts_counts):
@@ -1607,4 +1608,5 @@ if __name__ == "__main__":
     # test__stereoatom_bridgehead_pairs(
     #     C5H7O_B_TSG, {(1, 0): ((2, 3, 8), (4, 3, 8)), (3, 4): ((0, 1, 5), (0, 2, 5))}
     # )
-    test__stereo_corrected_geometry(C5H7_TSG, C5H7_TS_GEO)
+    # test__stereo_corrected_geometry(C5H7_TSG, C5H7_TS_GEO)
+    test__ts__expand_reaction_stereo("C5H7", C5H7_TSG, [2])

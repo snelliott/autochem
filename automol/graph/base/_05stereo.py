@@ -31,6 +31,7 @@ from ._03kekule import (
     rigid_planar_bonds_with_ring_constraints,
 )
 from ._04class import (
+    atom_transfers,
     insertions,
     substitutions,
     vinyl_addition_candidates,
@@ -208,10 +209,8 @@ def stereocenter_candidates_grouped(
 
 
 def stereoatom_bridgehead_pairs(
-    gra, cand_dct: CenterNeighborDict | None = None
-) -> dict[
-    AtomKey, tuple[tuple[AtomKey, AtomKey, AtomKey], tuple[AtomKey, AtomKey, AtomKey]]
-]:
+    gra, cand_dct: CenterNeighborDict | None = None, migration_only: bool = False
+) -> dict[tuple[AtomKey, AtomKey], tuple[AtomKeys, AtomKeys]]:
     r"""Identify pairs of interdependent bridgehead stereoatoms, if any.
 
     Bridgehead stereoatoms sharing the same three bridges are interdependent -- the
@@ -226,6 +225,7 @@ def stereoatom_bridgehead_pairs(
     :param gra: A molecular graph
     :param cand_dct: A mapping of stereocenter candidates onto their neighbor keys
         (To avoid recalculating)
+    :param migration_only: Only detect bridgehead pairs for atom migrations?
     :return: A dictionary mapping pairs of bridgehead atoms onto the connected neighbors
         of each, respectively
     """
@@ -243,6 +243,10 @@ def stereoatom_bridgehead_pairs(
         if len(set(conn_dct.keys())) == len(set(conn_dct.values())) == 3:
             conn_nkeys1, conn_nkeys2 = zip(*sorted(conn_dct.items()), strict=True)
             bhp_dct[(key1, key2)] = (conn_nkeys1, conn_nkeys2)
+
+    if migration_only:
+        mig_pairs = list(map(sorted, atom_transfers(gra).values()))
+        bhp_dct = dict_.filter_by_key(bhp_dct, lambda k: sorted(k) in mig_pairs)
 
     return bhp_dct
 

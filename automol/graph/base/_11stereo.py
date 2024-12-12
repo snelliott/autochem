@@ -99,8 +99,11 @@ def expand_stereo(
     )
 
     # 2. If requested, filter out strained stereoisomers
-    if not strained:
-        gps = _remove_strained_stereoisomers_from_expansion(gps, cand_dct=cand_dct)
+    # (If not, filter out only strained ring H-migrations, which are guaranteed to cause
+    # problems)
+    gps = _remove_strained_stereoisomers_from_expansion(
+        gps, cand_dct=cand_dct, migration_only=strained
+    )
 
     # 3. If requested, filter out non-canonical enantiomers
     if not enant:
@@ -197,14 +200,19 @@ def _select_ts_canonical_direction_priorities(gprs, fcand_dct: dict, rcand_dct: 
     return gps
 
 
-def _remove_strained_stereoisomers_from_expansion(gps, cand_dct):
-    """Remove strained stereoisomers from an expansion"""
+def _remove_strained_stereoisomers_from_expansion(
+    gps, cand_dct, migration_only: bool = False
+):
+    """Remove strained stereoisomers from an expansion.
+
+    :param migration_only: Only remove strained H-migration bridgeheads?
+    """
     if not gps:
         return gps
 
     gps0 = list(gps)
     gra = without_stereo(gps0[0][0])
-    bhp_dct = stereoatom_bridgehead_pairs(gra, cand_dct)
+    bhp_dct = stereoatom_bridgehead_pairs(gra, cand_dct, migration_only=migration_only)
 
     gps = gps0.copy()
     for gra, pri_dct in gps0:
