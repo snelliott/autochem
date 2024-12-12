@@ -30,7 +30,7 @@ def from_graphs(
     stereo: bool = True,
     struc_typ: str | None = None,
     enant: bool = True,
-    strained: bool = True,
+    strained: bool = False,
 ) -> tuple[Reaction, ...]:
     """Get reaction objects from graphs.
 
@@ -58,7 +58,7 @@ def from_amchis(
     stereo: bool = True,
     struc_typ: str | None = None,
     enant: bool = True,
-    strained: bool = True,
+    strained: bool = False,
 ) -> tuple[Reaction, ...]:
     """Get reaction objects from AMChIs.
 
@@ -86,7 +86,7 @@ def from_inchis(
     stereo: bool = True,
     struc_typ: str | None = None,
     enant: bool = True,
-    strained: bool = True,
+    strained: bool = False,
 ) -> tuple[Reaction, ...]:
     """Get reaction objects from InChIs.
 
@@ -114,7 +114,7 @@ def from_chis(
     stereo: bool = True,
     struc_typ: str | None = None,
     enant: bool = True,
-    strained: bool = True,
+    strained: bool = False,
 ) -> tuple[Reaction, ...]:
     """Get reaction objects from ChIs.
 
@@ -142,7 +142,7 @@ def from_smiles(
     stereo: bool = True,
     struc_typ: str | None = None,
     enant: bool = True,
-    strained: bool = True,
+    strained: bool = False,
 ) -> tuple[Reaction, ...]:
     """Get reaction objects from SMILES.
 
@@ -170,7 +170,7 @@ def from_geometries(
     stereo: bool = True,
     struc_typ: str | None = "geom",
     enant: bool = True,
-    strained: bool = True,
+    strained: bool = False,
 ) -> tuple[Reaction, ...]:
     """Get reaction objects from geometries.
 
@@ -202,7 +202,7 @@ def from_zmatrices(
     stereo: bool = True,
     struc_typ: str | None = "zmat",
     enant: bool = True,
-    strained: bool = True,
+    strained: bool = False,
 ) -> tuple[Reaction, ...]:
     """Get reaction objects from z-matrices.
 
