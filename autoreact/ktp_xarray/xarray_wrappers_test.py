@@ -8,6 +8,12 @@ Press = [1, 10, numpy.inf]
 Rates = [[1e1, 1e2, 1e3, 1e4], [1e5, 1e6, 1e7, 1e8], [1e9, 1e10, 1e11, 1e12]]
 
 Ktp = xarray_wrappers.from_data(Temps, Press, Rates)
+Ktp_dct = {1.0: (([1000., 1500., 2000., 2500.]),
+                ([ 10., 100., 1000., 10000.])),
+           10: (([1000., 1500., 2000., 2500.]),
+                ([1.e+05, 1.e+06, 1.e+07, 1.e+08])),
+           numpy.inf: (([1000., 1500., 2000., 2500.]),
+                ([1.e+09, 1.e+10, 1.e+11, 1.e+12]))}
 print(Ktp)
 
 def test_get_temperatures():
@@ -60,8 +66,18 @@ def test_get_itslice():
 
 def test_set_rates():
     """Tests the set_rates function"""
-    new_rates = xarray_wrappers.set_rates(Ktp, 1e11, 10, 2000)
+    new_rates = xarray_wrappers.set_rates(Ktp, numpy.nan, 10, 2000)
     print(new_rates)
+
+def test_dict_from_xarray():
+    """Tests the ktp_to_xarray function"""
+    ktp_dct = xarray_wrappers.dict_from_xarray(Ktp)
+    print(ktp_dct)
+
+#def test_xarray_from_dict():
+#    """Tests the set_ktp_dct function"""
+#    xarray = xarray_wrappers.xarray_from_dict(Ktp_dct)
+#    print(xarray)
 
 
 test_get_pressures()
@@ -73,3 +89,5 @@ test_get_spec_vals()
 test_get_ipslice()
 test_get_itslice()
 test_set_rates()
+test_dict_from_xarray()
+#test_xarray_from_dict()
