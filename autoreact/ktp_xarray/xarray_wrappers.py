@@ -1,85 +1,85 @@
-"""
-Wrappers for the new xarray system. Constructors, Getters, then Setters.
-"""
+"""Wrappers for the new xarray system. Constructors, Getters, then Setters."""
 
-import xarray
+from collections.abc import Sequence
+from numbers import Number
+
 import numpy
+import xarray
+
+RateConstant = xarray.DataArray
+
 
 # Constructors
-def from_data(temps, press, rates):
-    """Construct a KTP DataArray from data"""
-
-    ktp = xarray.DataArray(rates, (("pres", press), ("temp", temps)))
-
+def from_data(
+    temps: Sequence[Number], press: Sequence[Number], rates: Sequence[Sequence[Number]]
+) -> RateConstant:
+    """Construct a KTP DataArray from data.."""
+    data = [list(map(float, kT)) for kT in rates]
+    coords = {
+        "pres": list(map(float, press)),
+        "temp": list(map(float, temps)),
+    }
+    ktp = xarray.DataArray(data=data, coords=coords)
     return ktp
 
 
-
 # Getters
-def get_pressures(ktp):
-    """Gets the pressure values"""
-
+def get_pressures(ktp: RateConstant) -> numpy.ndarray:
+    """Get the pressure values.."""
     return ktp.pres.data
 
 
-def get_temperatures(ktp):
-    """Gets the temperature values"""
-
+def get_temperatures(ktp: RateConstant) -> numpy.ndarray:
+    """Get the temperature values.."""
     return ktp.temp.data
 
 
-def get_values(ktp):
-    """Gets the KTP values"""
-
+def get_values(ktp: RateConstant) -> numpy.ndarray:
+    """Get the KTP values.."""
     return ktp.values
 
 
-def get_pslice(ktp, ip):
-    """Get a slice at a selected pressure value"""
-
-    return ktp.sel(pres=ip)
-
-
-def get_tslice(ktp, it):
-    """Get a slice at a selected temperature value"""
-
-    return ktp.sel(temp=it)
+def get_pslice(ktp: RateConstant, p: Number) -> numpy.ndarray:
+    """Get a slice at a selected pressure value."""
+    return ktp.sel(pres=p)
 
 
-def get_spec_vals(ktp, it, ip):
-    """Get a specific value at a selected temperature and pressure value"""
+def get_tslice(ktp: RateConstant, t: Number) -> numpy.ndarray:
+    """Get a slice at a selected temperature value."""
+    return ktp.sel(temp=t)
 
-    return ktp.sel(temp=it, pres=ip)
+
+def get_spec_vals(ktp: RateConstant, t: Number, p: Number) -> numpy.ndarray:
+    """Get a specific value at a selected temperature and pressure value."""
+    return ktp.sel(temp=t, pres=p)
 
 
-def get_ipslice(ktp, ip):
-    """Get a slice at a selected pressure index"""
-
+def get_ipslice(ktp: RateConstant, ip: int) -> numpy.ndarray:
+    """Get a slice at a selected pressure index."""
     return ktp.isel(pres=ip)
 
 
-def get_itslice(ktp, it):
-    """Get a slice at a selected temperature index"""
-
+def get_itslice(ktp: RateConstant, it: int):
+    """Get a slice at a selected temperature index."""
     return ktp.isel(temp=it)
 
 
-
 # Setters
-def set_rates(ktp, rates, pres, temp):
-    """Sets the KTP values"""
-
+def set_rates(
+    ktp: RateConstant, rates: Sequence[Sequence[Number]], pres: Number, temp: Number
+):
+    """Set the KTP values."""
     ktp.loc[{"pres": pres, "temp": temp}] = rates
     return ktp
 
 
 # Translators
 
-def dict_from_xarray(xarray_in):
-    """Turns an xarray into a ktp_dct"""
 
+def dict_from_xarray(xarray_in: RateConstant) -> dict:
+    """Turn an xarray into a ktp_dct."""
     ktp_dct = {}
-    #dict_temps = get_temperatures(xarray)
+    # dict_temps = get_temperatures(xarray)
     for pres in get_pressures(xarray_in):
         dict_temps = get_temperatures(xarray_in)
         dict_kts = []
@@ -93,15 +93,16 @@ def dict_from_xarray(xarray_in):
         dict_temps = curr_temps
         dict_kts = numpy.array(dict_kts, dtype=numpy.float64)
         if pres == numpy.inf:
-            pres = 'high'
+            pres = "high"
         ktp_dct[pres] = (dict_temps, dict_kts)
     return ktp_dct
 
-#Stopped working on this one because it was less critical!
 
-#def xarray_from_dict(ktp_dct):
+# Stopped working on this one because it was less critical!
+
+# def xarray_from_dict(ktp_dct):
 #    """DOES NOT WORK YET!
-#    Turns a ktp_dct into an xarray"""
+#    Turn a ktp_dct into an xarray."""
 #
 #    xarray_press = []
 #    xarray_temps = []
