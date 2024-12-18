@@ -23,6 +23,7 @@ FILES=(
     "automol/prop/freq.py"
     "automol/embed/_cleanup.py"
     "automol/embed/_dgeom.py"
+    "autoreact/*"
 )
 
 (
