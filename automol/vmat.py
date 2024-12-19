@@ -60,12 +60,12 @@ def from_data(
     name_mat: NameMatrix = None,
     one_indexed: bool | None = None,
 ) -> VMatrix:
-    """V-Matrix constructor (V-Matrix without numerical coordinate values).
+    """Construct a V-Matrix without numerical coordinate values.
 
     :param symbs: Atomic symbols
     :param key_mat: Key/index columns of the v-matrix, zero-indexed
     :param name_mat: Coordinate name columns of the v-matrix
-    :param one_indexed: Parameter to store keys in one-indexing
+    :param one_indexed: Store keys in one-indexing
     :return: Automol V-Matrix data structure
     """
     symbs = list(map(ptab.to_symbol, symbs))
@@ -82,11 +82,11 @@ def from_data(
 # # V-Matrix/V-Matrix common functions (document these as z-matrix functions)
 # # # getters
 def symbols(vma: VMatrix, idxs: list[int] | None = None) -> tuple[Symbol, ...]:
-    """Obtain the atomic symbols for all atoms defined in the V-Matrix.
+    """Get atomic symbols for all atoms in the V-Matrix.
 
     :param vma: V-Matrix
-    :param idxs: Indices of atoms to obtain information for
-    :return: The list of atomic symbols
+    :param idxs: Indices of atoms to get symbols for
+    :return: List of atomic symbols
     """
     if vma:
         symbs, *_ = tuple(zip(*vma, strict=False))
@@ -97,11 +97,10 @@ def symbols(vma: VMatrix, idxs: list[int] | None = None) -> tuple[Symbol, ...]:
 
 
 def key_matrix(vma: VMatrix, shift: int = 0) -> KeyMatrix:
-    """Obtain the key matrix of the V-Matrix that contains the
-    coordinate atom keys by row and column.
+    """Get the key matrix of the V-Matrix.
 
     :param vma: V-Matrix
-    :param shift: Value to shift the keys by when obtaining the key matrix
+    :param shift: Value to shift the keys by
     :return: Key matrix
     """
     if vma:
@@ -120,11 +119,9 @@ def key_matrix(vma: VMatrix, shift: int = 0) -> KeyMatrix:
 
 
 def name_matrix(vma: VMatrix) -> NameMatrix:
-    """Obtain the name matrix of the V-Matrix that contains the
-    coordinate names by row and column.
+    """Get the name matrix of the V-Matrix.
 
     :param vma: V-Matrix
-    :type vma: Automol V-Matrix data structure
     :return: Name matrix
     """
     if vma:
@@ -139,34 +136,29 @@ def name_matrix(vma: VMatrix) -> NameMatrix:
 
 # # # properties
 def count(vma: VMatrix) -> int:
-    """Obtain the number of rows of the V-Matrix, which corresponds to
-    the number of atoms defined in the V-Matrix. This includes all
-    real and dummy atoms.
+    """Get the number of rows in the V-Matrix.
 
     :param vma: V-Matrix
-    :type vma: Automol V-Matrix data structure
     :return: Number of rows
     """
     return len(symbols(vma))
 
 
 def keys(vma: VMatrix) -> tuple[int, ...]:
-    """Get the list of z-matrix keys.
+    """Get the list of V-Matrix keys.
 
     :param vma: V-Matrix
-    :type vma: Automol V-Matrix data structure
-    :return: Number of rows
+    :return: List of keys
     """
     return tuple(range(count(vma)))
 
 
-def atom_indices(vma: VMatrix, symb: Symbol, match: bool = True) -> tuple[int]:
-    """Obtain the indices of a atoms of a particular type in the v-matrix.
+def atom_indices(vma: VMatrix, symb: Symbol, match: bool = True) -> tuple[int, ...]:
+    """Get indices of atoms of a particular type in the V-Matrix.
 
     :param vma: V-Matrix
-    :param match: Grab idxs that match given atom type
     :param symb: Atomic symbol
-    :param match: Obtain indices of symbols that match the type?
+    :param match: Get indices of matching atom type
     :return: Indices
     """
     symbs = symbols(vma)
@@ -181,11 +173,10 @@ def atom_indices(vma: VMatrix, symb: Symbol, match: bool = True) -> tuple[int]:
 
 
 def coordinate_key_matrix(vma: VMatrix, shift: int = 0) -> CoordinateKeyMatrix:
-    """Obtain the coordinate key matrix of the V-Matrix that contains the
-    coordinate keys by row and column.
+    """Get the coordinate key matrix of the V-Matrix.
 
     :param vma: V-Matrix
-    :param shift: value to shift the keys by when obtaining the key matrix
+    :param shift: Value to shift the keys by
     :return: Coordinate key matrix
     """
     key_mat = key_matrix(vma, shift=shift)
@@ -205,13 +196,11 @@ def coordinate_key_matrix(vma: VMatrix, shift: int = 0) -> CoordinateKeyMatrix:
 def coordinates(
     vma: VMatrix, shift: int = 0, multi: bool = True
 ) -> dict[Name, CoordinateKey]:
-    """Obtain the coordinate keys associated with each coordinate name,
-    as a dictionary. Values are sequences of coordinate keys,
-    since there may be multiple.
+    """Get the coordinate keys associated with each coordinate name.
 
     :param vma: V-Matrix
-    :param shift: Value to shift the keys by when obtaining the keys
-    :param multi: Parameter to grab multiple coordinate keys
+    :param shift: Value to shift the keys by
+    :param multi: Get multiple coordinate keys
     :return: Dictionary of coordinate keys
     """
     _names = numpy.ravel(name_matrix(vma))
@@ -233,7 +222,7 @@ def distance_coordinates(vma: VMatrix) -> dict[Name, CoordinateKey]:
     """Get the distance coordinates by coordinate name.
 
     :param vma: V-Matrix
-    :return: The coordinates, by coordinate name
+    :return: Distance coordinates
     """
     return dict_.by_key(coordinates(vma, multi=False), distance_names(vma))
 
@@ -242,7 +231,7 @@ def central_angle_coordinates(vma: VMatrix) -> dict[Name, CoordinateKey]:
     """Get the central angle coordinates by coordinate name.
 
     :param vma: V-Matrix
-    :return: The coordinates, by coordinate name
+    :return: Central angle coordinates
     """
     return dict_.by_key(coordinates(vma, multi=False), central_angle_names(vma))
 
@@ -251,7 +240,7 @@ def dihedral_angle_coordinates(vma: VMatrix) -> dict[Name, CoordinateKey]:
     """Get the dihedral angle coordinates by coordinate name.
 
     :param vma: V-Matrix
-    :return: The coordinates, by coordinate name
+    :return: Dihedral angle coordinates
     """
     return dict_.by_key(coordinates(vma, multi=False), dihedral_angle_names(vma))
 
@@ -259,9 +248,9 @@ def dihedral_angle_coordinates(vma: VMatrix) -> dict[Name, CoordinateKey]:
 def coordinate(vma: VMatrix, name: Name) -> CoordinateKey:
     """Get the atom keys defining a coordinate by name.
 
-    :param vma: A v-matrix or z-matrix
-    :param name: The name of the coordinate, e.g. "R5"
-    :return: The atom keys defining the coordinate
+    :param vma: V-Matrix
+    :param name: Coordinate name
+    :return: Atom keys defining the coordinate
     """
     coo, *_ = coordinates(vma)[name]
     return coo
@@ -270,9 +259,9 @@ def coordinate(vma: VMatrix, name: Name) -> CoordinateKey:
 def torsion_axis(vma: VMatrix, dih_name: Name) -> tuple[int, int]:
     """Get the rotational axis of a torsion from the dihedral angle name.
 
-    :param vma: A v-matrix or z-matrix
-    :param dih_name: The dihedral angle name of the torsion
-    :return: The axis, i.e. the central two atoms in the coordinate
+    :param vma: V-Matrix
+    :param dih_name: Dihedral angle name
+    :return: Rotational axis
     """
     dih_coo = coordinate(vma, dih_name)
     assert len(dih_coo) == 4, f"{dih_name} is not a dihedral angle:\n{vma}"
@@ -282,10 +271,10 @@ def torsion_axis(vma: VMatrix, dih_name: Name) -> tuple[int, int]:
 
 # # # names and standard naming
 def names(vma: VMatrix) -> tuple[Name, ...]:
-    """Obtain names of all coordinates defined in the V-Matrix.
+    """Get names of all coordinates in the V-Matrix.
 
     :param vma: V-Matrix
-    :return: Names of coordinates
+    :return: Coordinate names
     """
     name_mat = name_matrix(vma)
     _names = filter(lambda x: x is not None, numpy.ravel(numpy.transpose(name_mat)))
@@ -293,11 +282,11 @@ def names(vma: VMatrix) -> tuple[Name, ...]:
     return tuple(more_itertools.unique_everseen(_names))
 
 
-def distance_names(vma: VMatrix) -> tuple[str]:
-    """Obtain names of all distance coordinates defined in the V-Matrix.
+def distance_names(vma: VMatrix) -> tuple[str, ...]:
+    """Get names of all distance coordinates in the V-Matrix.
 
     :param vma: V-Matrix
-    :return: Names of defined coordinates
+    :return: Distance coordinate names
     """
     name_mat = numpy.array(name_matrix(vma))
 
@@ -305,10 +294,10 @@ def distance_names(vma: VMatrix) -> tuple[str]:
 
 
 def central_angle_names(vma: VMatrix) -> tuple[Name, ...]:
-    """Obtain names of all central-angle coordinates defined in the V-Matrix.
+    """Get names of all central-angle coordinates in the V-Matrix.
 
     :param vma: V-Matrix
-    :return: Names of central angle coordinates
+    :return: Central-angle coordinate names
     """
     name_mat = numpy.array(name_matrix(vma))
 
@@ -316,10 +305,10 @@ def central_angle_names(vma: VMatrix) -> tuple[Name, ...]:
 
 
 def dihedral_angle_names(vma: VMatrix) -> tuple[Name, ...]:
-    """Obtain names of all dihedral angle coordinates defined in the V-Matrix.
+    """Get names of all dihedral angle coordinates in the V-Matrix.
 
     :param vma: V-Matrix
-    :return: Names of dihedral angles
+    :return: Dihedral angle names
     """
     name_mat = numpy.array(name_matrix(vma))
 
@@ -327,24 +316,20 @@ def dihedral_angle_names(vma: VMatrix) -> tuple[Name, ...]:
 
 
 def angle_names(vma: VMatrix) -> tuple[Name, ...]:
-    """Obtain names of all angle coordinates defined in the V-Matrix.
+    """Get names of all angle coordinates in the V-Matrix.
 
     :param vma: V-Matrix
-    :return: Name of angle coordinates
+    :return: Angle coordinate names
     """
     return tuple(itertools.chain(central_angle_names(vma), dihedral_angle_names(vma)))
 
 
 def standard_names(vma: VMatrix, shift: int = 0) -> dict[Name, Name]:
-    """Build a dictionary that can mas the coordinate names
-    of the input V-Matrix to their name in a standard-form V-Matrix:
-        RN: (1<=N<=Ncoords)
-        AN: (2<=N<=Ncoords)
-        DN: (1<=N<=Ncoords).
+    """Build a dictionary mapping coordinate names to standard names.
 
     :param vma: V-Matrix
-    :param shift: Value to shift the keys by when obtaining the keys
-    :return: Dictionary with names
+    :param shift: Value to shift the keys by
+    :return: Dictionary with standard names
     """
     dist_names = distance_names(vma)
     cent_ang_names = central_angle_names(vma)
@@ -370,14 +355,10 @@ def standard_names(vma: VMatrix, shift: int = 0) -> dict[Name, Name]:
 
 
 def standard_name_matrix(vma: VMatrix, shift: int = 0) -> NameMatrix:
-    """Build a name matrix of the V-Matrix where all of the
-    coordinate names have been standardized:
-        RN: (1<=N<=Ncoords)
-        AN: (2<=N<=Ncoords)
-        DN: (1<=N<=Ncoords).
+    """Build a name matrix with standardized coordinate names.
 
     :param vma: V-Matrix
-    :param shift: value to shift the keys by when obtaining the keys
+    :param shift: Value to shift the keys by
     :return: Name matrix
     """
     natms = count(vma)
@@ -395,10 +376,10 @@ def standard_name_matrix(vma: VMatrix, shift: int = 0) -> NameMatrix:
 def distance_coordinate_name(zma: VMatrix, key1: int, key2: int) -> Name:
     """Get the name of a distance coordinate for a given bond.
 
-    :param zma: the z-matrix
-    :param key1: the first key
-    :param key2: the second key
-    :return: Name of coordinate
+    :param zma: V-Matrix
+    :param key1: First key
+    :param key2: Second key
+    :return: Distance coordinate name
     """
     key1, key2 = sorted([key1, key2])
     name_mat = name_matrix(zma)
@@ -414,13 +395,13 @@ def distance_coordinate_name(zma: VMatrix, key1: int, key2: int) -> Name:
 def central_angle_coordinate_name(
     zma: VMatrix, key1: int, key2: int, key3: int
 ) -> Name:
-    """Get the name of angle coordinate for a set of 3 atoms.
+    """Get the name of an angle coordinate for a set of 3 atoms.
 
-    :param zma: The z-matrix
-    :param key1: The first key
-    :param key2: The second key (central atom)
-    :param key3: The third key
-    :return: Name of angle coordinates
+    :param zma: V-Matrix
+    :param key1: First key
+    :param key2: Second key (central atom)
+    :param key3: Third key
+    :return: Angle coordinate name
     """
     key1, key3 = sorted([key1, key3])
     name_mat = name_matrix(zma)
@@ -436,14 +417,14 @@ def central_angle_coordinate_name(
 def dihedral_angle_coordinate_name(
     zma: VMatrix, key1: int, key2: int, key3: int, key4: int
 ) -> Name:
-    """Get the name of dihedral coordinate for a set of 4 atoms.
+    """Get the name of a dihedral coordinate for a set of 4 atoms.
 
-    :param zma: The z-matrix
-    :param key1: The first key
-    :param key2: The second key
-    :param key3: The third key
-    :param key4: The fourth key
-    :return:Name for dihedral coordinate
+    :param zma: V-Matrix
+    :param key1: First key
+    :param key2: Second key
+    :param key3: Third key
+    :param key4: Fourth key
+    :return: Dihedral coordinate name
     """
     if key1 > key4:
         key1, key2, key3, key4 = key4, key3, key2, key1
@@ -463,10 +444,10 @@ def dihedral_angle_coordinate_name(
 
 # # dummy atom functions
 def dummy_keys(zma: VMatrix) -> tuple[Key, ...]:
-    """Obtain keys to dummy atoms in the Z-Matrix.
+    """Get keys to dummy atoms in the V-Matrix.
 
-    :param zma: Z-Matrix
-    :return: Key to dummy atoms
+    :param zma: V-Matrix
+    :return: Keys to dummy atoms
     """
     return tuple(key for key, sym in enumerate(symbols(zma)) if not ptab.to_number(sym))
 
@@ -474,12 +455,11 @@ def dummy_keys(zma: VMatrix) -> tuple[Key, ...]:
 def dummy_source_dict(
     zma: VMatrix, dir_: bool = True
 ) -> dict[int, int | tuple[int, int]]:
-    """Obtain keys to dummy atoms in the Z-Matrix, along with their
-    parent atoms.
+    """Get keys to dummy atoms and their parent atoms.
 
-    :param zma: Z-Matrix
-    :param dir_: Include linear direction atoms? defaults to True
-    :returns: A dictionary mapping dummy atoms onto their parent atoms
+    :param zma: V-Matrix
+    :param dir_: Include linear direction atoms?
+    :return: Dictionary mapping dummy atoms to parent atoms
     """
     key_mat = key_matrix(zma)
     dum_keys = dummy_keys(zma)
@@ -500,11 +480,10 @@ def dummy_source_dict(
 
 
 def conversion_info(zma: VMatrix) -> ZmatConv:
-    """Get the conversion information for this z-matrix, relative to geometry following
-    the same atom order.
+    """Get conversion information for the V-Matrix.
 
-    :param zma: Z-Matrix
-    :return: The z-matrix conversion
+    :param zma: V-Matrix
+    :return: Z-Matrix conversion
     """
     zcount = count(zma)
     src_zkeys_dct = dummy_source_dict(zma)
@@ -512,10 +491,10 @@ def conversion_info(zma: VMatrix) -> ZmatConv:
 
 
 def neighbor_keys(vma: VMatrix) -> dict[Key, frozenset[Key]]:
-    """Identify which atoms are explicit neighbors in the V-Matrix.
+    """Identify explicit neighbors in the V-Matrix.
 
     :param vma: V-Matrix
-    :return: A dictionary mapping atoms onto their neighbors
+    :return: Dictionary mapping atoms to neighbors
     """
     dist_coos = list(distance_coordinates(vma).values())
     nkeys_dct = defaultdict(set)
@@ -528,11 +507,11 @@ def neighbor_keys(vma: VMatrix) -> dict[Key, frozenset[Key]]:
 # # V-Matrix-specific functions
 # # # setters
 def set_key_matrix(vma: VMatrix, key_mat: KeyMatrix) -> VMatrix:
-    """Re-set the key matrix of a V-Matrix using the input key matrix.
+    """Set the key matrix of a V-Matrix.
 
     :param vma: V-Matrix
-    :param key_mat: Key matrix of V-Matrix coordinate keys
-    :return: VMatrix with input keys
+    :param key_mat: Key matrix
+    :return: V-Matrix with new key matrix
     """
     symbs = symbols(vma)
     name_mat = name_matrix(vma)
@@ -542,11 +521,11 @@ def set_key_matrix(vma: VMatrix, key_mat: KeyMatrix) -> VMatrix:
 
 
 def set_name_matrix(vma: VMatrix, name_mat: NameMatrix) -> VMatrix:
-    """Re-set the name matrix of a V-Matrix using the input name matrix.
+    """Set the name matrix of a V-Matrix.
 
     :param vma: V-Matrix
-    :param name_mat: name matrix of V-Matrix coordinate names
-    :return: V-Matrix reset
+    :param name_mat: Name matrix
+    :return: V-Matrix with new name matrix
     """
     symbs = symbols(vma)
     key_mat = key_matrix(vma)
@@ -557,11 +536,11 @@ def set_name_matrix(vma: VMatrix, name_mat: NameMatrix) -> VMatrix:
 
 # # # names and naming
 def rename(vma: VMatrix, name_dct: dict[Name, Name]) -> VMatrix:
-    """Rename a subset of the coordinates of a V-Matrix.
+    """Rename a subset of the coordinates in a V-Matrix.
 
     :param vma: V-Matrix
-    :param name_dct: Mapping from old coordinate names to new ones
-    :return: VMatrix with new names
+    :param name_dct: Mapping from old names to new names
+    :return: V-Matrix with renamed coordinates
     """
     orig_name_mat = numpy.array(name_matrix(vma))
     tril_idxs = numpy.tril_indices(orig_name_mat.shape[0], -1, m=3)
@@ -579,15 +558,11 @@ def rename(vma: VMatrix, name_dct: dict[Name, Name]) -> VMatrix:
 
 
 def standard_form(vma: VMatrix, shift: int = 0) -> VMatrix:
-    """Build a V-Matrix where all of the coordinate names of an input V-Matrix
-    have been put into standard form:
-        RN: (1<=N<=Ncoords)
-        AN: (2<=N<=Ncoords)
-        DN: (1<=N<=Ncoords).
+    """Build a V-Matrix with standardized coordinate names.
 
     :param vma: V-Matrix
-    :param shift: value to shift the keys by when obtaining the keys
-    :return: V-Matrix of coordinate names
+    :param shift: Value to shift the keys by
+    :return: V-Matrix with standardized names
     """
     name_mat = standard_name_matrix(vma, shift=shift)
     return set_name_matrix(vma, name_mat)
@@ -605,9 +580,9 @@ def add_atom(
 
     :param vma: V-Matrix
     :param symb: Symbol of atom to add
-    :param key_row: Row of keys to define new atom added to key matrix
-    :param name_row: Row of names to define new atom added to name matrix
-    :param one_indexed: Parameter to store keys in one-indexing
+    :param key_row: Row of keys for new atom
+    :param name_row: Row of names for new atom
+    :param one_indexed: Store keys in one-indexing
     :return: V-Matrix with new atom
     """
     symbs = symbols(vma)
@@ -624,12 +599,11 @@ def add_atom(
 
 
 def remove_atom(vma: VMatrix, key: Key) -> VMatrix:
-    """Remove an atom from a V-Matrix. Error raised if attempting
-    to remove atom other atoms depend on.
+    """Remove an atom from a V-Matrix.
 
     :param vma: V-Matrix
-    :param key: key of atom to remove
-    :return: V-Matrix without atom
+    :param key: Key of atom to remove
+    :return: V-Matrix without the atom
     """
     symbs = list(symbols(vma))
     symbs.pop(key)
@@ -654,10 +628,10 @@ def remove_atom(vma: VMatrix, key: Key) -> VMatrix:
 
 # # # validation
 def is_valid(vma: VMatrix) -> bool:
-    """Assess if a V-Matrix has proper structure.
+    """Check if a V-Matrix has proper structure.
 
     :param vma: V-Matrix
-    :return: True, if V-Matrix has proper structure; False otherwise
+    :return: True if valid, False otherwise
     """
     ret = True
     try:
@@ -671,24 +645,21 @@ def is_valid(vma: VMatrix) -> bool:
 
 
 def is_standard_form(vma: VMatrix) -> bool:
-    """Assesses if the names of the V-Matrix are in standard form:
-        RN: (1<=N<=Ncoords)
-        AN: (2<=N<=Ncoords)
-        DN: (1<=N<=Ncoords).
+    """Check if the V-Matrix is in standard form.
 
     :param vma: V-Matrix
-    :return: True if V-Matrix is in standard form, False if not
+    :return: True if in standard form, False otherwise
     """
     return names(vma) == names(standard_form(vma))
 
 
 # # # I/O
 def string(vma: VMatrix, one_indexed: bool = False) -> str:
-    """Write a V-Matrix object to a string.
+    """Write a V-Matrix to a string.
 
     :param vma: V-Matrix
-    :param one_indexed: Parameter to write keys in one-indexing
-    :return: String
+    :param one_indexed: Write keys in one-indexing
+    :return: V-Matrix string
     """
     shift = 1 if one_indexed else 0
     symbs = symbols(vma)
@@ -714,11 +685,11 @@ def string(vma: VMatrix, one_indexed: bool = False) -> str:
 
 
 def from_string(vma_str: str, one_indexed: bool | None = None) -> VMatrix:
-    """Parse a V-Matrix object from a string.
+    """Parse a V-Matrix from a string.
 
-    :param vma_str: string containing a V-Matrix
+    :param vma_str: String containing a V-Matrix
     :param one_indexed: Read a one-indexed string?
-    :return: V-Matrix of string
+    :return: V-Matrix
     """
     rows = VMAT_LINES.parseString(vma_str).asList()
     symbs = [r.pop(0) for r in rows]
@@ -734,13 +705,12 @@ def from_string(vma_str: str, one_indexed: bool | None = None) -> VMatrix:
 def _key_matrix(
     key_mat: KeyMatrix, natms: int, one_indexed: bool | None = None
 ) -> KeyMatrix:
-    """Build name matrix of the V-Matrix that contains the
-    coordinate keys by row and column.
+    """Build the key matrix of the V-Matrix.
 
-    :param key_mat: key matrix of V-Matrix coordinate keys
-    :param natms: number of atoms
-    :param one_indexed: parameter to write keys in one-indexing
-    :return: Name matrix of V-Matrix
+    :param key_mat: Key matrix
+    :param natms: Number of atoms
+    :param one_indexed: Write keys in one-indexing
+    :return: Key matrix
     """
     if natms == 1:
         return ((None, None, None),)
@@ -763,12 +733,11 @@ def _key_matrix(
 
 
 def _name_matrix(name_mat: NameMatrix, natms: int) -> NameMatrix:
-    """Build name matrix of the V-Matrix that contains the
-    coordinate names by row and column.
+    """Build the name matrix of the V-Matrix.
 
-    :param name_mat: key matrix of V-Matrix coordinate keys
-    :param natms: number of atoms
-    :return: Name matrix of Vmatrix
+    :param name_mat: Name matrix
+    :param natms: Number of atoms
+    :return: Name matrix
     """
     if name_mat is None:
         name_mat = numpy.empty((natms, 3), dtype=object)
@@ -796,10 +765,10 @@ def _name_matrix(name_mat: NameMatrix, natms: int) -> NameMatrix:
 
 
 def _is_sequence_of_triples(obj) -> bool:
-    """Assess if input object sequence has length of three.
+    """Check if input object is a sequence of triples.
 
     :param obj: Object with __len__ attribute
-    :return: True if object is less than len=3, False if not
+    :return: True if sequence of triples, False otherwise
     """
     ret = hasattr(obj, "__len__")
     if ret:
