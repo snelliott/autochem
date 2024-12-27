@@ -78,6 +78,7 @@ COMPOSITE_GRP_LIST = [
     "C5,OH-M",
     "A1,OH-M",
     "A1,OH,OH-M",
+    "A1,OH,CH3-M",
     "A1,OH,CHO-M",
     "A1,OH,OCH3-M",
     "A1,CHO-M",
@@ -111,7 +112,7 @@ class SuperFunctionalGroup:
         # assign base groups
         for key, fct in BASE_GRP_DCT.items():
             self.sup_grps[key] = self.grp_fct_dct[fct]
-
+        base_grps_0 = list(itertools.chain(*[grp for grp in self.sup_grps.values() if len(grp) > 0]))
         # assign substituents
         subs_fct_dct = {}
         for key, fct in SUBSTITUENTS_GRP_DCT.items():
@@ -119,20 +120,28 @@ class SuperFunctionalGroup:
 
         # CH3CK C6H5C2H2, C6H5C2H4!!
         # assign composite
+        heavy_atms = list(implicit(gra)[0].keys())
         for comp_grp in COMPOSITE_GRP_LIST:
             base_and_subs, base_type = comp_grp.split("-")
             base, subs = (
                 base_and_subs.split(",")[0] + "-" + base_type,
                 base_and_subs.split(",")[1:],
             )
+
             base_grps = self.sup_grps[base]  # base groups to search substituents in
             for sub in subs:
                 sub_grps = subs_fct_dct[sub]
-                # intersection becomes the new base_grps;
+                sub_grps_eff = ()
+
+                # if the atoms of the substituent are part of (any) base group: skip
+                for grp in sub_grps:
+                    if not any(all(atm in basei for atm in grp if atm in heavy_atms) for basei in base_grps_0):
+                        sub_grps_eff += (grp,)
+                # intersection base+sub becomes the new base_grps;
                 # filter by bond type, e.g., C-C, C-O..
                 # with bonded_grps only: fails for OCH3
                 # (CH2-O bonded to an aromatic would work too)
-                base_grps = bonded_grps_checksymb(gra, base_grps, sub_grps, "C", sub[0])
+                base_grps = bonded_grps_checksymb(gra, base_grps, sub_grps_eff, "C", sub[0])
             # add to dct
             self.sup_grps[comp_grp] = base_grps
 
@@ -179,6 +188,7 @@ def bonded_grps_checksymb(gra, grps1, grps2, symb1, symb2):
     heavy_atms = list(implicit(gra)[0].keys())
     correct_bonds = bonds_of_type(gra, symb1, symb2)
     grps = ()
+    assigned_grps2 = () # make sure that each substituent is assigned to one group only
     if len(grps1) > 0 and len(grps2) > 0 and len(correct_bonds) > 0:
         for grp1 in grps1:
             # keep only heavy atoms
@@ -187,13 +197,14 @@ def bonded_grps_checksymb(gra, grps1, grps2, symb1, symb2):
                 grp2 = tuple(
                     atm for atm in grp2 if atm in heavy_atms and atm not in grp1
                 )
-                possible_bonds = list(itertools.product(grp1, grp2))
-                effective_bonds = (
+                possible_bonds = list(itertools.product(grp1, grp2)) + list(itertools.product(grp2, grp1))
+                effective_bonds = list(
                     bond for bond in possible_bonds if frozenset(bond) in gra[1].keys()
                 )
                 if len(tuple(set(effective_bonds).intersection(correct_bonds))) > 0:
                     grp = grp1 + grp2
-                    if sorted(grp) not in [sorted(grpi) for grpi in grps]:
+                    if sorted(grp) not in [sorted(grpi) for grpi in grps] and grp2 not in assigned_grps2:
                         grps += (grp,)
-
+                        assigned_grps2 += (grp2,)
+            
     return grps
