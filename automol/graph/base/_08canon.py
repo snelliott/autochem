@@ -186,7 +186,7 @@ def canonical_amchi_graph_with_numbers(
 def smiles_graph(
     gra: Any, res_stereo: bool = True, exp: bool = False, dummy: bool = False
 ) -> Any:
-    """Put a connected graph in a form appropriate for writing SMILES strings
+    """Put a connected graph in a form appropriate for writing SMILES strings.
 
     :param gra: molecular graph
     :param exp: Include explicit hydrogens that aren't needed for stereochemistry?
