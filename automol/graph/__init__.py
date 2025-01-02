@@ -56,7 +56,7 @@ from ._3super_func_group import (
 # algorithm functions:
 # # isomorphisms and equivalence
 # submodules:
-from .base import equivalent_without_dummy_atoms, ts, vmat
+from .base import enum, equivalent_without_dummy_atoms, ts, vmat
 
 # # getters
 # # setters
@@ -758,6 +758,7 @@ __all__ = [
     # TS graph submodule:
     "ts_graph",
     "ts",
+    "enum",
     "vmat",
     # L4
     # embedding functions:

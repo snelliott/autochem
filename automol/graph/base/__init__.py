@@ -1,4 +1,4 @@
-""" Level 2 graph functions (no dependencies on extern or other types)
+"""Level 2 graph functions (no dependencies on extern or other types).
 
 Import hierarchy:
     _core       no dependencies
@@ -11,8 +11,10 @@ Import hierarchy:
     _amchi      dependencies: _core, _networkx, _algo, _canon, _kekule
     _smiles     dependencies: _core, _networkx, _algo, _canon, _kekule
     _stereo     dependencies: _core, _networkx, _algo, _canon, _kekule, _amchi
+    _rdkit      dependencies: _core, _networkx, _algo, _canon, _kekule, _amchi
     _func_group dependencies: _core, _networkx, _algo, _kekule, _stereo
     ts          dependencies: _core, _networkx, _algo, _kekule, _stereo
+    enum        dependencies: _core, _networkx, _algo, _kekule, _stereo, _rdkit
     vmat        dependencies: ts
 
 Each next submodule in the hierarchy may depend on the ones before it, but
@@ -24,377 +26,370 @@ something needs to be updated or altered in it.
 
 # core functions:
 # # constructors
-from ._00core import from_data
-from ._00core import atoms_from_data
-from ._00core import bonds_from_data
-from ._00core import from_atoms_and_bonds
+# submodules:
+from . import enum, ts, vmat
 
 # # getters
-from ._00core import atoms
-from ._00core import bonds
-from ._00core import atom_keys
-from ._00core import bond_keys
-from ._00core import atom_symbols
-from ._00core import bond_orders
-from ._00core import atom_implicit_hydrogens
-from ._00core import atom_stereo_parities
-from ._00core import bond_stereo_parities
-from ._00core import stereo_parities
-from ._00core import ts_graph
-
 # # setters
-from ._00core import set_atom_symbols
-from ._00core import set_bond_orders
-from ._00core import set_atom_implicit_hydrogens
-from ._00core import set_atom_stereo_parities
-from ._00core import set_bond_stereo_parities
-from ._00core import set_stereo_parities
-
 # # I/O
-from ._00core import string
-from ._00core import yaml_data
-from ._00core import from_string
-from ._00core import from_yaml_data
-from ._00core import from_old_yaml_data
-
 # # conversions
-from ._00core import frozen
-from ._00core import formula
-from ._00core import symbols
-
 # # sorting
-from ._00core import argsort_by_size
-from ._00core import sort_by_size
-
 # # properties
-from ._00core import atom_count
-from ._00core import count
-from ._00core import electron_count
-from ._00core import atom_stereo_keys
-from ._00core import bond_stereo_keys
-from ._00core import stereo_keys
-from ._00core import has_stereo
-from ._00core import has_atom_stereo
-from ._00core import has_bond_stereo
-from ._00core import has_dummy_atoms
-from ._00core import has_pi_bonds
-from ._00core import is_ts_graph
-from ._00core import atomic_numbers
-from ._00core import mass_numbers
-from ._00core import van_der_waals_radii
-from ._00core import covalent_radii
-from ._00core import atomic_valences
-from ._00core import atom_lone_pairs
-from ._00core import atom_electron_pairs
-from ._00core import atom_van_der_waals_radius
-from ._00core import atom_bond_counts
-from ._00core import atom_unpaired_electrons
-from ._00core import bond_unpaired_electrons
-from ._00core import atom_hypervalencies
-from ._00core import tetrahedral_atoms
-from ._00core import tetrahedral_atom_keys
-from ._00core import vinyl_radical_bond_candidates
-from ._00core import maximum_spin_multiplicity
-from ._00core import possible_spin_multiplicities
-from ._00core import atom_symbol_keys
-from ._00core import backbone_keys
-from ._00core import backbone_bond_keys
-from ._00core import backbone_hydrogen_keys
-from ._00core import nonbackbone_hydrogen_keys
-from ._00core import atom_backbone_hydrogen_keys
-from ._00core import atom_nonbackbone_hydrogen_keys
-from ._00core import terminal_atom_keys
-from ._00core import terminal_atom_neighbors
-from ._00core import unsaturated_atom_keys
-from ._00core import unsaturated_bond_keys
-from ._00core import lone_pair_atom_keys
-from ._00core import distance_keys
-from ._00core import central_angle_keys
-from ._00core import dihedral_angle_keys
-
 # # relabeling and changing keys
-from ._00core import relabel
-from ._00core import standard_keys
-from ._00core import standard_keys_for_sequence
-from ._00core import zmatrix_conversion_info
-from ._00core import apply_zmatrix_conversion
-from ._00core import undo_zmatrix_conversion
-from ._00core import align_with_geometry
-
 # # add/remove/insert/without
-from ._00core import add_atoms
-from ._00core import add_bonds
-from ._00core import remove_atoms
-from ._00core import remove_bonds
-from ._00core import change_implicit_hydrogens
-from ._00core import add_atom_explicit_hydrogens
-from ._00core import add_bonded_atom
-from ._00core import without_pi_bonds
-from ._00core import without_reacting_bonds
-from ._00core import without_dummy_atoms
-from ._00core import ts_reverse
-from ._00core import ts_reactants_graph_without_stereo
-from ._00core import ts_products_graph_without_stereo
-from ._00core import ts_reagents_graphs_without_stereo
-from ._00core import ts_reagents_graph_without_stereo
-from ._00core import without_bonds_by_orders
-from ._00core import without_stereo
-from ._00core import with_explicit_stereo_hydrogens
-from ._00core import explicit
-from ._00core import implicit
-
 # # unions
-from ._00core import union
-from ._00core import union_from_sequence
-
 # # subgraphs and neighborhoods
-from ._00core import subgraph
-from ._00core import bond_induced_subgraph
-from ._00core import atom_neighborhood
-from ._00core import atom_neighborhoods
-from ._00core import bond_neighborhood
-from ._00core import bond_neighborhoods
-from ._00core import atom_neighbor_atom_key
-from ._00core import atom_neighbor_atom_keys
-from ._00core import atoms_neighbor_atom_keys
-from ._00core import atom_sorted_neighbor_atom_keys
-from ._00core import local_stereo_priorities
-from ._00core import atoms_sorted_neighbor_atom_keys
-from ._00core import atom_bond_keys
-from ._00core import atoms_bond_keys
-from ._00core import dummy_source_dict
-from ._00core import bond_neighbor_atom_keys
-from ._00core import bond_neighbor_bond_keys
-from ._00core import bonds_neighbor_atom_keys
-from ._00core import bonds_neighbor_bond_keys
-
 # algorithm functions:
 # # isomorphisms and equivalence
-from ._00core import equivalent_without_dummy_atoms
-from ._02algo import isomorphism
-from ._02algo import isomorphic
-from ._02algo import unique
-from ._02algo import sequence_isomorphism
-from ._02algo import subgraph_isomorphism
-from ._02algo import equivalent_atoms
-from ._02algo import equivalent_bonds
-from ._02algo import are_equivalent_atoms
-from ._02algo import are_equivalent_bonds
-from ._02algo import atom_equivalence_class_reps
-from ._02algo import bond_equivalence_class_reps
+from ._00core import (
+    add_atom_explicit_hydrogens,
+    add_atoms,
+    add_bonded_atom,
+    add_bonds,
+    align_with_geometry,
+    apply_zmatrix_conversion,
+    argsort_by_size,
+    atom_backbone_hydrogen_keys,
+    atom_bond_counts,
+    atom_bond_keys,
+    atom_count,
+    atom_electron_pairs,
+    atom_hypervalencies,
+    atom_implicit_hydrogens,
+    atom_keys,
+    atom_lone_pairs,
+    atom_neighbor_atom_key,
+    atom_neighbor_atom_keys,
+    atom_neighborhood,
+    atom_neighborhoods,
+    atom_nonbackbone_hydrogen_keys,
+    atom_sorted_neighbor_atom_keys,
+    atom_stereo_keys,
+    atom_stereo_parities,
+    atom_symbol_keys,
+    atom_symbols,
+    atom_unpaired_electrons,
+    atom_van_der_waals_radius,
+    atomic_numbers,
+    atomic_valences,
+    atoms,
+    atoms_bond_keys,
+    atoms_from_data,
+    atoms_neighbor_atom_keys,
+    atoms_sorted_neighbor_atom_keys,
+    backbone_bond_keys,
+    backbone_hydrogen_keys,
+    backbone_keys,
+    bond_induced_subgraph,
+    bond_keys,
+    bond_neighbor_atom_keys,
+    bond_neighbor_bond_keys,
+    bond_neighborhood,
+    bond_neighborhoods,
+    bond_orders,
+    bond_stereo_keys,
+    bond_stereo_parities,
+    bond_unpaired_electrons,
+    bonds,
+    bonds_from_data,
+    bonds_neighbor_atom_keys,
+    bonds_neighbor_bond_keys,
+    central_angle_keys,
+    change_implicit_hydrogens,
+    count,
+    covalent_radii,
+    dihedral_angle_keys,
+    distance_keys,
+    dummy_source_dict,
+    electron_count,
+    equivalent_without_dummy_atoms,
+    explicit,
+    formula,
+    from_atoms_and_bonds,
+    from_data,
+    from_old_yaml_data,
+    from_string,
+    from_yaml_data,
+    frozen,
+    has_atom_stereo,
+    has_bond_stereo,
+    has_dummy_atoms,
+    has_pi_bonds,
+    has_stereo,
+    implicit,
+    invert_atom_stereo_parities,
+    is_ts_graph,
+    local_stereo_priorities,
+    lone_pair_atom_keys,
+    mass_numbers,
+    maximum_spin_multiplicity,
+    nonbackbone_hydrogen_keys,
+    possible_spin_multiplicities,
+    relabel,
+    remove_atoms,
+    remove_bonds,
+    set_atom_implicit_hydrogens,
+    set_atom_stereo_parities,
+    set_atom_symbols,
+    set_bond_orders,
+    set_bond_stereo_parities,
+    set_stereo_parities,
+    sort_by_size,
+    standard_keys,
+    standard_keys_for_sequence,
+    stereo_keys,
+    stereo_parities,
+    string,
+    subgraph,
+    symbols,
+    terminal_atom_keys,
+    terminal_atom_neighbors,
+    tetrahedral_atom_keys,
+    tetrahedral_atoms,
+    ts_graph,
+    ts_products_graph_without_stereo,
+    ts_reactants_graph_without_stereo,
+    ts_reagents_graph_without_stereo,
+    ts_reagents_graphs_without_stereo,
+    ts_reverse,
+    undo_zmatrix_conversion,
+    union,
+    union_from_sequence,
+    unsaturated_atom_keys,
+    unsaturated_bond_keys,
+    van_der_waals_radii,
+    vinyl_radical_bond_candidates,
+    with_explicit_stereo_hydrogens,
+    without_bonds_by_orders,
+    without_dummy_atoms,
+    without_pi_bonds,
+    without_reacting_bonds,
+    without_stereo,
+    yaml_data,
+    zmatrix_conversion_info,
+)
 
 # # algorithms
-from ._02algo import connected_components
-from ._02algo import connected_components_atom_keys
-from ._02algo import is_connected
-from ._02algo import dfs_
-from ._02algo import dfs_atom_keys
-from ._02algo import dfs_bond_keys
-from ._02algo import dfs_children
-from ._02algo import dfs_parents
-from ._02algo import dfs_missing_bond_keys
-from ._02algo import dfs_missing_children
-from ._02algo import atom_shortest_paths
-from ._02algo import shortest_path_between_atoms
-from ._02algo import shortest_path_between_groups
-from ._02algo import atom_longest_chains
-from ._02algo import atom_longest_chain
-from ._02algo import longest_chain
-
 # # branches and groups
-from ._02algo import ring_atom_chirality
-from ._02algo import branches
-from ._02algo import branch_dict
-from ._02algo import branch_atom_keys
-from ._02algo import branch
-from ._02algo import is_branched
-
 # # rings
-from ._02algo import rings
-from ._02algo import rings_atom_keys
-from ._02algo import rings_bond_keys
-from ._02algo import sorted_ring_atom_keys
-from ._02algo import sorted_ring_atom_keys_from_bond_keys
-from ._02algo import is_ring_key_sequence
-from ._02algo import ring_arc_complement_atom_keys
-from ._02algo import ring_systems
-from ._02algo import ring_systems_atom_keys
-from ._02algo import ring_systems_bond_keys
-from ._02algo import spiros
-from ._02algo import spiro_atom_keys
-from ._02algo import is_ring_system
-from ._02algo import ring_system_decomposed_atom_keys
-from ._02algo import ring_systems_decomposed_atom_keys
+from ._02algo import (
+    are_equivalent_atoms,
+    are_equivalent_bonds,
+    atom_equivalence_class_reps,
+    atom_longest_chain,
+    atom_longest_chains,
+    atom_shortest_paths,
+    bond_equivalence_class_reps,
+    branch,
+    branch_atom_keys,
+    branch_dict,
+    branches,
+    connected_components,
+    connected_components_atom_keys,
+    dfs_,
+    dfs_atom_keys,
+    dfs_bond_keys,
+    dfs_children,
+    dfs_missing_bond_keys,
+    dfs_missing_children,
+    dfs_parents,
+    equivalent_atoms,
+    equivalent_bonds,
+    is_branched,
+    is_connected,
+    is_ring_key_sequence,
+    is_ring_system,
+    isomorphic,
+    isomorphism,
+    longest_chain,
+    ring_arc_complement_atom_keys,
+    ring_atom_chirality,
+    ring_system_decomposed_atom_keys,
+    ring_systems,
+    ring_systems_atom_keys,
+    ring_systems_bond_keys,
+    ring_systems_decomposed_atom_keys,
+    rings,
+    rings_atom_keys,
+    rings_bond_keys,
+    sequence_isomorphism,
+    shortest_path_between_atoms,
+    shortest_path_between_groups,
+    sorted_ring_atom_keys,
+    sorted_ring_atom_keys_from_bond_keys,
+    spiro_atom_keys,
+    spiros,
+    subgraph_isomorphism,
+    unique,
+)
 
 # kekule functions:
 # # core functions
-from ._03kekule import kekule
-from ._03kekule import kekules
-from ._03kekule import kekule_bond_orders
-from ._03kekule import kekules_bond_orders
-from ._03kekule import kekules_bond_orders_collated
-from ._03kekule import kekules_bond_orders_averaged
-
 # # derived properties
-from ._03kekule import linear_atom_keys
-from ._03kekule import linear_segment_cap_keys
-from ._03kekule import linear_segments_atom_keys
-from ._03kekule import unneeded_dummy_atom_keys
-from ._03kekule import atom_hybridizations
-from ._03kekule import atom_hybridizations_from_kekule
-from ._03kekule import bad_stereo_bond_keys_from_kekule
-from ._03kekule import good_stereo_bond_keys_from_kekule
-from ._03kekule import radical_atom_keys
-from ._03kekule import radical_atom_keys_from_kekule
-from ._03kekule import nonresonant_radical_atom_keys
-from ._03kekule import vinyl_radical_atom_bond_keys
-from ._03kekule import sigma_radical_atom_bond_keys
-from ._03kekule import vinyl_radical_atom_keys
-from ._03kekule import sigma_radical_atom_keys
-from ._03kekule import has_separated_radical_sites
-from ._03kekule import addition_atom_keys
-from ._03kekule import beta_scission_bond_keys
-from ._03kekule import beta_scission_bond_keys_from_kekule
-from ._03kekule import resonance_bond_stereo_keys
-from ._03kekule import vinyl_bond_stereo_keys
-from ._03kekule import has_resonance_bond_stereo
-from ._03kekule import has_vinyl_bond_stereo
-from ._03kekule import has_nonkekule_bond_stereo
-from ._03kekule import has_noninchi_stereo
-from ._03kekule import radical_groups
-from ._03kekule import radical_group_dct
-from ._03kekule import rigid_planar_bonds
-from ._03kekule import rigid_planar_bond_keys
-from ._03kekule import strict_rigid_planar_bond_keys
-from ._03kekule import possible_rigid_planar_bond_keys
-from ._05stereo import stereocenter_candidates
-from ._05stereo import stereoatom_bridgehead_pairs
-from ._03kekule import atom_centered_cumulene_keys
-from ._03kekule import bond_centered_cumulene_keys
-
-# structural heuristics:
-from ._06heur import heuristic_bond_distance
-from ._06heur import heuristic_bond_distance_limit
-from ._06heur import heuristic_bond_angle
-from ._06heur import rotational_bond_keys
-from ._06heur import rotational_segment_keys
-from ._06heur import rotational_coordinates
-from ._06heur import rotational_groups
-from ._06heur import rotational_symmetry_number
+from ._03kekule import (
+    addition_atom_keys,
+    atom_centered_cumulene_keys,
+    atom_hybridizations,
+    atom_hybridizations_from_kekule,
+    bad_stereo_bond_keys_from_kekule,
+    beta_scission_bond_keys,
+    beta_scission_bond_keys_from_kekule,
+    bond_centered_cumulene_keys,
+    good_stereo_bond_keys_from_kekule,
+    has_noninchi_stereo,
+    has_nonkekule_bond_stereo,
+    has_resonance_bond_stereo,
+    has_separated_radical_sites,
+    has_vinyl_bond_stereo,
+    kekule,
+    kekule_bond_orders,
+    kekules,
+    kekules_bond_orders,
+    kekules_bond_orders_averaged,
+    kekules_bond_orders_collated,
+    linear_atom_keys,
+    linear_segment_cap_keys,
+    linear_segments_atom_keys,
+    nonresonant_radical_atom_keys,
+    possible_rigid_planar_bond_keys,
+    radical_atom_keys,
+    radical_atom_keys_from_kekule,
+    radical_group_dct,
+    radical_groups,
+    resonance_bond_stereo_keys,
+    rigid_planar_bond_keys,
+    rigid_planar_bonds,
+    sigma_radical_atom_bond_keys,
+    sigma_radical_atom_keys,
+    strict_rigid_planar_bond_keys,
+    unneeded_dummy_atom_keys,
+    vinyl_bond_stereo_keys,
+    vinyl_radical_atom_bond_keys,
+    vinyl_radical_atom_keys,
+)
 
 # geometry functions:
 # # stereo parity evaluations
-from ._05stereo import geometry_atom_parity
-from ._05stereo import geometry_bond_parity
-from ._07geom import geometry_local_parity
-from ._07geom import geometries_parity_mismatches
+# # parity evaluators
+from ._05stereo import (
+    geometry_atom_parity,
+    geometry_bond_parity,
+    parity_evaluator_flip_from_graph,
+    parity_evaluator_measure_from_geometry_,
+    parity_evaluator_read_from_graph,
+    stereoatom_bridgehead_pairs,
+    stereocenter_candidates,
+    unassigned_stereocenter_keys_from_candidates,
+)
+
+# structural heuristics:
+from ._06heur import (
+    heuristic_bond_angle,
+    heuristic_bond_distance,
+    heuristic_bond_distance_limit,
+    rotational_bond_keys,
+    rotational_coordinates,
+    rotational_groups,
+    rotational_segment_keys,
+    rotational_symmetry_number,
+)
 
 # # corrections
-from ._07geom import geometry_correct_linear_vinyls
-from ._11stereo import geometry_pseudorotate_atom
-from ._07geom import geometry_rotate_bond
-from ._07geom import geometry_dihedrals_near_value
+from ._07geom import (
+    geometries_parity_mismatches,
+    geometry_correct_linear_vinyls,
+    geometry_dihedrals_near_value,
+    geometry_local_parity,
+    geometry_rotate_bond,
+)
 
 # canonicalization functions:
 # # canonical key functions
-from ._08canon import canonical
-from ._08canon import canonical_keys
-from ._08canon import smiles_graph
-
-# # canonical stereo functions
-from ._11stereo import unassigned_stereocenter_keys
-from ._05stereo import unassigned_stereocenter_keys_from_candidates
-from ._11stereo import reflect
-from ._00core import invert_atom_stereo_parities
-from ._08canon import to_local_stereo
-from ._08canon import from_local_stereo
-from ._11stereo import set_stereo_from_geometry
-
 # # symmetry class functions
-from ._08canon import canonical_priorities
-from ._08canon import calculate_stereo
-
-# # parity evaluators
-from ._05stereo import parity_evaluator_measure_from_geometry_
-from ._05stereo import parity_evaluator_read_from_graph
-from ._05stereo import parity_evaluator_flip_from_graph
+from ._08canon import (
+    calculate_stereo,
+    canonical,
+    canonical_keys,
+    canonical_priorities,
+    from_local_stereo,
+    smiles_graph,
+    to_local_stereo,
+)
 
 # AMChI functions:
-from ._09amchi import amchi
-from ._09amchi import amchi_with_numbers
-from ._09amchi import inchi_is_bad
+from ._09amchi import amchi, amchi_with_numbers, inchi_is_bad
 
 # SMILES functions:
 from ._10smiles import smiles
 
+# # canonical stereo functions
 # stereo functions:
 # # core functions
-from ._11stereo import expand_stereo
-from ._11stereo import expand_reaction_stereo
-
 # # stereo correction
-from ._11stereo import has_fleeting_atom_or_bond_stereo
-from ._11stereo import stereo_corrected_geometry
+from ._11stereo import (
+    expand_reaction_stereo,
+    expand_stereo,
+    geometry_pseudorotate_atom,
+    has_fleeting_atom_or_bond_stereo,
+    reflect,
+    set_stereo_from_geometry,
+    stereo_corrected_geometry,
+    unassigned_stereocenter_keys,
+)
 
 # functional groups code:
 # # core functions
-from ._func_group import FunctionalGroup
-from ._func_group import functional_group_dct
-from ._func_group import functional_group_count_dct
-from ._func_group import ring_substituents
-
 # # finders for overaching types
-from ._func_group import is_hydrocarbon_species
-from ._func_group import is_radical_species
-
 # # finders for reactive sites and groups
-from ._func_group import alkane_sites
-from ._func_group import alkene_sites
-from ._func_group import alkyne_sites
-from ._func_group import propyne_sites
-from ._func_group import allene_sites
-from ._func_group import alcohol_groups
-from ._func_group import peroxy_groups
-from ._func_group import alkoxy_OC_groups
-from ._func_group import hydroperoxy_groups
-from ._func_group import ether_groups
-from ._func_group import cyclic_ether_groups
-from ._func_group import aldehyde_groups
-from ._func_group import ketone_groups
-from ._func_group import ester_groups
-from ._func_group import carboxylic_acid_groups
-from ._func_group import amide_groups
-from ._func_group import nitro_groups
-from ._func_group import halide_groups
-from ._func_group import thiol_groups
-from ._func_group import methyl_groups
-from ._func_group import aromatic_groups
-from ._func_group import benzene_groups
-from ._func_group import phenyl_groups
-from ._func_group import benzyl_groups
-from ._func_group import cyclopentadienyl_groups
-from ._func_group import cyclopentadiene_groups
-from ._func_group import cyclopentadienone_groups
-from ._func_group import fulvene_groups
-from ._func_group import phenoxy_groups
-from ._func_group import allyl_groups
-from ._func_group import allyl_groups_lowestspin
-from ._func_group import cyclopentenyl_groups
-from ._func_group import c5h5o_groups
-from ._func_group import furan_groups
-from ._func_group import radical_dissociation_products
-
 # # helper functions
-from ._func_group import bonds_of_type
-from ._func_group import bonds_of_order
-from ._func_group import two_bond_idxs
-from ._func_group import neighbors_of_type
-from ._func_group import radicals_of_type
-
-# submodules:
-from . import ts
-from . import vmat
-
+from ._func_group import (
+    FunctionalGroup,
+    alcohol_groups,
+    aldehyde_groups,
+    alkane_sites,
+    alkene_sites,
+    alkoxy_OC_groups,
+    alkyne_sites,
+    allene_sites,
+    allyl_groups,
+    allyl_groups_lowestspin,
+    amide_groups,
+    aromatic_groups,
+    benzene_groups,
+    benzyl_groups,
+    bonds_of_order,
+    bonds_of_type,
+    c5h5o_groups,
+    carboxylic_acid_groups,
+    cyclic_ether_groups,
+    cyclopentadiene_groups,
+    cyclopentadienone_groups,
+    cyclopentadienyl_groups,
+    cyclopentenyl_groups,
+    ester_groups,
+    ether_groups,
+    fulvene_groups,
+    functional_group_count_dct,
+    functional_group_dct,
+    furan_groups,
+    halide_groups,
+    hydroperoxy_groups,
+    is_hydrocarbon_species,
+    is_radical_species,
+    ketone_groups,
+    methyl_groups,
+    neighbors_of_type,
+    nitro_groups,
+    peroxy_groups,
+    phenoxy_groups,
+    phenyl_groups,
+    propyne_sites,
+    radical_dissociation_products,
+    radicals_of_type,
+    ring_substituents,
+    thiol_groups,
+    two_bond_idxs,
+)
 
 __all__ = [
     # core functions:
@@ -736,5 +731,6 @@ __all__ = [
     "radicals_of_type",
     # submodules:
     "ts",
+    "enum",
     "vmat",
 ]
