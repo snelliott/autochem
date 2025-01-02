@@ -9,7 +9,6 @@ from typing import Dict, Optional, Tuple
 
 import more_itertools as mit
 import numpy
-
 from phydat import phycon
 
 from ... import util

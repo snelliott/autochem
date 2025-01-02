@@ -1,16 +1,16 @@
-""" transition state graph data structure
+"""Transition state graph data structure.
 
 BEFORE ADDING ANYTHING, SEE IMPORT HIERARCHY IN __init__.py!!!!
 """
-from ._00core import (
-    ts_breaking_bond_keys as breaking_bond_keys,
-)
+
+from ._00core import ts_breaking_bond_keys as breaking_bond_keys
 from ._00core import (
     ts_forming_bond_keys as forming_bond_keys,
 )
 from ._00core import (
     ts_graph as graph,
 )
+from ._00core import ts_graph_from_reactants_and_products as from_reactants_and_products
 from ._00core import (
     ts_products_graph_without_stereo as products_graph_without_stereo,
 )
@@ -80,6 +80,7 @@ __all__ = [
     "breaking_bond_keys",
     "forming_bond_keys",
     "graph",
+    "from_reactants_and_products",
     "reacting_atom_keys",
     "reacting_bond_keys",
     "reactants_graph_without_stereo",

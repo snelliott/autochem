@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy
 import yaml
-
 from phydat import phycon, ptab
 
 from ... import form, util
@@ -415,7 +414,7 @@ def stereo_parities(gra):
 
 # # TS graph constructor
 def ts_graph(gra, frm_bnd_keys, brk_bnd_keys):
-    """Construct a TS graph from a molecular graph
+    """Construct a TS graph from a molecular graph.
 
     :param gra: molecular graph, representing the reactants
     :type gra: automol graph data structure
@@ -435,6 +434,22 @@ def ts_graph(gra, frm_bnd_keys, brk_bnd_keys):
     gra = add_bonds(gra, frm_bnd_keys, ord_dct=frm_ord_dct, check=False)
     gra = add_bonds(gra, brk_bnd_keys, ord_dct=brk_ord_dct, check=False)
     return gra
+
+
+def ts_graph_from_reactants_and_products(rct_gra: object, prd_gra: object) -> object:
+    """Construct a TS graph from reactants and products graphs.
+
+    The reactants and products must have matching keys.
+
+    :param rct_gra: Reactants graph
+    :param prd_gra: Products graph
+    :return: TS graph
+    """
+    rct_bkeys = bond_keys(rct_gra)
+    prd_bkeys = bond_keys(prd_gra)
+    frm_bkeys = prd_bkeys - rct_bkeys
+    brk_bkeys = rct_bkeys - prd_bkeys
+    return ts_graph(rct_gra, frm_bnd_keys=frm_bkeys, brk_bnd_keys=brk_bkeys)
 
 
 # # TS graph getters
