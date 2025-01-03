@@ -80,7 +80,7 @@ def vibrational_analysis(
     bohr2m = qcc.conversion_factor("bohr", "meter")
     sol = qcc.get("speed of light in vacuum") * 100  # in cm / s
     to_inv_cm = numpy.sqrt(har2J / (amu2kg * bohr2m * bohr2m)) / (sol * 2 * numpy.pi)
-    freqs = numpy.sqrt(numpy.complex_(eig_vals)) * to_inv_cm
+    freqs = numpy.sqrt(numpy.complex128(eig_vals)) * to_inv_cm
     freqs = tuple(map(float, numpy.real(freqs) - numpy.imag(freqs)))
 
     return freqs, norm_coos

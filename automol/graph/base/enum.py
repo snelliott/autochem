@@ -19,7 +19,7 @@ from ._12rdkit import to_graph as from_rdkit
 
 
 # Reaction enumeration
-class Smarts:
+class ReactionSmarts:
     """SMARTS reaction templates for enumeration."""
 
     elimination = "[H:5][C:1][C:2][O:3][OX1v1:4]>>[C:1]=[C:2].[OX1v1:3][O:4][H:5]"

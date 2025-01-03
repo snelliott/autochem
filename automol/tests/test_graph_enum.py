@@ -6,7 +6,7 @@ from automol import graph, smiles
 
 @pytest.mark.parametrize(
     "smarts, rcts_smi, nrxns",
-    [(graph.enum.Smarts.abstraction, "CCC.[OH]", 2)],
+    [(graph.enum.ReactionSmarts.abstraction, "CCC.[OH]", 2)],
 )
 def test__reactions(smarts, rcts_smi, nrxns):
     """Test reactions."""
@@ -16,4 +16,4 @@ def test__reactions(smarts, rcts_smi, nrxns):
 
 
 if __name__ == "__main__":
-    test__reactions(graph.enum.ReactionTemplate.abstraction, "CCC.[OH]", 2)
+    test__reactions(graph.enum.ReactionSmarts.abstraction, "CCC.[OH]", 2)
