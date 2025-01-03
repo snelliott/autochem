@@ -61,65 +61,71 @@ Level 5: L1-4 dependencies; hierarchical interdependency (descending)
 """
 
 # L1
-from . import const
-from . import util
-from . import error
-from . import mult
-from . import form
-from . import inchi_key
-from . import vmat
-from . import prop
-from . import embed
 # L2
 # L3
-from . import extern
 # L4
-from . import graph
-from . import geom
-from . import amchi
-from . import inchi
-from . import smiles
-from . import zmat
 # L5
-from . import etrans
-from . import combine
-from . import reac
-from . import _deprecated
-from . import data
-from . import symm
-# type imports
-from .const import ReactionClass, ReactionSpin, ReactionInfo
+from . import (
+    _deprecated,
+    amchi,
+    combine,
+    const,
+    data,
+    embed,
+    error,
+    etrans,
+    extern,
+    form,
+    geom,
+    graph,
+    inchi,
+    inchi_key,
+    mult,
+    prop,
+    reac,
+    smarts,
+    smiles,
+    symm,
+    util,
+    vmat,
+    zmat,
+)
 
+# type imports
+from .const import ReactionClass, ReactionInfo, ReactionSpin
 
 __all__ = [
     # L1
-    'const',
-    'util',
-    'error',
-    'mult',
-    'form',
-    'inchi_key',
-    'vmat',
-    'prop',
-    'embed',
+    "const",
+    "util",
+    "error",
+    "mult",
+    "form",
+    "inchi_key",
+    "vmat",
+    "prop",
+    "embed",
+    "smarts",
     # L2
     # L3
-    'extern',
+    "extern",
     # L4
-    'graph',
-    'geom',
-    'amchi',
-    'inchi',
-    'smiles',
-    'smiles',
-    'zmat',
+    "graph",
+    "geom",
+    "amchi",
+    "inchi",
+    "smiles",
+    "smiles",
+    "zmat",
     # L5
-    'etrans',
-    'combine',
-    'reac',
-    '_deprecated',
-    'data',
-    'symm',
+    "etrans",
+    "combine",
+    "reac",
+    "_deprecated",
+    "data",
+    "symm",
     # type imports
-    'ReactionClass', 'ReactionSpin', 'ReactionInfo',
+    "ReactionClass",
+    "ReactionSpin",
+    "ReactionInfo",
 ]
