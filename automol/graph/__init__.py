@@ -56,7 +56,7 @@ from ._3super_func_group import (
 # algorithm functions:
 # # isomorphisms and equivalence
 # submodules:
-from .base import enum, equivalent_without_dummy_atoms, ts, vmat
+from .base import enum, ts, vmat
 
 # # getters
 # # setters
@@ -129,6 +129,7 @@ from .base._00core import (
     distance_keys,
     dummy_source_dict,
     electron_count,
+    equivalent_without_dummy_atoms,
     explicit,
     formula,
     from_atoms_and_bonds,

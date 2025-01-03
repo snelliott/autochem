@@ -22,6 +22,8 @@ class ReactionClass(str, enum.Enum):
     INSERTION = "insertion"
     DOUBLE_INSERTION = "double_insertion"
     SUBSTITUTION = "substitution"
+    # Other
+    UNCLASSIFIED = "unclassified"
 
     def __str__(self):
         """Convert a reaction class object to a string.
@@ -59,6 +61,8 @@ class ReactionClass(str, enum.Enum):
             cls.INSERTION: cls.ELIMINATION,
             cls.DOUBLE_INSERTION: None,
             cls.SUBSTITUTION: cls.SUBSTITUTION,
+            # Other
+            cls.UNCLASSIFIED: None,
         }
         return reverse_dct[cls(value)]
 

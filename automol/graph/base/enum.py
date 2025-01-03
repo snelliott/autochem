@@ -19,33 +19,33 @@ from ._12rdkit import to_graph as from_rdkit
 
 
 # Reaction enumeration
-class ReactionTemplate:
+class Smarts:
     """SMARTS reaction templates for enumeration."""
 
     elimination = "[H:5][C:1][C:2][O:3][OX1v1:4]>>[C:1]=[C:2].[OX1v1:3][O:4][H:5]"
     abstraction = "[C:1][H:2].[OX1v1:3]>>[C:1].[H:2][OX1v1:3]"
 
 
-def reactions(gra: object, smarts: str, symeq: bool = False) -> list[object]:
+def reactions(smarts: str, gra: object, symeq: bool = False) -> list[object]:
     """Enumerate reaction TS graphs for a given SMARTS reaction template.
 
-    :param gra: Molecular graph representing the reactants
     :param smarts: SMARTS pattern for the reaction
+    :param gra: Molecular graph representing the reactants
     :param symeq: Whether to include symmetrically equivalent reactions
     :return: TS graphs
     """
     ts_gras = [
         ts_graph_from_reactants_and_products(gra, p)
-        for p in products(gra, smarts)
+        for p in products(smarts, gra)
     ]
     return ts_gras if symeq else unique(ts_gras)
 
 
-def products(gra: object, smarts: str) -> list[object]:
+def products(smarts: str, gra: object) -> list[object]:
     """Enumerate products for a given SMARTS reaction template.
 
-    :param gra: Molecular graph representing the reactants
     :param smarts: SMARTS pattern for the reaction
+    :param gra: Molecular graph representing the reactants
     :returns: Products graphs
     """
     assert gra == explicit(gra), f"Graph must be explicit\ngra = {gra}"

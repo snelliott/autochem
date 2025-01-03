@@ -4,7 +4,6 @@
 from collections.abc import Sequence
 
 from .. import amchi, geom, graph
-from .. import chi as chi_
 from .. import smiles as smiles_
 from .. import zmat as zmat_
 from ..extern import rdkit_
@@ -70,9 +69,9 @@ def from_amchis(
     :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
     """
-    return from_chis(
-        rct_achs,
-        prd_achs,
+    return from_graphs(
+        list(map(amchi.graph, rct_achs)),
+        list(map(amchi.graph, prd_achs)),
         stereo=stereo,
         struc_typ=struc_typ,
         enant=enant,
@@ -98,7 +97,7 @@ def from_inchis(
     :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
     """
-    return from_chis(
+    return from_amchis(
         rct_ichs,
         prd_ichs,
         stereo=stereo,
@@ -126,14 +125,14 @@ def from_chis(
     :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
     """
-    rct_gras = tuple(map(graph.explicit, map(chi_.graph, rct_chis)))
-    prd_gras = tuple(map(graph.explicit, map(chi_.graph, prd_chis)))
-    rxns = find(rct_gras, prd_gras, stereo=stereo, enant=enant, strained=strained)
-
-    if struc_typ is not None:
-        rxns = tuple(with_structures(r, struc_typ) for r in rxns)
-
-    return rxns
+    return from_amchis(
+        rct_chis,
+        prd_chis,
+        stereo=stereo,
+        struc_typ=struc_typ,
+        enant=enant,
+        strained=strained,
+    )
 
 
 def from_smiles(
@@ -154,14 +153,14 @@ def from_smiles(
     :param strained: If expanding stereo, include strained stereoisomers?
     :returns: A series of reaction objects
     """
-    rct_gras = tuple(map(graph.explicit, map(smiles_.graph, rct_smis)))
-    prd_gras = tuple(map(graph.explicit, map(smiles_.graph, prd_smis)))
-    rxns = find(rct_gras, prd_gras, stereo=stereo, enant=enant, strained=strained)
-
-    if struc_typ is not None:
-        rxns = tuple(with_structures(r, struc_typ) for r in rxns)
-
-    return rxns
+    return from_graphs(
+        list(map(smiles_.graph, rct_smis)),
+        list(map(smiles_.graph, prd_smis)),
+        stereo=stereo,
+        struc_typ=struc_typ,
+        enant=enant,
+        strained=strained,
+    )
 
 
 def from_geometries(

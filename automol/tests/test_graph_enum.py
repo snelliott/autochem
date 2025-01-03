@@ -5,15 +5,15 @@ from automol import graph, smiles
 
 
 @pytest.mark.parametrize(
-    "rcts_smi, smarts, nrxns",
-    [("CCC.[OH]", graph.enum.ReactionTemplate.abstraction, 2)],
+    "smarts, rcts_smi, nrxns",
+    [(graph.enum.Smarts.abstraction, "CCC.[OH]", 2)],
 )
-def test__reactions(rcts_smi, smarts, nrxns):
+def test__reactions(smarts, rcts_smi, nrxns):
     """Test reactions."""
     rcts_gra = smiles.graph(rcts_smi)
-    ts_gras = graph.enum.reactions(rcts_gra, smarts)
+    ts_gras = graph.enum.reactions(smarts, rcts_gra)
     assert len(ts_gras) == nrxns, f"ts_gras = {ts_gras}"
 
 
 if __name__ == "__main__":
-    test__reactions("CCC.[OH]", graph.enum.ReactionTemplate.abstraction, 2)
+    test__reactions(graph.enum.ReactionTemplate.abstraction, "CCC.[OH]", 2)

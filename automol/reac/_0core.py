@@ -72,7 +72,7 @@ def from_data(
     tsg,
     rcts_keys,
     prds_keys,
-    cla,
+    cla=const.ReactionClass.UNCLASSIFIED,
     ts_struc=None,
     rct_strucs=None,
     prd_strucs=None,
