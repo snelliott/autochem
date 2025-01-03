@@ -12,7 +12,7 @@ def from_smiles(
 ) -> list[Reaction]:
     """Enumerate reactions from SMILES.
 
-    Reagents can be given as lists or dictionaries by position in the SMARTS template.
+    Reactants can be given as lists or dictionaries by position in the SMARTS template.
 
     :param smarts: Reaction SMARTS string
     :param rct_chis: Reactant ChIs
@@ -27,7 +27,7 @@ def from_amchis(
 ) -> list[Reaction]:
     """Enumerate reactions from AMChIs.
 
-    Reagents can be given as lists or dictionaries by position in the SMARTS template.
+    Reactants can be given as lists or dictionaries by position in the SMARTS template.
 
     :param rct_chis: Reactant ChIs
     :param smarts: Reaction SMARTS string
@@ -42,7 +42,7 @@ def from_graphs(
 ) -> list[Reaction]:
     """Enumerate reactions from graphs.
 
-    Reagents can be given as lists or dictionaries by position in the SMARTS template.
+    Reactants can be given as lists or dictionaries by position in the SMARTS template.
 
     :param smarts: SMARTS string
     :param rct_gras: Reactant graphs
