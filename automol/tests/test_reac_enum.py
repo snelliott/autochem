@@ -5,16 +5,16 @@ from automol import graph, reac
 
 
 @pytest.mark.parametrize(
-    "smarts, rct_smis, prd_smis, nrxns",
+    "smarts, rct_smis, nrxns",
     [
-        (graph.enum.Smarts.abstraction, ["C1=CCCC1", "[OH]"], None, 3),
+        (graph.enum.ReactionSmarts.abstraction, ["C1=CCCC1", "[OH]"], 3),
     ],
 )
-def test__from_smiles(smarts, rct_smis, prd_smis, nrxns):
+def test__from_smiles(smarts, rct_smis, nrxns):
     """Test reac.from_smiles."""
-    rxns = reac.enum.from_smiles(smarts, rct_smis, prd_smis)
+    rxns = reac.enum.from_smiles(smarts, rct_smis)
     assert len(rxns) == nrxns, f"\nrxns = {rxns}"
 
 
 if __name__ == "__main__":
-    test__from_smiles(graph.enum.Smarts.abstraction, ["C1=CCCC1", "[OH]"], None, 3)
+    test__from_smiles(graph.enum.ReactionSmarts.abstraction, ["C1=CCCC1", "[OH]"], 3)
