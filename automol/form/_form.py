@@ -88,6 +88,7 @@ def normalized(fml: Formula) -> Formula:
     :param fml: A chemical formula
     :return: The formula, without `None` values
     """
+    fml = from_string(fml) if isinstance(fml, str) else fml
     fml = {ptab.to_symbol(k): int(v) for k, v in fml.items() if v}
     return fml
 
@@ -154,7 +155,7 @@ def join_sequence(fmls: Formula) -> int:
     :param fml: Stochiometric chemical formula
     :return: Sum of the formulas
     """
-    return functools.reduce(join, fmls)
+    return functools.reduce(join, map(normalized, fmls))
 
 
 def sorted_symbols_in_sequence(fmls: Sequence[Formula]) -> tuple[str, ...]:
@@ -164,6 +165,19 @@ def sorted_symbols_in_sequence(fmls: Sequence[Formula]) -> tuple[str, ...]:
     :return: The sorted symbols in the sequence
     """
     return sorted_symbols(join_sequence(fmls).keys())
+
+
+def sorted_sequence(fmls: Sequence[Formula | str]) -> list[Formula]:
+    """Sort a sequence of formulas based on Hill-sorting.
+
+    :param fmls: A sequence of formulas
+    :return: The sorted formulas in the sequence
+    """
+    fmls = list(fmls)
+    symbs = sorted_symbols_in_sequence(fmls)
+    srt_vecs = [sort_vector(f, symbs) for f in fmls]
+    srt_idxs = sorted(range(len(fmls)), key=lambda i: srt_vecs[i])
+    return [fmls[i] for i in srt_idxs]
 
 
 def unique(fmls: Sequence[Formula]) -> list[Formula]:
@@ -301,15 +315,15 @@ def argsort_symbols(
     )
 
 
-def sort_vector(
-    fml: Sequence[Formula], symbs: Sequence[str] | None = None
-) -> tuple[int, ...]:
+def sort_vector(fml: Formula, symbs: Sequence[str] | None = None) -> tuple[int, ...]:
     """Generate a sort vector for sorting various formulas against each other.
 
-    :param fml_str: stochiometric chemical formula string
+    :param fml: stochiometric chemical formula string
     :param symbs: atomic symbols in the desired sort order (optional)
     :return: Sorted vector
     """
+    fml = normalized(fml)
+
     if symbs is None:
         symbs = sorted_symbols(fml.keys())
 
