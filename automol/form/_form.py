@@ -90,6 +90,7 @@ def normalized(fml: Formula) -> Formula:
     """
     fml = from_string(fml) if isinstance(fml, str) else fml
     fml = {ptab.to_symbol(k): int(v) for k, v in fml.items() if v}
+    fml = {k: fml[k] for k in sorted_symbols(fml)}
     return fml
 
 
@@ -155,7 +156,7 @@ def join_sequence(fmls: Formula) -> int:
     :param fml: Stochiometric chemical formula
     :return: Sum of the formulas
     """
-    return functools.reduce(join, map(normalized, fmls))
+    return normalized(functools.reduce(join, map(normalized, fmls)))
 
 
 def sorted_symbols_in_sequence(fmls: Sequence[Formula]) -> tuple[str, ...]:
