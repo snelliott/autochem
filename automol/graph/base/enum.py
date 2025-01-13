@@ -22,6 +22,7 @@ from ._12rdkit import to_graph as from_rdkit
 class ReactionSmarts:
     """SMARTS reaction templates for enumeration."""
 
+    pi2_addition = "[*:1]=[*:2].[OX1v1:3]>>[*:1]-[*:2]-[OX1v1:3]"
     elimination = "[H:5][C:1][C:2][O:3][OX1v1:4]>>[C:1]=[C:2].[OX1v1:3][O:4][H:5]"
     abstraction = "[C:1][H:2].[OX1v1:3]>>[C:1].[H:2][OX1v1:3]"
 
@@ -35,8 +36,7 @@ def reactions(smarts: str, gra: object, symeq: bool = False) -> list[object]:
     :return: TS graphs
     """
     ts_gras = [
-        ts_graph_from_reactants_and_products(gra, p)
-        for p in products(smarts, gra)
+        ts_graph_from_reactants_and_products(gra, p) for p in products(smarts, gra)
     ]
     return ts_gras if symeq else unique(ts_gras)
 
@@ -55,7 +55,8 @@ def products(smarts: str, gra: object) -> list[object]:
 
     # Form the reactant graphs
     rct_gras = connected_components(gra)
-    rct_rdms = [to_rdkit(g, exp=True) for g in rct_gras]
+    # (label=True) stores the current graph keys to the `molAtomMapNumber` property
+    rct_rdms = [to_rdkit(g, exp=True, label=True) for g in rct_gras]
 
     # Enumerate the products
     pos_dct = _template_map_number_to_reactant_position(rxn)
@@ -82,10 +83,14 @@ def _products_graph(
     for prd_pos, prd_rdm in enumerate(prd_rdms):
         key_dct = {}
         for rda in prd_rdm.GetAtoms():
-            map_num = rda.GetPropsAsDict().get("old_mapno")
-            rct_pos = pos_dct.get(map_num, prd_pos)
-            rct_key = rda.GetPropsAsDict().get("react_atom_idx")
-            key_dct[rda.GetIdx()] = rct_key + offset_dct.get(rct_pos, 0)
+            prop_dct: dict[str, object] = rda.GetPropsAsDict()
+            if "molAtomMapNumber" in prop_dct:
+                key_dct[rda.GetIdx()] = prop_dct.get("molAtomMapNumber")
+            else:
+                map_num = rda.GetPropsAsDict().get("old_mapno")
+                rct_pos = pos_dct.get(map_num, prd_pos)
+                rct_key = rda.GetPropsAsDict().get("react_atom_idx")
+                key_dct[rda.GetIdx()] = rct_key + offset_dct.get(rct_pos, 0)
         prd_gra = _product_graph_from_rdkit(prd_rdm)
         prd_gras.append(relabel(prd_gra, key_dct))
 
