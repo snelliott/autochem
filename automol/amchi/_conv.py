@@ -93,7 +93,7 @@ def connectivity_digest(chi: str, max_len: int = 10) -> str:
     :return: The short hash
     """
     # hash length by heavy atom count
-    hash_len_dct = {0: 0, 1: 0, 2: 4, 3: 5, 4: 5, 5: 6, 6: 6}
+    hash_len_dct = {0: 0, 1: 0, 2: 4, 3: 5, 4: 5, 5: 6, 6: 6, 7: 6}
 
     # Determine appropriate hash length
     fml = formula(chi)
