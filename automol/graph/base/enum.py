@@ -25,6 +25,7 @@ class ReactionSmarts:
     pi2_addition = "[*:1]=[*:2].[OX1v1:3]>>[*:1]-[*:2]-[OX1v1:3]"
     elimination = "[H:5][C:1][C:2][O:3][OX1v1:4]>>[C:1]=[C:2].[OX1v1:3][O:4][H:5]"
     abstraction = "[C:1][H:2].[OX1v1:3]>>[C:1].[H:2][OX1v1:3]"
+    ring_forming_scission = "([Cv3:1].[Ov2:2][O:3][H:4])>>[R:1][R:2].[O:3][H:4]"
 
 
 def reactions(smarts: str, gra: object, symeq: bool = False) -> list[object]:
