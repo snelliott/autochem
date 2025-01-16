@@ -17,15 +17,25 @@ from ._02algo import connected_components, unique
 from ._12rdkit import from_graph as to_rdkit
 from ._12rdkit import to_graph as from_rdkit
 
+A_ = "Cv4,Ov2"
+C_ = "Cv4"
+O_ = "Ov2"
+Ar = "Cv3,Ov1"
+Cr = "Cv3"
+Or = "Ov1"
+
 
 # Reaction enumeration
 class ReactionSmarts:
     """SMARTS reaction templates for enumeration."""
 
-    pi2_addition = "[*:1]=[*:2].[OX1v1:3]>>[*:1]-[*:2]-[OX1v1:3]"
-    elimination = "[H:5][C:1][C:2][O:3][OX1v1:4]>>[C:1]=[C:2].[OX1v1:3][O:4][H:5]"
-    abstraction = "[C:1][H:2].[OX1v1:3]>>[C:1].[H:2][OX1v1:3]"
-    ring_forming_scission = "([Cv3:1].[Ov2:2][O:3][H:4])>>[R:1][R:2].[O:3][H:4]"
+    pi2_addition = f"[*:1]=[*:2].[{Or}:3]>>[*:1]-[*:2]-[*:3]"
+    elimination = f"[H:5][C:1][C:2][O:3][{Or}:4]>>[C:1]=[C:2].[{Or}:3][O:4][H:5]"
+    abstraction = f"[C:1][H:2].[{Or}:3]>>[C:1].[H:2][*:3]"
+    ring_forming_scission = f"([{Cr}:1].[{O_}:2][O:3][H:4])>>[R:1][R:2].[O:3][H:4]"
+    h_migration = f"([{Ar}:1].[{A_}:2][H:3])>>([H:3][{A_}:1].[{Ar}:2])"
+    h_migration_12 = f"[{Ar}:1][{A_}:2][H:3]>>[H:3][{A_}:1][{Ar}:2]"
+    ring_beta_scission = f"[{A_}:1]-[{A_}:2]-[{Ar}:3]>>([{Ar}:1].[{A_}:2]=[{A_}:3])"
 
 
 def reactions(smarts: str, gra: object, symeq: bool = False) -> list[object]:
