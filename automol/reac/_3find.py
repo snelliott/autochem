@@ -901,8 +901,8 @@ def arbitrary_reactions(
                 [key for key in shared_bnd_keys if len(
                     graph.unsaturated_atom_keys(common_rct_gra) & key) == 0])
 
-            cur_overlap_perc = len(common_bnd_keys)/len(
-                graph.bond_keys(graph.implicit(common_rct_gra)))
+            cur_overlap_perc = len(common_bnd_keys)/max(1, len(
+                graph.bond_keys(graph.implicit(common_rct_gra))))
             if overlap_perc < cur_overlap_perc:
                 overlap_perc = cur_overlap_perc
                 stable_key_pairs = common_iso_dct
