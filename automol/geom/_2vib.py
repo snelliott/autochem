@@ -71,6 +71,7 @@ def vibrational_analysis(
     #       Qmw = PI (see above)    Q = Qmw / mw_vec
     norm_coos_mw = numpy.dot(proj, eig_vecs) / mw_vec[:, numpy.newaxis]
     norm_coos = norm_coos_mw / mw_vec[:, numpy.newaxis]
+    norm_coos = norm_coos / numpy.linalg.norm(norm_coos, axis=0)
     if not wavenum:
         return eig_vals, norm_coos
 
