@@ -3,6 +3,7 @@
 
 import functools
 import itertools
+from collections.abc import Sequence
 from typing import Dict, Optional
 
 import numpy
@@ -36,6 +37,7 @@ from .base import (
     translate,
     without_dummy_atoms,
     xyz_string,
+    xyz_trajectory_string,
 )
 
 
@@ -566,7 +568,7 @@ def rdkit_molecule(geo, gra=None, stereo=True):
 def py3dmol_view(
     geo, gra=None, view=None, image_size: int = 400, mode: Optional[ArrayLike] = None
 ):
-    """Get a py3DMol view of this molecular geometry
+    """Get a py3DMol view of this molecular geometry.
 
     :param geo: molecular geometry
     :type geo: automol geometry data structure
@@ -603,7 +605,7 @@ def display(
     vis_bkeys: Optional[tuple[tuple[int, int]]] = None,
     mode: Optional[ArrayLike] = None,
 ):
-    """Display molecule to IPython using the RDKit visualizer
+    """Display molecule to IPython using the RDKit visualizer.
 
     :param geo: molecular geometry
     :type geo: automol geometry data structure
@@ -640,6 +642,17 @@ def display(
             view = py3dmol_.view_vector(rvec1, orig_xyz=fxyz1, view=view)
             view = py3dmol_.view_vector(rvec2, orig_xyz=fxyz2, view=view)
 
+    return view.show()
+
+
+def display_trajectory(geos: Sequence[object], image_size=400):
+    """Display molecule trajectory to IPython using the RDKit visualizer.
+
+    :param geo: molecular geometry
+    :param image_size: The image size, if creating a new view, defaults to 400
+    """
+    xyz_str = xyz_trajectory_string(geos)
+    view = py3dmol_.view_molecule_from_xyz_trajectory(xyz_str, image_size=image_size)
     return view.show()
 
 

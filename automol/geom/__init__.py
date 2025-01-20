@@ -123,6 +123,7 @@ from ._1conv import smiles
 from ._1conv import rdkit_molecule
 from ._1conv import py3dmol_view
 from ._1conv import display
+from ._1conv import display_trajectory
 # # derived properties
 from ._1conv import is_connected
 from ._1conv import linear_atoms
@@ -276,6 +277,7 @@ __all__ = [
     'rdkit_molecule',
     'py3dmol_view',
     'display',
+    'display_trajectory',
     # # derived properties
     'is_connected',
     'linear_atoms',
