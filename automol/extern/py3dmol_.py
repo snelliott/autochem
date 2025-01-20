@@ -33,7 +33,7 @@ def view_molecule_from_xyz(
     if view is None:
         view = create_view(image_size=image_size)
 
-    options = {"vibrate": {"frames": 10, "amplitude": 3}} if vib else {}
+    options = {"vibrate": {"frames": 10, "amplitude": 1}} if vib else {}
 
     view.addModel(xyz_str, "xyz", options)
     view.setStyle({"stick": {}, "sphere": {"radius": 0.3}})
