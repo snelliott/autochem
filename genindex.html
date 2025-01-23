@@ -15,28 +15,31 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
 
-  
-  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
   
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
 
     <script src="_static/documentation_options.js?v=e15ae344"></script>
-    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
@@ -44,6 +47,7 @@
     <link rel="search" title="Search" href="search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
   </head>
   
   
@@ -59,19 +63,8 @@
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
 
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
-  
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
-  
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="search.html"
       method="get">
@@ -79,7 +72,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -87,8 +79,8 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
@@ -106,7 +98,8 @@
       
         
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -136,20 +129,18 @@
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="automol/inchi_key.html">automol.inchi_key</a></li>
 <li class="toctree-l1"><a class="reference internal" href="automol/util.html">automol.util</a></li>
+<li class="toctree-l1"><a class="reference internal" href="automol/form.html">automol.form</a></li>
+
 </ul>
 
     </div>
@@ -158,9 +149,14 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -209,24 +205,16 @@
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
-  </button>
-`);
-</script>
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 
 </div></div>
       
@@ -262,7 +250,10 @@ document.write(`
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
+ | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#J"><strong>J</strong></a>
+ | <a href="#K"><strong>K</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#O"><strong>O</strong></a>
@@ -272,17 +263,40 @@ document.write(`
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
  
 </div>
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/form.html#automol.form.add_element">add_element() (in module automol.form)</a>
+</li>
       <li><a href="automol/util.html#automol.util.vector.angle">angle() (in module automol.util.vector)</a>
 </li>
       <li><a href="automol/util.html#automol.util.vector.arbitrary_unit_perpendicular">arbitrary_unit_perpendicular() (in module automol.util.vector)</a>
 </li>
       <li><a href="automol/util.html#automol.util.vector.are_parallel">are_parallel() (in module automol.util.vector)</a>
 </li>
+      <li><a href="automol/form.html#automol.form.reac.argsort_hydrogen_abstraction">argsort_hydrogen_abstraction() (in module automol.form.reac)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.argsort_symbols">argsort_symbols() (in module automol.form)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.atom_count">atom_count() (in module automol.form)</a>
+</li>
+      <li>
+    automol.form
+
+      <ul>
+        <li><a href="automol/form.html#module-automol.form">module</a>
+</li>
+      </ul></li>
+      <li>
+    automol.form.reac
+
+      <ul>
+        <li><a href="automol/form.html#module-automol.form.reac">module</a>
+</li>
+      </ul></li>
       <li>
     automol.inchi_key
 
@@ -297,6 +311,22 @@ document.write(`
         <li><a href="automol/util.html#module-automol.util">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    automol.util.dict_
+
+      <ul>
+        <li><a href="automol/util.html#module-automol.util.dict_">module</a>
+</li>
+      </ul></li>
+      <li>
+    automol.util.dict_.multi
+
+      <ul>
+        <li><a href="automol/util.html#module-automol.util.dict_.multi">module</a>
+</li>
+      </ul></li>
       <li>
     automol.util.heuristic
 
@@ -304,8 +334,6 @@ document.write(`
         <li><a href="automol/util.html#module-automol.util.heuristic">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     automol.util.matrix
 
@@ -344,13 +372,19 @@ document.write(`
 </li>
       <li><a href="automol/util.html#automol.util.heuristic.bond_distance">bond_distance() (in module automol.util.heuristic)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="automol/util.html#automol.util.heuristic.bond_distance_limit">bond_distance_limit() (in module automol.util.heuristic)</a>
 </li>
       <li><a href="automol/util.html#automol.util.breakby">breakby() (in module automol.util)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="automol/util.html#automol.util.tensor.build_full_array">build_full_array() (in module automol.util.tensor)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.by_key">by_key() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.multi.by_key_by_position">by_key_by_position() (in module automol.util.dict_.multi)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.by_value">by_value() (in module automol.util.dict_)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -359,6 +393,8 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="automol/util.html#automol.util.vector.central_angle">central_angle() (in module automol.util.vector)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.compose">compose() (in module automol.util.dict_)</a>
 </li>
       <li><a href="automol/util.html#automol.util.ring.cycle">cycle() (in module automol.util.ring)</a>
 </li>
@@ -398,8 +434,16 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="automol/util.html#automol.util.ring.edges">edges() (in module automol.util.ring)</a>
 </li>
+      <li><a href="automol/form.html#automol.form.electron_count">electron_count() (in module automol.form)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.element_count">element_count() (in module automol.form)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.empty_if_none">empty_if_none() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.equal">equal() (in module automol.form)</a>
+</li>
       <li><a href="automol/util.html#automol.util.equivalence_partition">equivalence_partition() (in module automol.util)</a>
 </li>
   </ul></td>
@@ -408,19 +452,37 @@ document.write(`
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.filter_by_key">filter_by_key() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.filter_by_value">filter_by_value() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.filter_keys">filter_keys() (in module automol.util.dict_)</a>
+</li>
       <li><a href="automol/inchi_key.html#automol.inchi_key.first_hash">first_hash() (in module automol.inchi_key)</a>
 </li>
       <li><a href="automol/util.html#automol.util.flatten">flatten() (in module automol.util)</a>
 </li>
-      <li><a href="automol/util.html#automol.util.vector.flip_if_left_handed">flip_if_left_handed() (in module automol.util.vector)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.vector.flip_if_left_handed">flip_if_left_handed() (in module automol.util.vector)</a>
+</li>
       <li><a href="automol/util.html#automol.util.formula_from_symbols">formula_from_symbols() (in module automol.util)</a>
 </li>
       <li><a href="automol/util.html#automol.util.vector.from_internals">from_internals() (in module automol.util.vector)</a>
 </li>
-      <li><a href="automol/util.html#automol.util.tensor.from_string">from_string() (in module automol.util.tensor)</a>
+      <li><a href="automol/form.html#automol.form.from_string">from_string() (in module automol.form)</a>
+
+      <ul>
+        <li><a href="automol/util.html#automol.util.tensor.from_string">(in module automol.util.tensor)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/form.html#automol.form.heavy_atom_count">heavy_atom_count() (in module automol.form)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -428,13 +490,43 @@ document.write(`
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.invert">invert() (in module automol.util.dict_)</a>
+</li>
       <li><a href="automol/util.html#automol.util.is_even_permutation">is_even_permutation() (in module automol.util)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.multi.is_multidict">is_multidict() (in module automol.util.dict_.multi)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="automol/util.html#automol.util.is_odd_permutation">is_odd_permutation() (in module automol.util)</a>
 </li>
+      <li><a href="automol/form.html#automol.form.reac.is_valid_reaction">is_valid_reaction() (in module automol.form.reac)</a>
+</li>
       <li><a href="automol/util.html#automol.util.vector.is_vector_like">is_vector_like() (in module automol.util.vector)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="J">J</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/form.html#automol.form.join">join() (in module automol.form)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/form.html#automol.form.join_sequence">join_sequence() (in module automol.form)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.keys_by_value">keys_by_value() (in module automol.util.dict_)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.keys_sorted_by_value">keys_sorted_by_value() (in module automol.util.dict_)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -442,13 +534,25 @@ document.write(`
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/form.html#automol.form.match">match() (in module automol.form)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.merge_sequence">merge_sequence() (in module automol.util.dict_)</a>
+</li>
       <li>
     module
 
       <ul>
+        <li><a href="automol/form.html#module-automol.form">automol.form</a>
+</li>
+        <li><a href="automol/form.html#module-automol.form.reac">automol.form.reac</a>
+</li>
         <li><a href="automol/inchi_key.html#module-automol.inchi_key">automol.inchi_key</a>
 </li>
         <li><a href="automol/util.html#module-automol.util">automol.util</a>
+</li>
+        <li><a href="automol/util.html#module-automol.util.dict_">automol.util.dict_</a>
+</li>
+        <li><a href="automol/util.html#module-automol.util.dict_.multi">automol.util.dict_.multi</a>
 </li>
         <li><a href="automol/util.html#module-automol.util.heuristic">automol.util.heuristic</a>
 </li>
@@ -527,18 +631,34 @@ document.write(`
 </li>
       <li><a href="automol/util.html#automol.util.separate_negatives">separate_negatives() (in module automol.util)</a>
 </li>
+      <li><a href="automol/util.html#automol.util.dict_.multi.set_by_key_by_position">set_by_key_by_position() (in module automol.util.dict_.multi)</a>
+</li>
       <li><a href="automol/util.html#automol.util.sort_by_list">sort_by_list() (in module automol.util)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.sort_value_">sort_value_() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.sort_vector">sort_vector() (in module automol.form)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.sorted_sequence">sorted_sequence() (in module automol.form)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="automol/util.html#automol.util.matrix.string">string() (in module automol.util.matrix)</a>
+      <li><a href="automol/form.html#automol.form.sorted_symbols">sorted_symbols() (in module automol.form)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.sorted_symbols_in_sequence">sorted_symbols_in_sequence() (in module automol.form)</a>
+</li>
+      <li><a href="automol/form.html#automol.form.string">string() (in module automol.form)</a>
 
       <ul>
+        <li><a href="automol/util.html#automol.util.matrix.string">(in module automol.util.matrix)</a>
+</li>
         <li><a href="automol/util.html#automol.util.tensor.string">(in module automol.util.tensor)</a>
 </li>
         <li><a href="automol/util.html#automol.util.vector.string">(in module automol.util.vector)</a>
 </li>
       </ul></li>
+      <li><a href="automol/form.html#automol.form.string2">string2() (in module automol.form)</a>
+</li>
       <li><a href="automol/util.html#automol.util.tensor.string_submat_3d">string_submat_3d() (in module automol.util.tensor)</a>
 </li>
       <li><a href="automol/util.html#automol.util.tensor.string_submat_4d">string_submat_4d() (in module automol.util.tensor)</a>
@@ -549,6 +669,14 @@ document.write(`
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.transform_items_to_values">transform_items_to_values() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.transform_keys">transform_keys() (in module automol.util.dict_)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.transform_values">transform_values() (in module automol.util.dict_)</a>
+</li>
       <li><a href="automol/util.html#automol.util.translate">translate() (in module automol.util)</a>
 </li>
   </ul></td>
@@ -557,12 +685,14 @@ document.write(`
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="automol/util.html#automol.util.vector.unit_bisector">unit_bisector() (in module automol.util.vector)</a>
+      <li><a href="automol/form.html#automol.form.unique">unique() (in module automol.form)</a>
 </li>
-      <li><a href="automol/util.html#automol.util.vector.unit_direction">unit_direction() (in module automol.util.vector)</a>
+      <li><a href="automol/util.html#automol.util.vector.unit_bisector">unit_bisector() (in module automol.util.vector)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.vector.unit_direction">unit_direction() (in module automol.util.vector)</a>
+</li>
       <li><a href="automol/util.html#automol.util.vector.unit_norm">unit_norm() (in module automol.util.vector)</a>
 </li>
       <li><a href="automol/util.html#automol.util.vector.unit_perpendicular">unit_perpendicular() (in module automol.util.vector)</a>
@@ -573,11 +703,29 @@ document.write(`
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.value_by_unordered_key">value_by_unordered_key() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.value_in_floatkey_dct">value_in_floatkey_dct() (in module automol.util.dict_)</a>
+</li>
       <li><a href="automol/util.html#automol.util.value_similar_to">value_similar_to() (in module automol.util)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/util.html#automol.util.dict_.values_by_key">values_by_key() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.values_in_multilevel_dct">values_in_multilevel_dct() (in module automol.util.dict_)</a>
+</li>
+      <li><a href="automol/util.html#automol.util.dict_.values_sorted_by_key">values_sorted_by_key() (in module automol.util.dict_)</a>
+</li>
       <li><a href="automol/inchi_key.html#automol.inchi_key.version_indicator">version_indicator() (in module automol.inchi_key)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="automol/form.html#automol.form.without">without() (in module automol.form)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -644,8 +792,8 @@ By Andreas V. Copan
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
 
   <footer class="bd-footer">
   </footer>
