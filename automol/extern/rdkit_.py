@@ -5,7 +5,7 @@ import numbers
 
 import rdkit
 from rdkit import RDLogger
-from rdkit.Chem import AllChem, Draw
+from rdkit.Chem import AllChem, Draw, rdDistGeom
 
 from .. import util
 from ..geom import base as geom_base
@@ -130,7 +130,7 @@ def from_geometry_with_graph(geo, gra):
     return rdm
 
 
-def to_geometry(rdm):
+def to_geometry(rdm, seed: int = -1):
     """Generate a molecular geometry from an RDKit molecule object.
 
     :param rdm: molecule object
@@ -144,9 +144,19 @@ def to_geometry(rdm):
         syms = [str(atms[0].GetSymbol()).title()]
         xyzs = [(0.0, 0.0, 0.0)]
     else:
-        ret = AllChem.EmbedMolecule(rdm, maxAttempts=10000)
+        ps = rdDistGeom.ETKDGv3()
+        ps.randomSeed = seed
+        ps.maxAttempts = 10000
+
+        ret = AllChem.EmbedMolecule(rdm, ps)
         if ret < 0:
-            ret = AllChem.EmbedMolecule(rdm, maxAttempts=10000, useRandomCoords=True)
+            ps.useBasicKnowledge = False
+            ret = AllChem.EmbedMolecule(rdm, ps)
+        if ret < 0:
+            ps.useRandomCoords = False
+            ret = AllChem.EmbedMolecule(rdm, ps)
+        if ret < 0:
+            return None
 
         AllChem.MMFFOptimizeMolecule(rdm)
         syms = tuple(str(rda.GetSymbol()).title() for rda in atms)
@@ -168,41 +178,6 @@ def canonicalize_geometry(rdm):
     xyzs = tuple(map(tuple, rdm.GetConformer(0).GetPositions()))
     geo = geom_base.from_data(syms, xyzs, angstrom=False)
     return geo
-
-
-def to_conformers(rdm, nconfs):
-    """Generate molecular geometries for a set of conformers
-    from am RDKit molecule object.
-
-    Currently not removing redundant conformers.
-
-    :param rdm: molecule object
-    :type rdm: RDKit molecule object
-    :param nconfs: number of conformers to generate
-    :type nconfs: int
-    :rtype: automol geometry data structure
-    """
-
-    rdm = rdkit.Chem.AddHs(rdm)
-    atms = rdm.GetAtoms()
-    natms = len(rdm.GetAtoms())
-    geos = []
-    if natms == 1:
-        syms = [str(atms[0].GetSymbol()).title()]
-        xyzs = [(0.0, 0.0, 0.0)]
-        geos.append(geom_base.from_data(syms, xyzs, angstrom=True))
-    else:
-        cids = AllChem.EmbedMultipleConfs(rdm, numConfs=nconfs)
-        res = AllChem.MMFFOptimizeMoleculeConfs(rdm)
-        energies = list(zip(*res))[1]
-        for cid in cids:
-            syms = tuple(str(rda.GetSymbol()).title() for rda in atms)
-            xyzs = tuple(map(tuple, rdm.GetConformer(cid).GetPositions()))
-            geos.append(geom_base.from_data(syms, xyzs, angstrom=True))
-        # Sort geometries using the energies
-        geos = [x for _, x in sorted(zip(energies, geos), key=lambda pair: pair[0])]
-
-    return geos
 
 
 # molfile
