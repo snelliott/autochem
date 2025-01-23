@@ -9,7 +9,6 @@ import IPython.display as ipd
 import ipywidgets
 import more_itertools as mit
 import numpy
-
 from phydat import phycon
 
 from .. import error, geom
@@ -34,7 +33,6 @@ from .base import (
     smiles,
     standard_keys,
     stereo_corrected_geometry,
-    string,
     to_local_stereo,
     ts,
     union_from_sequence,
@@ -92,8 +90,9 @@ def geometry(gra, check=True, log=False):
     return geo
 
 
-def _connected_geometry(gra, check=True, log=False):
+def _connected_geometry(gra, check=True, log=False, ntries: int = 2):
     """Generate a geometry for a connected molecular graph.
+
     :param gra: connected molecular graph
     :type gra: automol graph data structure
     :param check: Check stereo and connectivity? defaults to True
@@ -111,28 +110,20 @@ def _connected_geometry(gra, check=True, log=False):
     # Determine if stereochemistry and/or vinyl radical groups are present
     stereo = has_stereo(gra)
 
-    # Define geometry generation methods
-    def method1_(gra_):
-        try:
-            rdm = rdkit_.from_graph(gra_, stereo=stereo, exp=True, local_stereo=True)
-            geo = rdkit_.to_geometry(rdm)
-        except ValueError:
-            rdm = rdkit_.from_graph(gra_, stereo=False, exp=True)
-            geo = rdkit_.to_geometry(rdm)
-        return geo
-
-    def method2_(gra_):
-        rdm = rdkit_.from_graph(gra_, stereo=stereo, exp=True, local_stereo=True)
-        (geo,) = rdkit_.to_conformers(rdm, nconfs=1)
-        return geo
-
     # Try geometry generation methods until one works
-    methods_ = [method1_, method2_, method2_]
-    for try_number, method_ in enumerate(methods_):
-        geo = method_(gra)
+    for seed in range(ntries):
+        try:
+            rdm = rdkit_.from_graph(gra, stereo=stereo, exp=True, local_stereo=True)
+            geo = rdkit_.to_geometry(rdm, seed=seed)
+        except ValueError:
+            rdm = rdkit_.from_graph(gra, stereo=False, exp=True)
+            geo = rdkit_.to_geometry(rdm, seed=seed)
+
+        if geo is None:
+            continue
 
         if log:
-            print(f"Try {try_number}...")
+            print(f"Try {seed}...")
             print("Raw geometry:")
             print(geom.round_(geo))
 
@@ -143,7 +134,7 @@ def _connected_geometry(gra, check=True, log=False):
         if geo is not None:
             return geo
 
-    raise error.FailedGeometryGenerationError(f"Failed graph:\n{string(orig_gra)}")
+    raise error.FailedGeometryGenerationError(f"\nseed = {seed}\norig_gra = {orig_gra}")
 
 
 def _clean_and_validate_connected_geometry(
@@ -499,7 +490,7 @@ def ts_geometry_from_reactants(
         print(f"TS geometry after cleaning:\n{ts_geo}")
 
     if check and not geometry_matches(tsg, ts_geo, local_stereo=True, log=log):
-        raise error.FailedGeometryGenerationError(f"Failed TS graph:\n{string(tsg0)}")
+        raise error.FailedGeometryGenerationError(f"\ntsg0 = {tsg0}")
 
     return ts_geo
 
@@ -556,7 +547,7 @@ def clean_ts_geometry(
         print(f"TS geometry after cleaning:\n{ts_geo}")
 
     if check and not geometry_matches(tsg, ts_geo, local_stereo=True, log=log):
-        raise error.FailedGeometryGenerationError(f"Failed TS graph:\n{string(tsg0)}")
+        raise error.FailedGeometryGenerationError(f"\ntsg0 = {tsg0}")
 
     return ts_geo
 
