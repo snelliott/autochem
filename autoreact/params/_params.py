@@ -94,7 +94,7 @@ class RxnParams:
     def __repr__(self):
         """ Get a string representation of the parametrization
         """
-        type_, dct = (('arr', self.arr) if self.arr is not None else
+        type_, dct = (('arr', (self.arr, self.arr_collid)) if self.arr is not None else
                       ('plog', self.plog) if self.plog is not None else
                       ('cheb', self.cheb) if self.cheb is not None else
                       ('troe', self.troe) if self.troe is not None else
@@ -495,8 +495,9 @@ def multiply_factor(params, factor):
     def single_form(params, form, factor):
         if form == 'arr':
             arr_tuples = params.arr
+            arr_collid = params.arr_collid
             new_arr = fix_arr_tuples(arr_tuples, factor)
-            new_arr_dct = {'arr_tuples': new_arr}
+            new_arr_dct = {'arr_tuples': new_arr, 'arr_collid': arr_collid}
             new_params = RxnParams(arr_dct=new_arr_dct)
         elif form == 'plog':
             plog_dct = params.plog
