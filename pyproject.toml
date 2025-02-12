@@ -12,3 +12,5 @@ requires = ["hatchling"]
 [tool.hatch.build.targets.sdist]
 include = ["autochem", "automol", "autoreact", "molsym"]
 
+[tool.hatch.build.targets.wheel]
+include = ["autochem", "automol", "autoreact", "molsym"]
