@@ -7,7 +7,6 @@ import more_itertools
 import numpy
 import pyparsing as pp
 from pyparsing import pyparsing_common as ppc
-
 from phydat import ptab
 
 from .util import ZmatConv, dict_, zmat_conv

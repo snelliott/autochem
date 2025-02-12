@@ -3,7 +3,6 @@ from collections.abc import Callable, Sequence
 
 import numpy
 from scipy.spatial.transform import Rotation
-
 from phydat import phycon
 
 Vector = numpy.ndarray

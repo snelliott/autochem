@@ -1,7 +1,6 @@
 """Functions to deal with vibrational frequencies."""
 
 import numpy
-
 from phydat import phycon
 
 
