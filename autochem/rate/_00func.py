@@ -1,7 +1,7 @@
 """Blending function models."""
 
 import abc
-from typing import Annotated, TypeVar
+from typing import Annotated, TypeVar, ClassVar
 
 import numpy
 import pydantic
@@ -31,7 +31,7 @@ class BlendingFunction(Frozen, Scalable, SubclassTyped, abc.ABC):
 class LindemannBlendingFunction(BlendingFunction):
 
     # Private attributes
-    _type: str = "lindemann"
+    type_: ClassVar[str] = "lindemann"
 
     def __call__(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
         """Evaluate blending function, f(t, p_r)."""
@@ -45,7 +45,7 @@ class TroeBlendingFunction(BlendingFunction):
     t2: float | None = None
 
     # Private attributes
-    _type: str = "troe"
+    type_: ClassVar[str] = "troe"
 
     def __call__(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
         """Evaluate blending function, f(t, p_r)."""
@@ -84,7 +84,7 @@ class SriBlendingFunction(BlendingFunction):
     e: float = 0.0
 
     # Private attributes
-    _type: str = "sri"
+    type_: ClassVar[str] = "sri"
 
     def __call__(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
         """Evaluate blending function, f(t, p_r)."""
