@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [tool.hatch.build.targets.sdist]
-include = ["autochem", "automol", "autoreact", "molsym"]
+include = ["autochem", "automol", "autoreact", "phydat", "molsym"]
 
 [tool.hatch.build.targets.wheel]
-include = ["autochem", "automol", "autoreact", "molsym"]
+include = ["autochem", "automol", "autoreact", "phydat", "molsym"]
