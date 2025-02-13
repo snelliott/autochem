@@ -224,7 +224,8 @@ def chemkin_string(rate: Rate, eq_width: int = 55, dup: bool = False) -> str:
 # Display
 def display(
     rate: Rate,
-    comp_rates: "Mapping[str, Rate] | None" = None,
+    comp_rates: Sequence[Rate] = (),
+    comp_labels: Sequence[str] = (),
     t_range: tuple[Number, Number] = (400, 1250),
     p: Number = 1,
     units: UnitsData | None = None,
@@ -232,10 +233,11 @@ def display(
     x_label: str = "1000/T",
     y_label: str = "k",
 ) -> altair.Chart:
-    """Display as an Arrhenius plot.
+    """Display as an Arrhenius plot, optionally comparing to other rates.
 
     :param rate: Rate
-    :param others: Other rate constants by label
+    :param comp_rates: Rates for comparison
+    :param comp_labels: Labels for comparison
     :param t_range: Temperature range
     :param p: Pressure
     :param units: Units
@@ -243,11 +245,9 @@ def display(
     :param y_label: Y-axis label
     :return: Chart
     """
-    if comp_rates is not None:
-        comp_rates = {lab: obj.rate_constant for lab, obj in comp_rates.items()}
-
     return rate.rate_constant.display(
-        comp_rates=comp_rates,
+        others=[r.rate_constant for r in comp_rates],
+        labels=comp_labels,
         t_range=t_range,
         p=p,
         units=units,
