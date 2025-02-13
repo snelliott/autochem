@@ -1,6 +1,7 @@
 """Rate constant models."""
 
 import abc
+from collections.abc import Mapping
 from typing import Annotated, ClassVar
 
 import more_itertools as mit
@@ -87,7 +88,7 @@ class RawRateConstant(RateConstant):
     # Private attributes
     _t_key = "t"
     _p_key = "p"
-    _type: str = "raw"
+    type_: ClassVar[str] = "raw"
     _scalers: ClassVar[Scalers] = {"k_array": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
         "ts": Dimension.temperature,
@@ -128,6 +129,13 @@ class ParamRateConstant(RateConstant):
 
         return next((c for c, e in eff.items() if e == 1.0), None)
 
+    @pydantic.field_validator("efficiencies", mode="before")
+    @classmethod
+    def sanitize_efficiencies(cls, value: object) -> object:
+        if isinstance(value, Mapping):
+            return {k: v for k, v in value.items() if v is not None}
+        return value
+
 
 class ArrheniusRateConstant(ParamRateConstant):
     A: float = 1.0
@@ -135,7 +143,7 @@ class ArrheniusRateConstant(ParamRateConstant):
     E: float = 0.0
 
     # Private attributes
-    _type: str = "arrhenius"
+    type_: ClassVar[str] = "arrhenius"
     _scalers: ClassVar[Scalers] = {"A": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
         "A": Dimension.rate_constant,
@@ -224,7 +232,7 @@ class BlendedRateConstant(ParamRateConstant, abc.ABC):  # type: ignore[misc]
 class FalloffRateConstant(BlendedRateConstant):
 
     # Private attributes
-    _type: str = "falloff"
+    type_: ClassVar[str] = "falloff"
 
     @unit_.manage_units(
         [Dimension.temperature, Dimension.pressure], Dimension.rate_constant
@@ -243,7 +251,7 @@ class FalloffRateConstant(BlendedRateConstant):
 class ActivatedRateConstant(BlendedRateConstant):
 
     # Private attributes
-    _type: str = "activated"
+    type_: ClassVar[str] = "activated"
 
     @unit_.manage_units(
         [Dimension.temperature, Dimension.pressure], Dimension.rate_constant
@@ -266,7 +274,7 @@ class PlogRateConstant(ParamRateConstant):
     ps: list[float]
 
     # Private attributes
-    _type: str = "plog"
+    type_: ClassVar[str] = "plog"
     _scalers: ClassVar[Scalers] = {"As": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
         "As": Dimension.rate_constant,
@@ -371,7 +379,7 @@ class ChebRateConstant(ParamRateConstant):
     p_range: tuple[float, float]
 
     # Private attributes
-    _type: str = "cheb"
+    type_: ClassVar[str] = "cheb"
     _scalers: ClassVar[Scalers] = {"coeffs": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
         "coeffs": Dimension.rate_constant,

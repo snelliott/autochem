@@ -39,16 +39,16 @@ class SubclassTyped(pydantic.BaseModel, abc.ABC):
 
     Usage:
     ```
-    from typing import Final
+    from typing import ClassVar
 
     class A(SubclassTyped):
         x: int
 
     class B(A):
-        _type: str = "b"
+        type: ClassVar[str] = "b"
 
     class C(A):
-        _type: str = "c"
+        type: ClassVar[str] = "c"
 
     A.from_data({"x": 1, "type": "b"})
 
@@ -56,12 +56,12 @@ class SubclassTyped(pydantic.BaseModel, abc.ABC):
     ```
     """
 
-    _type: str
+    type_: ClassVar[str] = ""
 
     @pydantic.computed_field
     def type(self) -> str:
         """Subclass type."""
-        return self._type
+        return self.__class__.type_
 
     @classmethod
     def model_validate(
@@ -76,8 +76,8 @@ class SubclassTyped(pydantic.BaseModel, abc.ABC):
         if isinstance(obj, Mapping) and "type" in obj:
             assert "type" in obj, f"Missing type field: {obj}"
             obj = dict(obj).copy()
-            _type = obj.pop("type")
-            sub = next((s for s in cls.__subclasses__() if s._type == _type), None)
+            typ = obj.pop("type")
+            sub = next((s for s in subclasses(cls) if s.type_ == typ), None)
             if sub is not None:
                 return sub.model_validate(
                     obj, strict=strict, from_attributes=from_attributes, context=context
@@ -86,6 +86,16 @@ class SubclassTyped(pydantic.BaseModel, abc.ABC):
         return super().model_validate(
             obj, strict=strict, from_attributes=from_attributes, context=context
         )
+
+
+def subclasses(cls: type[SubclassTyped]) -> list[type[SubclassTyped]]:
+    subs = []
+
+    for sub in cls.__subclasses__():
+        subs.append(sub)
+        subs.extend(subclasses(sub))
+
+    return subs
 
 
 class Scalable(pydantic.BaseModel, abc.ABC):
