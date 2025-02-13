@@ -1,7 +1,7 @@
 """Rate constant models."""
 
 import abc
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Annotated, ClassVar
 
 import altair
@@ -91,7 +91,8 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
 
     def display(
         self,
-        others: "Mapping[str, RateConstant] | None" = None,
+        others: "Sequence[RateConstant]" = (),
+        labels: Sequence[str] = (),
         t_range: tuple[Number, Number] = (400, 1250),
         p: Number = 1,
         units: UnitsData | None = None,
@@ -101,7 +102,8 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
     ) -> altair.Chart:
         """Display as an Arrhenius plot.
 
-        :param others: Other rate constants by label
+        :param others: Other rate constants
+        :param others_labels: Labels for other rate constants
         :param t_range: Temperature range
         :param p: Pressure
         :param units: Units
@@ -118,13 +120,14 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         x_label = f"{x_label} ({x_unit})"
         y_label = f"{y_label} ({y_unit})"
 
-        # Gather functions
-        others = {} if others is None else others
-        funcs = {label: self, **others}
+        # Gather rate constants and labels
+        assert len(others) == len(labels), f"{labels} !~ {others}"
+        all_ks = [self, *others]
+        all_labels = [label, *labels]
 
         # Gether data from functons
         t = numpy.linspace(*t_range, num=500)
-        data_dct = {lab: func(t, p) for lab, func in funcs.items()}
+        data_dct = {lab: k(t, p) for lab, k in zip(all_labels, all_ks, strict=True)}
         data = pandas.DataFrame({"x": numpy.divide(1000, t), **data_dct})
 
         # Determine exponent range

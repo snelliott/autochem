@@ -78,39 +78,6 @@ class Rate(Scalable):
         """
         return self.rate_constant(t=t, p=p, units=units)
 
-    def display(
-        self,
-        others: "Mapping[str, Rate] | None" = None,
-        t_range: tuple[Number, Number] = (400, 1250),
-        p: Number = 1,
-        units: UnitsData | None = None,
-        label: str = "This work",
-        x_label: str = "1000/T",
-        y_label: str = "k",
-    ) -> altair.Chart:
-        """Display as an Arrhenius plot.
-
-        :param others: Other rate constants by label
-        :param t_range: Temperature range
-        :param p: Pressure
-        :param units: Units
-        :param x_label: X-axis label
-        :param y_label: Y-axis label
-        :return: Chart
-        """
-        if others is not None:
-            others = {lab: obj.rate_constant for lab, obj in others.items()}
-
-        return self.rate_constant.display(
-            others=others,
-            t_range=t_range,
-            p=p,
-            units=units,
-            label=label,
-            x_label=x_label,
-            y_label=y_label,
-        )
-
 
 # Constructors
 def from_chemkin_string(
@@ -252,3 +219,39 @@ def chemkin_string(rate: Rate, eq_width: int = 55, dup: bool = False) -> str:
     rate_str = rate_constant_chemkin_string(rate.rate_constant, eq_width=eq_width)
     reac_str = f"{eq:<{eq_width}} {rate_str}"
     return chemkin.write_with_dup(reac_str, dup=dup)
+
+
+# Display
+def display(
+    rate: Rate,
+    comp_rates: Sequence[Rate] = (),
+    comp_labels: Sequence[str] = (),
+    t_range: tuple[Number, Number] = (400, 1250),
+    p: Number = 1,
+    units: UnitsData | None = None,
+    label: str = "This work",
+    x_label: str = "1000/T",
+    y_label: str = "k",
+) -> altair.Chart:
+    """Display as an Arrhenius plot, optionally comparing to other rates.
+
+    :param rate: Rate
+    :param comp_rates: Rates for comparison
+    :param comp_labels: Labels for comparison
+    :param t_range: Temperature range
+    :param p: Pressure
+    :param units: Units
+    :param x_label: X-axis label
+    :param y_label: Y-axis label
+    :return: Chart
+    """
+    return rate.rate_constant.display(
+        others=[r.rate_constant for r in comp_rates],
+        labels=comp_labels,
+        t_range=t_range,
+        p=p,
+        units=units,
+        label=label,
+        x_label=x_label,
+        y_label=y_label,
+    )
