@@ -1,5 +1,5 @@
 """Utilities."""
 
-from . import chemkin, plot, type_
+from . import chemkin, type_
 
-__all__ = ["chemkin", "plot", "type_"]
+__all__ = ["chemkin", "type_"]

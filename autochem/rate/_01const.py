@@ -4,8 +4,10 @@ import abc
 from collections.abc import Mapping
 from typing import Annotated, ClassVar
 
+import altair
 import more_itertools as mit
 import numpy
+import pandas
 import pint
 import pydantic
 import xarray
@@ -16,7 +18,7 @@ from pydantic_core import core_schema
 from .. import unit_
 from ..unit_ import UNITS, Dimension, UnitManager, Units, UnitsData
 from ..util import chemkin
-from ..util.type_ import Frozen, NDArray_, Scalable, Scalers, SubclassTyped
+from ..util.type_ import Frozen, NDArray_, Number, Scalable, Scalers, SubclassTyped
 from ._00func import (
     BlendingFunction_,
     extract_blending_function_from_chemkin_parse_results,
@@ -79,6 +81,79 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
 
         return t, p
 
+    def process_output(self, ktp: ArrayLike) -> NDArray[numpy.float64]:
+        """Normalize rate constant output, clipping unphyiscal negative values.
+
+        :param ktp: Rate constant values
+        :return: Rate constant values
+        """
+        return numpy.where(numpy.less_equal(ktp, 0), numpy.nan, ktp)
+
+    def display(
+        self,
+        others: "Mapping[str, RateConstant] | None" = None,
+        t_range: tuple[Number, Number] = (400, 1250),
+        p: Number = 1,
+        units: UnitsData | None = None,
+        label: str = "This work",
+        x_label: str = "1000/T",
+        y_label: str = "k",
+    ) -> altair.Chart:
+        """Display as an Arrhenius plot.
+
+        :param others: Other rate constants by label
+        :param t_range: Temperature range
+        :param p: Pressure
+        :param units: Units
+        :param x_label: X-axis label
+        :param y_label: Y-axis label
+        :return: Chart
+        """
+        # Process units
+        units = UNITS if units is None else Units.model_validate(units)
+        x_unit = unit_.pretty_string(units.temperature**-1)
+        y_unit = unit_.pretty_string(units.rate_constant(self.order))
+
+        # Add units to labels
+        x_label = f"{x_label} ({x_unit})"
+        y_label = f"{y_label} ({y_unit})"
+
+        # Gather functions
+        others = {} if others is None else others
+        funcs = {label: self, **others}
+
+        # Gether data from functons
+        t = numpy.linspace(*t_range, num=500)
+        data_dct = {lab: func(t, p) for lab, func in funcs.items()}
+        data = pandas.DataFrame({"x": numpy.divide(1000, t), **data_dct})
+
+        # Determine exponent range
+        vals_arr = numpy.array(list(data_dct.values()))
+        is_nan = numpy.isnan(vals_arr)
+        exp_arr = numpy.log10(vals_arr, where=~is_nan)
+        exp_arr[is_nan] = 0.0
+        exp_arr = numpy.rint(exp_arr).astype(int)
+        exp_max = numpy.max(exp_arr).item()
+        exp_min = numpy.min(exp_arr).item()
+        y_vals = [10**x for x in range(exp_min, exp_max + 2)]
+
+        # Prepare encoding parameters
+        x = altair.X("x", title=x_label)
+        y = (
+            altair.Y("value:Q", title=y_label)
+            .scale(type="log")
+            .axis(format=".1e", values=y_vals)
+        )
+        color = "key:N" if others else altair.Undefined
+
+        # Create chart
+        return (
+            altair.Chart(data)
+            .mark_line()
+            .transform_fold(fold=list(data_dct.keys()))
+            .encode(x=x, y=y, color=color)
+        )
+
 
 class RawRateConstant(RateConstant):
     ts: list[float]
@@ -111,7 +186,7 @@ class RawRateConstant(RateConstant):
         """Evaluate rate constant."""
         t, p = self.process_input(t, p)
         ktp: NDArray[numpy.float64] = self.ktp.sel(t=t, p=p, method="ffill").data
-        return ktp
+        return self.process_output(ktp)
 
 
 class ParamRateConstant(RateConstant):
@@ -160,7 +235,7 @@ class ArrheniusRateConstant(ParamRateConstant):
         t, p = self.process_input(t, p)
         r = unit_.system.gas_constant_value(UNITS)
         ktp = self.A * (t**self.b) * numpy.exp(-self.E / (r * t))
-        return ktp
+        return self.process_output(ktp)
 
 
 class BlendedRateConstant(ParamRateConstant, abc.ABC):  # type: ignore[misc]
@@ -245,7 +320,7 @@ class FalloffRateConstant(BlendedRateConstant):
         _, k_high = self.arrhenius_functions
         p_r = self.effective_reduced_pressure(t, p)
         ktp = k_high(t) * p_r / (1 + p_r) * self.function(t, p_r)
-        return ktp
+        return self.process_output(ktp)
 
 
 class ActivatedRateConstant(BlendedRateConstant):
@@ -264,7 +339,7 @@ class ActivatedRateConstant(BlendedRateConstant):
         k_low, _ = self.arrhenius_functions
         p_r = self.effective_reduced_pressure(t, p)
         ktp = k_low(t) / (1 + p_r) * self.function(t, p_r)
-        return ktp
+        return self.process_output(ktp)
 
 
 class PlogRateConstant(ParamRateConstant):
@@ -305,7 +380,7 @@ class PlogRateConstant(ParamRateConstant):
         elif p == p0:
             ktp = kt0
 
-        return ktp
+        return self.process_output(ktp)
 
     @property
     def arrhenius_functions(self) -> list[ArrheniusRateConstant]:
@@ -406,7 +481,7 @@ class ChebRateConstant(ParamRateConstant):
 
         # AVC: I don't understand why I need to transpose the coefficient matrix here
         ktp = chebyshev.chebgrid2d(t_, p_, self.coeffs.T)
-        return ktp
+        return self.process_output(ktp)
 
 
 RateConstant_ = Annotated[

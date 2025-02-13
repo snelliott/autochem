@@ -5,6 +5,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import ClassVar
 
+import altair
 import numpy
 import pint
 import pydantic
@@ -12,7 +13,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from ..unit_ import UnitsData
 from ..util import chemkin
-from ..util.type_ import Scalable, Scalers
+from ..util.type_ import Number, Scalable, Scalers
 from ._01const import (
     ArrheniusRateConstant,
     ParamRateConstant,
@@ -76,6 +77,39 @@ class Rate(Scalable):
         :return: Value(s)
         """
         return self.rate_constant(t=t, p=p, units=units)
+
+    def display(
+        self,
+        others: "Mapping[str, Rate] | None" = None,
+        t_range: tuple[Number, Number] = (400, 1250),
+        p: Number = 1,
+        units: UnitsData | None = None,
+        label: str = "This work",
+        x_label: str = "1000/T",
+        y_label: str = "k",
+    ) -> altair.Chart:
+        """Display as an Arrhenius plot.
+
+        :param others: Other rate constants by label
+        :param t_range: Temperature range
+        :param p: Pressure
+        :param units: Units
+        :param x_label: X-axis label
+        :param y_label: Y-axis label
+        :return: Chart
+        """
+        if others is not None:
+            others = {lab: obj.rate_constant for lab, obj in others.items()}
+
+        return self.rate_constant.display(
+            others=others,
+            t_range=t_range,
+            p=p,
+            units=units,
+            label=label,
+            x_label=x_label,
+            y_label=y_label,
+        )
 
 
 # Constructors

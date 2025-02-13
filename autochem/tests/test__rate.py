@@ -1,10 +1,8 @@
 """Test autochem.rate."""
 
-import numpy
 import pytest
 
 from autochem import rate
-from autochem.util import plot
 
 # Elementary
 SIMPLE = {
@@ -115,18 +113,20 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     # Read
     k = rate.from_chemkin_string(chem_str, units=units)
 
-    # Plot
-    T = numpy.linspace(400, 1250, 500)
-    P = 10
-    k(T, P)
-    plot.arrhenius_plot(T, k(T, P), y_unit=k.unit)
-
     # Write
     chem_str_ = rate.chemkin_string(k)
     print(chem_str_)
     k_ = rate.from_chemkin_string(chem_str_)
+
+    # Check roundtrip
     if check_roundtrip:
         assert k == k_, f"\n   {k}\n!= {k_}"
+
+    # Plot against another rate
+    other_units = SIMPLE.get("units")
+    other_chem_str = SIMPLE.get("chemkin")
+    other_k = rate.from_chemkin_string(other_chem_str, units=other_units)
+    k.display({"Other": other_k})
 
 
 if __name__ == "__main__":
