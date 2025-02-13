@@ -21,6 +21,7 @@ from ._02rate import (
     Rate,
     chemkin_equation,
     chemkin_string,
+    display,
     expand_lumped,
     from_chemkin_string,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "TroeBlendingFunction",
     "chemkin_equation",
     "chemkin_string",
+    "display",
     "expand_lumped",
     "from_chemkin_string",
 ]

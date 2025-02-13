@@ -91,7 +91,7 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
 
     def display(
         self,
-        others: "Mapping[str, RateConstant] | None" = None,
+        comp_rates: "Mapping[str, RateConstant] | None" = None,
         t_range: tuple[Number, Number] = (400, 1250),
         p: Number = 1,
         units: UnitsData | None = None,
@@ -119,8 +119,8 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         y_label = f"{y_label} ({y_unit})"
 
         # Gather functions
-        others = {} if others is None else others
-        funcs = {label: self, **others}
+        comp_rates = {} if comp_rates is None else comp_rates
+        funcs = {label: self, **comp_rates}
 
         # Gether data from functons
         t = numpy.linspace(*t_range, num=500)
@@ -144,7 +144,7 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
             .scale(type="log")
             .axis(format=".1e", values=y_vals)
         )
-        color = "key:N" if others else altair.Undefined
+        color = "key:N" if comp_rates else altair.Undefined
 
         # Create chart
         return (

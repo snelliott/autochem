@@ -126,7 +126,7 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     other_units = SIMPLE.get("units")
     other_chem_str = SIMPLE.get("chemkin")
     other_k = rate.from_chemkin_string(other_chem_str, units=other_units)
-    k.display({"Other": other_k})
+    rate.display(k, {"Other": other_k})
 
 
 if __name__ == "__main__":

@@ -78,39 +78,6 @@ class Rate(Scalable):
         """
         return self.rate_constant(t=t, p=p, units=units)
 
-    def display(
-        self,
-        others: "Mapping[str, Rate] | None" = None,
-        t_range: tuple[Number, Number] = (400, 1250),
-        p: Number = 1,
-        units: UnitsData | None = None,
-        label: str = "This work",
-        x_label: str = "1000/T",
-        y_label: str = "k",
-    ) -> altair.Chart:
-        """Display as an Arrhenius plot.
-
-        :param others: Other rate constants by label
-        :param t_range: Temperature range
-        :param p: Pressure
-        :param units: Units
-        :param x_label: X-axis label
-        :param y_label: Y-axis label
-        :return: Chart
-        """
-        if others is not None:
-            others = {lab: obj.rate_constant for lab, obj in others.items()}
-
-        return self.rate_constant.display(
-            others=others,
-            t_range=t_range,
-            p=p,
-            units=units,
-            label=label,
-            x_label=x_label,
-            y_label=y_label,
-        )
-
 
 # Constructors
 def from_chemkin_string(
@@ -252,3 +219,39 @@ def chemkin_string(rate: Rate, eq_width: int = 55, dup: bool = False) -> str:
     rate_str = rate_constant_chemkin_string(rate.rate_constant, eq_width=eq_width)
     reac_str = f"{eq:<{eq_width}} {rate_str}"
     return chemkin.write_with_dup(reac_str, dup=dup)
+
+
+# Display
+def display(
+    rate: Rate,
+    comp_rates: "Mapping[str, Rate] | None" = None,
+    t_range: tuple[Number, Number] = (400, 1250),
+    p: Number = 1,
+    units: UnitsData | None = None,
+    label: str = "This work",
+    x_label: str = "1000/T",
+    y_label: str = "k",
+) -> altair.Chart:
+    """Display as an Arrhenius plot.
+
+    :param rate: Rate
+    :param others: Other rate constants by label
+    :param t_range: Temperature range
+    :param p: Pressure
+    :param units: Units
+    :param x_label: X-axis label
+    :param y_label: Y-axis label
+    :return: Chart
+    """
+    if comp_rates is not None:
+        comp_rates = {lab: obj.rate_constant for lab, obj in comp_rates.items()}
+
+    return rate.rate_constant.display(
+        comp_rates=comp_rates,
+        t_range=t_range,
+        p=p,
+        units=units,
+        label=label,
+        x_label=x_label,
+        y_label=y_label,
+    )
