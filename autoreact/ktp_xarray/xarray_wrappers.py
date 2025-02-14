@@ -13,7 +13,7 @@ RateConstant = xarray.DataArray
 def from_data(
     temps: Sequence[Number], press: Sequence[Number], rates: Sequence[Sequence[Number]]
 ) -> RateConstant:
-    """Construct a KTP DataArray from data.."""
+    """Construct a KTP DataArray from data."""
     data = [list(map(float, kT)) for kT in rates]
     coords = {
         "pres": list(map(float, press)),
@@ -22,20 +22,27 @@ def from_data(
     ktp = xarray.DataArray(data=data, coords=coords)
     return ktp
 
+def make_empty_dataarray(temps: Sequence[Number], press: Sequence[Number]
+) -> RateConstant:
+    """Construct a DataArray filled with numpy.nan objects."""
+    empty_ndarray = numpy.full((len(press), len(temps)), numpy.nan)
+    ktp = from_data(temps, press, empty_ndarray)
+    return ktp
+
 
 # Getters
 def get_pressures(ktp: RateConstant) -> numpy.ndarray:
-    """Get the pressure values.."""
+    """Get the pressure values."""
     return ktp.pres.data
 
 
 def get_temperatures(ktp: RateConstant) -> numpy.ndarray:
-    """Get the temperature values.."""
+    """Get the temperature values."""
     return ktp.temp.data
 
 
 def get_values(ktp: RateConstant) -> numpy.ndarray:
-    """Get the KTP values.."""
+    """Get the KTP values."""
     return ktp.values
 
 
@@ -59,7 +66,7 @@ def get_ipslice(ktp: RateConstant, ip: int) -> numpy.ndarray:
     return ktp.isel(pres=ip)
 
 
-def get_itslice(ktp: RateConstant, it: int):
+def get_itslice(ktp: RateConstant, it: int) -> numpy.ndarray:
     """Get a slice at a selected temperature index."""
     return ktp.isel(temp=it)
 
@@ -72,9 +79,14 @@ def set_rates(
     ktp.loc[{"pres": pres, "temp": temp}] = rates
     return ktp
 
+def set_rates_pslice(
+    ktp: RateConstant, rates: Sequence[Sequence[Number]], pres: Number):
+    """Set the KTP values at a specific pressure slice."""
+    ktp.loc[{"pres": pres}] = rates
+    return ktp
+
 
 # Translators
-
 
 def dict_from_xarray(xarray_in: RateConstant) -> dict:
     """Turn an xarray into a ktp_dct."""
