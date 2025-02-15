@@ -2484,7 +2484,7 @@ def union(gra1, gra2, check=True):
     :rtype: automol graph data structure
     """
     if check:
-        assert not atom_keys(gra1) & atom_keys(gra2)
+        assert not atom_keys(gra1) & atom_keys(gra2), f"\ngra1 = {gra1}\ngra2 = {gra2}"
     atm_dct = {}
     atm_dct.update(atoms(gra1))
     atm_dct.update(atoms(gra2))

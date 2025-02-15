@@ -36,7 +36,8 @@ class ReactionSmarts:
     ring_forming_scission = f"([{Cr}:1].[{O_}:2][O:3][H:4])>>[R:1][R:2].[O:3][H:4]"
     h_migration = f"([{Ar}:1].[{A_}:2][H:3])>>([H:3][{A_}:1].[{Ar}:2])"
     h_migration_12 = f"[{Ar}:1][{A_}:2][H:3]>>[H:3][{A_}:1][{Ar}:2]"
-    ring_beta_scission = f"[{A_}:1]-[{A_}:2]-[{Ar}:3]>>([{Ar}:1].[{A_}:2]=[{A_}:3])"
+    beta_scission = f"[{A_}:1]!@[{A_}:2]-[{Ar}:3]>>([{Ar}:1]).([{A_}:2]=[{A_}:3])"
+    ring_beta_scission = f"[{A_}:1]@[{A_}:2]-[{Ar}:3]>>([{Ar}:1].[{A_}:2]=[{A_}:3])"
 
 
 def reactions(smarts: str, gra: object, symeq: bool = False) -> list[object]:
