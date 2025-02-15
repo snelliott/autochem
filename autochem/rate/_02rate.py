@@ -56,7 +56,7 @@ class Rate(Scalable):
     @property
     def is_pressure_dependent(self) -> bool:
         """Whether the rate is pressure dependent."""
-        return isinstance(self.rate_constant, ArrheniusRateConstant)
+        return not isinstance(self.rate_constant, ArrheniusRateConstant)
 
     def __call__(
         self, t: ArrayLike, p: ArrayLike = 1, units: UnitsData | None = None
