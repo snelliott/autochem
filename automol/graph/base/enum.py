@@ -12,6 +12,7 @@ from ._00core import (
     relabel,
     ts_graph_from_reactants_and_products,
     union_from_sequence,
+    without_stereo,
 )
 from ._02algo import connected_components, unique
 from ._12rdkit import from_graph as to_rdkit
@@ -60,6 +61,7 @@ def products(smarts: str, gra: object) -> list[object]:
     :returns: Products graphs
     """
     assert gra == explicit(gra), f"Graph must be explicit\ngra = {gra}"
+    assert gra == without_stereo(gra), f"Cannot handle stereochemistry\ngra = {gra}"
 
     # Form the reaction object
     rxn = AllChem.ReactionFromSmarts(smarts)

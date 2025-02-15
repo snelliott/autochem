@@ -253,8 +253,10 @@ def amchis(rxn: Reaction, stereo: bool = True):
     :returns: AMChI strings for the reactants and products
     :rtype: (tuple[str], tuple[str])
     """
-    rct_chis = tuple(graph.amchi(gra, stereo=stereo) for gra in reactant_graphs(rxn))
-    prd_chis = tuple(graph.amchi(gra, stereo=stereo) for gra in product_graphs(rxn))
+    rct_gras = reactant_graphs(rxn, stereo=stereo)
+    prd_gras = product_graphs(rxn, stereo=stereo)
+    rct_chis = tuple(graph.amchi(g, stereo=stereo) for g in rct_gras)
+    prd_chis = tuple(graph.amchi(g, stereo=stereo) for g in prd_gras)
     return (rct_chis, prd_chis)
 
 
