@@ -142,7 +142,7 @@ def canonical_amchi_graph_with_numbers(
     """
     assert is_connected(gra), f"Graph is disconnected\n{gra}"
     gra = without_dummy_atoms(gra)
-    gra = gra if stereo else without_stereo
+    gra = gra if stereo else without_stereo(gra)
     ste_keys = stereo_keys(gra)
     atm_ste_keys = atom_stereo_keys(gra)
     cand_dct = stereocenter_candidates(gra)

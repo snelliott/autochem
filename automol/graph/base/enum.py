@@ -12,6 +12,7 @@ from ._00core import (
     relabel,
     ts_graph_from_reactants_and_products,
     union_from_sequence,
+    without_stereo,
 )
 from ._02algo import connected_components, unique
 from ._12rdkit import from_graph as to_rdkit
@@ -35,7 +36,8 @@ class ReactionSmarts:
     ring_forming_scission = f"([{Cr}:1].[{O_}:2][O:3][H:4])>>[R:1][R:2].[O:3][H:4]"
     h_migration = f"([{Ar}:1].[{A_}:2][H:3])>>([H:3][{A_}:1].[{Ar}:2])"
     h_migration_12 = f"[{Ar}:1][{A_}:2][H:3]>>[H:3][{A_}:1][{Ar}:2]"
-    ring_beta_scission = f"[{A_}:1]-[{A_}:2]-[{Ar}:3]>>([{Ar}:1].[{A_}:2]=[{A_}:3])"
+    beta_scission = f"[{A_}:1]!@[{A_}:2]-[{Ar}:3]>>([{Ar}:1]).([{A_}:2]=[{A_}:3])"
+    ring_beta_scission = f"[{A_}:1]@[{A_}:2]-[{Ar}:3]>>([{Ar}:1].[{A_}:2]=[{A_}:3])"
 
 
 def reactions(smarts: str, gra: object, symeq: bool = False) -> list[object]:
@@ -60,6 +62,7 @@ def products(smarts: str, gra: object) -> list[object]:
     :returns: Products graphs
     """
     assert gra == explicit(gra), f"Graph must be explicit\ngra = {gra}"
+    assert gra == without_stereo(gra), f"Cannot handle stereochemistry\ngra = {gra}"
 
     # Form the reaction object
     rxn = AllChem.ReactionFromSmarts(smarts)
