@@ -90,7 +90,7 @@ def geometry(gra, check=True, log=False):
     return geo
 
 
-def _connected_geometry(gra, check=True, log=False, ntries: int = 2):
+def _connected_geometry(gra, check=True, log=False, ntries: int = 4):
     """Generate a geometry for a connected molecular graph.
 
     :param gra: connected molecular graph
