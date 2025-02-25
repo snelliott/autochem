@@ -1,9 +1,8 @@
-""" graph conversions
-"""
+"""graph conversions"""
 
 import functools
 import itertools
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 import IPython.display as ipd
 import ipywidgets
@@ -41,24 +40,38 @@ from .base import (
 
 
 # # conversions
-def geometry(gra, check=True, log=False):
+def geometry(
+    gra,
+    check=True,
+    log=False,
+    rct_geos: Sequence[object] | None = None,
+    geo_idx_dct: Dict[int, int] | None = None,
+):
     """Convert a molecular graph to a molecular geometry.
 
     :param gra: molecular graph
     :type gra: automol graph data structure
-    :param fdist_factor: For a TS graph, set the forming bond distance to this times
-        the average van der Waals radius, defaults to 1.1
-    :type fdist_factor: float, optional
-    :param bdist_factor: For a TS graph, set the breaking bond distance to this times
-        the average van der Waals radius, defaults to 0.9
-    :type bdist_factor: float, optional
     :param check: Check stereo and connectivity? defaults to True
     :type check: bool, optional
     :param log: Log information to the screen? defaults to False
     :type log: bool, optional
+    :param rct_geos: For a TS graph, reactant geometries
+    :param geo_idx_dct: For a TS graph, specify which graph
+        keys correspond to which geometry indices, defaults to None
     :rtype: automol molecular geometry data structure
     """
     is_ts = is_ts_graph(gra)
+
+    # If this is a TS graph and reactant geometries were provided, try to build the TS
+    # from them. If this fails, try to build the TS from scratch.
+    if is_ts and rct_geos is not None:
+        try:
+            return ts_geometry_from_reactants(
+                gra, rct_geos=rct_geos, geo_idx_dct=geo_idx_dct, check=check, log=log
+            )
+        except error.FailedGeometryGenerationError:
+            pass
+
     if is_ts:
         tsg = gra
         gra = ts.reactants_graph(tsg)
@@ -431,7 +444,7 @@ def ts_geometry_from_reactants(
     check: bool = True,
     log: bool = False,
 ) -> Any:
-    """Generate a TS geometry from reactants
+    """Generate a TS geometry from reactants.
 
     :param tsg: TS graph
     :type tsg: automol graph data structure
@@ -444,9 +457,9 @@ def ts_geometry_from_reactants(
     :return: TS geometry
     :rtype: automol geom data structure
     """
-    assert not has_dummy_atoms(
-        tsg
-    ), f"Cannot convert graph->geom with dummy atoms:\n{tsg}\n{rct_geos}"
+    assert not has_dummy_atoms(tsg), (
+        f"Cannot convert graph->geom with dummy atoms:\n{tsg}\n{rct_geos}"
+    )
 
     # 0. Join geometries for bimolecular reactions, yielding a single starting structure
     ts_geo = ts_join_reactant_geometries(tsg, rct_geos, geo_idx_dct=geo_idx_dct)
@@ -515,9 +528,9 @@ def clean_ts_geometry(
     :return: TS geometry
     :rtype: automol geom data structure
     """
-    assert not has_dummy_atoms(
-        tsg
-    ), f"Cannot convert graph->geom with dummy atoms:\n{tsg}"
+    assert not has_dummy_atoms(tsg), (
+        f"Cannot convert graph->geom with dummy atoms:\n{tsg}"
+    )
 
     # 1. Align the graph and the geometry keys/indices
     tsg, ts_geo, *_ = align_with_geometry(tsg, ts_geo, (), geo_idx_dct)
