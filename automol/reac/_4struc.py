@@ -188,7 +188,7 @@ def _with_geom_structures(
     prd_zcs: List[ZmatConv] = None,
     log: bool = False,
 ) -> Reaction:
-    """Add geometry structures to a Reaction object
+    """Add geometry structures to a Reaction object.
 
     :param rxn: The reaction object
     :type rxn: Reaction
@@ -223,8 +223,8 @@ def _with_geom_structures(
         print(f"Building geometry for TS graph:\n{tsg}")
         print(f"... using these reactant geometries:\n{rct_geos}")
 
-    ts_geo = graph.ts_geometry_from_reactants(
-        tsg, rct_geos, geo_idx_dct=geo_idx_dct, log=log
+    ts_geo = graph.geometry(
+        tsg, rct_geos=rct_geos, geo_idx_dct=geo_idx_dct, log=log
     )
 
     grxn = set_structures(
