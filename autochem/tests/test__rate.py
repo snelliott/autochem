@@ -1,5 +1,6 @@
 """Test autochem.rate."""
 
+import numpy
 import pytest
 
 from autochem import rate
@@ -112,6 +113,20 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
 
     # Read
     k = rate.from_chemkin_string(chem_str, units=units)
+
+    # Evaluate
+    T0 = 500
+    T1 = [500, 600, 700, 800]
+    P0 = 1.0
+    P1 = [0.1, 1.0, 10.0]
+    kT0P0 = k(T0, P0)
+    assert numpy.shape(kT0P0) == (), kT0P0
+    kT1P0 = k(T1, P0)
+    assert numpy.shape(kT1P0) == (4,), kT1P0
+    kT0P1 = k(T0, P1)
+    assert numpy.shape(kT0P1) == (3,), kT0P1
+    kT1P1 = k(T1, P1)
+    assert numpy.shape(kT1P1) == (4, 3), kT1P1
 
     # Write
     chem_str_ = rate.chemkin_string(k)

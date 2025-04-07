@@ -13,11 +13,11 @@ from numpy.typing import ArrayLike, NDArray
 
 from ..unit_ import UnitsData
 from ..util import chemkin
-from ..util.type_ import Number, Scalable, Scalers
+from ..util.type_ import Scalable, Scalers
 from ._01const import (
-    ArrheniusRateConstant,
-    RateConstantFit,
+    ArrheniusRateConstantFit,
     RateConstant_,
+    RateConstantFit,
     extract_rate_constant_from_chemkin_parse_results,
 )
 from ._01const import (
@@ -32,7 +32,7 @@ class Rate(Scalable):
     products: list[str]
     reversible: bool = True
     rate_constant: RateConstant_ = pydantic.Field(
-        default_factory=lambda data: ArrheniusRateConstant(
+        default_factory=lambda data: ArrheniusRateConstantFit(
             A=1, b=0, E=0, order=len(data["reactants"])
         )
     )
@@ -56,27 +56,30 @@ class Rate(Scalable):
     @property
     def is_pressure_dependent(self) -> bool:
         """Whether the rate is pressure dependent."""
-        return not isinstance(self.rate_constant, ArrheniusRateConstant)
+        return not isinstance(self.rate_constant, ArrheniusRateConstantFit)
 
     def __call__(
-        self, t: ArrayLike, p: ArrayLike = 1, units: UnitsData | None = None
+        self,
+        T: ArrayLike,  # noqa: N803
+        P: ArrayLike = 1,  # noqa: N803
+        units: UnitsData | None = None,
     ) -> NDArray[numpy.float64]:
         """Evaluate rate constant.
 
         Uses:
         - If temperature and pressure are both numbers, the rate constant will be
-          returned as a number, k(t, p).
+          returned as a number, k(T, P).
         - If either temperature or pressure are both lists, the rate constant will be
-          returned as a 1D array, [k(t1, p), k(t2, p), ...] or [k(t, p1), k(t, p2), ...]
+          returned as a 1D array, [k(T1, P), k(T2, P), ...] or [k(T, P1), k(T, P2), ...]
         - If temperature and pressure are lists, the rate constant will be returned as a
-          2D array, [[k(t1, p1), k(t1, p2), ...], [k(t2, p1), k(t2, p2), ...]]
+          2D array, [[k(T1, P1), k(T1, P2), ...], [k(T2, P1), k(T2, P2), ...]]
 
-        :param t: Temperature(s)
-        :param p: Pressure(s)
+        :param T: Temperature(s)
+        :param P: Pressure(s)
         :param units: Input / desired output units
         :return: Value(s)
         """
-        return self.rate_constant(t=t, p=p, units=units)
+        return self.rate_constant(T=T, P=P, units=units)
 
 
 # Constructors
@@ -226,8 +229,8 @@ def display(
     rate: Rate,
     comp_rates: Sequence[Rate] = (),
     comp_labels: Sequence[str] = (),
-    t_range: tuple[Number, Number] = (400, 1250),
-    p: Number = 1,
+    T_range: tuple[float, float] = (400, 1250),  # noqa: N803
+    P: float = 1,  # noqa: N803
     units: UnitsData | None = None,
     label: str = "This work",
     x_label: str = "1000/T",
@@ -248,8 +251,8 @@ def display(
     return rate.rate_constant.display(
         others=[r.rate_constant for r in comp_rates],
         labels=comp_labels,
-        t_range=t_range,
-        p=p,
+        T_range=T_range,
+        P=P,
         units=units,
         label=label,
         x_label=x_label,
