@@ -16,7 +16,7 @@ from ..util import chemkin
 from ..util.type_ import Number, Scalable, Scalers
 from ._01const import (
     ArrheniusRateConstant,
-    ParamRateConstant,
+    RateConstantFit,
     RateConstant_,
     extract_rate_constant_from_chemkin_parse_results,
 )
@@ -48,7 +48,7 @@ class Rate(Scalable):
     @property
     def third_body(self) -> str | None:
         """Third body."""
-        if isinstance(self.rate_constant, ParamRateConstant):
+        if isinstance(self.rate_constant, RateConstantFit):
             return self.rate_constant.third_body
 
         return None

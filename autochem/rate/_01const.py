@@ -28,7 +28,7 @@ from ._00func import (
 )
 
 
-class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
+class BaseRateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
     """Abstract base class for rate constants."""
 
     order: int = 1
@@ -91,7 +91,7 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
 
     def display(
         self,
-        others: "Sequence[RateConstant]" = (),
+        others: "Sequence[BaseRateConstant]" = (),
         labels: Sequence[str] = (),
         t_range: tuple[Number, Number] = (400, 1250),
         p: Number = 1,
@@ -158,7 +158,7 @@ class RateConstant(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         )
 
 
-class RawRateConstant(RateConstant):
+class RateConstant(BaseRateConstant):
     ts: list[float]
     ps: list[float]
     k_array: NDArray_
@@ -192,7 +192,7 @@ class RawRateConstant(RateConstant):
         return self.process_output(ktp)
 
 
-class ParamRateConstant(RateConstant):
+class RateConstantFit(BaseRateConstant):
     """Abstract base class for parametrized rate constants."""
 
     efficiencies: dict[str, float] = pydantic.Field(default_factory=dict)
@@ -215,7 +215,7 @@ class ParamRateConstant(RateConstant):
         return value
 
 
-class ArrheniusRateConstant(ParamRateConstant):
+class ArrheniusRateConstant(RateConstantFit):
     A: float = 1.0
     b: float = 0.0
     E: float = 0.0
@@ -241,7 +241,7 @@ class ArrheniusRateConstant(ParamRateConstant):
         return self.process_output(ktp)
 
 
-class BlendedRateConstant(ParamRateConstant, abc.ABC):  # type: ignore[misc]
+class BlendedRateConstant(RateConstantFit, abc.ABC):  # type: ignore[misc]
     A_high: float
     b_high: float
     E_high: float
@@ -345,7 +345,7 @@ class ActivatedRateConstant(BlendedRateConstant):
         return self.process_output(ktp)
 
 
-class PlogRateConstant(ParamRateConstant):
+class PlogRateConstant(RateConstantFit):
     As: list[float]
     bs: list[float]
     Es: list[float]
@@ -451,7 +451,7 @@ class PlogRateConstant(ParamRateConstant):
         return val
 
 
-class ChebRateConstant(ParamRateConstant):
+class ChebRateConstant(RateConstantFit):
     coeffs: NDArray_
     t_range: tuple[float, float]
     p_range: tuple[float, float]
@@ -488,9 +488,9 @@ class ChebRateConstant(ParamRateConstant):
 
 
 RateConstant_ = Annotated[
-    pydantic.SkipValidation[RateConstant],
-    pydantic.BeforeValidator(lambda x: RateConstant.model_validate(x)),
-    pydantic.PlainSerializer(lambda x: RateConstant.model_validate(x).model_dump()),
+    pydantic.SkipValidation[BaseRateConstant],
+    pydantic.BeforeValidator(lambda x: BaseRateConstant.model_validate(x)),
+    pydantic.PlainSerializer(lambda x: BaseRateConstant.model_validate(x).model_dump()),
     pydantic.GetPydanticSchema(
         lambda _, handler: core_schema.with_default_schema(handler(pydantic.BaseModel))
     ),
@@ -498,7 +498,7 @@ RateConstant_ = Annotated[
 
 
 # Conversions
-def chemkin_string(rate_const: ParamRateConstant, eq_width: int = 0) -> str:
+def chemkin_string(rate_const: RateConstantFit, eq_width: int = 0) -> str:
     """Write Chemkin rate to a string.
 
     :param rate_const: Rate constant
@@ -568,7 +568,7 @@ def chemkin_string(rate_const: ParamRateConstant, eq_width: int = 0) -> str:
 # Parse helpers
 def extract_rate_constant_from_chemkin_parse_results(
     res: chemkin.ChemkinRateParseResults, units: UnitsData | None = None
-) -> ParamRateConstant:
+) -> RateConstantFit:
     """Extract blending function from Chemkin parse results.
 
     Chemkin parse results are modified in-place
