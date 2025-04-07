@@ -7,15 +7,13 @@ from ._00func import (
     TroeBlendingFunction,
 )
 from ._01const import (
-    # ActivatedRateConstant,
-    ArrheniusRateConstant,
-    # BlendedRateConstant,
-    # ChebRateConstant,
-    # FalloffRateConstant,
-    ParamRateConstant,
-    # PlogRateConstant,
+    ArrheniusRateConstantFit,
+    BaseRateConstant,
+    ChebRateConstantFit,
+    FalloffRateConstantFit,
+    PlogRateConstantFit,
     RateConstant,
-    RawRateConstant,
+    RateConstantFit,
 )
 from ._02rate import (
     Rate,
@@ -27,18 +25,16 @@ from ._02rate import (
 )
 
 __all__ = [
-    "ActivatedRateConstant",
-    "ArrheniusRateConstant",
-    "BlendedRateConstant",
+    "ArrheniusRateConstantFit",
+    "BaseRateConstant",
     "BlendingFunction",
-    "ChebRateConstant",
-    "FalloffRateConstant",
+    "ChebRateConstantFit",
+    "FalloffRateConstantFit",
     "LindemannBlendingFunction",
-    "ParamRateConstant",
-    "PlogRateConstant",
+    "PlogRateConstantFit",
     "Rate",
     "RateConstant",
-    "RawRateConstant",
+    "RateConstantFit",
     "SriBlendingFunction",
     "TroeBlendingFunction",
     "chemkin_equation",

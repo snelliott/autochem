@@ -1,7 +1,7 @@
 """Blending function models."""
 
 import abc
-from typing import Annotated, TypeVar, ClassVar
+from typing import Annotated, ClassVar, TypeVar
 
 import numpy
 import pydantic
@@ -18,11 +18,11 @@ class BlendingFunction(Frozen, Scalable, SubclassTyped, abc.ABC):
     """Abstract base class for blending functions."""
 
     @abc.abstractmethod
-    def __call__(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
-        """Evaluate blending function, f(t, p_r).
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+        """Evaluate blending function, f(T, P_r).
 
-        :param t: Temperature(s)
-        :param p_r: Reduced pressure(s)
+        :param T: Temperature(s)
+        :param P_r: Reduced pressure(s)
         :return: Blending function value(s)
         """
         pass
@@ -33,46 +33,45 @@ class LindemannBlendingFunction(BlendingFunction):
     # Private attributes
     type_: ClassVar[str] = "lindemann"
 
-    def __call__(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
-        """Evaluate blending function, f(t, p_r)."""
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+        """Evaluate blending function, f(T, P_r)."""
         return numpy.array(1.0)
 
 
 class TroeBlendingFunction(BlendingFunction):
-    a: float
-    t3: float
-    t1: float
-    t2: float | None = None
+    A: float
+    T3: float
+    T1: float
+    T2: float | None = None
 
     # Private attributes
     type_: ClassVar[str] = "troe"
 
-    def __call__(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
-        """Evaluate blending function, f(t, p_r)."""
-        log_f = numpy.log10(self.f_cent(t)) / (1 + self.f1(t, p_r) ** 2)
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+        """Evaluate blending function, f(T, P_r)."""
+        log_f = numpy.log10(self.f_cent(T)) / (1 + self.f1(T, P_r) ** 2)
         return numpy.power(10, log_f)
 
-    def f_cent(self, t: ArrayLike) -> numpy.ndarray:
+    def f_cent(self, T: ArrayLike) -> numpy.ndarray:  # noqa: N803
         """Evaluate center broadening factor."""
-        a, t3, t1, t2 = (self.a, self.t3, self.t1, self.t2)
-        f_cent = (1 - a) * numpy.exp(-numpy.divide(t, t3))
-        f_cent += a * numpy.exp(-numpy.divide(t, t1))
-        f_cent += 0.0 if t2 is None else numpy.exp(-numpy.divide(t2, t))
+        f_cent = (1 - self.A) * numpy.exp(-numpy.divide(T, self.T3))
+        f_cent += self.A * numpy.exp(-numpy.divide(T, self.T1))
+        f_cent += 0.0 if self.T2 is None else numpy.exp(-numpy.divide(self.T2, T))
         return f_cent
 
-    def n(self, t: ArrayLike) -> numpy.ndarray:
+    def n(self, T: ArrayLike) -> numpy.ndarray:  # noqa: N803
         """Evaluate N."""
-        return 0.75 - 1.27 * numpy.log10(self.f_cent(t))
+        return 0.75 - 1.27 * numpy.log10(self.f_cent(T))
 
-    def c(self, t: ArrayLike) -> numpy.ndarray:
+    def c(self, T: ArrayLike) -> numpy.ndarray:  # noqa: N803
         """Evaluate C."""
-        return -0.4 - 0.67 * numpy.log10(self.f_cent(t))
+        return -0.4 - 0.67 * numpy.log10(self.f_cent(T))
 
-    def f1(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
+    def f1(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
         """Evaluate f1."""
-        n = self.n(t)
-        c = self.c(t)
-        log_p_r_plus_c = numpy.log10(p_r) + c
+        n = self.n(T)
+        c = self.c(T)
+        log_p_r_plus_c = numpy.log10(P_r) + c
         return log_p_r_plus_c / (n - 0.14 * log_p_r_plus_c)
 
 
@@ -86,14 +85,14 @@ class SriBlendingFunction(BlendingFunction):
     # Private attributes
     type_: ClassVar[str] = "sri"
 
-    def __call__(self, t: ArrayLike, p_r: ArrayLike) -> numpy.ndarray:
-        """Evaluate blending function, f(t, p_r)."""
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+        """Evaluate blending function, f(T, P_r)."""
         a, b, c, d, e = (self.a, self.b, self.c, self.d, self.e)
         return (
             d
-            * (a * numpy.exp(-numpy.divide(b, t)) + numpy.exp(-numpy.divide(t, c)))
-            ** (1 / (1 + numpy.log10(p_r) ** 2))
-            * numpy.power(t, e)
+            * (a * numpy.exp(-numpy.divide(b, T)) + numpy.exp(-numpy.divide(T, c)))
+            ** (1 / (1 + numpy.log10(P_r) ** 2))
+            * numpy.power(T, e)
         )
 
 
@@ -116,8 +115,8 @@ def chemkin_aux_lines(func: BlendingFunction, head_width: int = 55) -> list[str]
     """
     match func:
         case TroeBlendingFunction():
-            troe_params = [func.a, func.t3, func.t1]
-            troe_params += [] if func.t2 is None else [func.t2]
+            troe_params = [func.A, func.T3, func.T1]
+            troe_params += [] if func.T2 is None else [func.T2]
             return [chemkin.write_aux("TROE", troe_params, head_width=head_width)]
         case SriBlendingFunction():
             sri_params = [func.a, func.b, func.c, func.d, func.e]
@@ -146,7 +145,7 @@ def extract_blending_function_from_chemkin_parse_results(
 
     if "TROE" in res.aux_numbers:
         numbers = res.aux_numbers.pop("TROE")
-        keys = ["a", "t3", "t1", "t2"]
+        keys = ["A", "T3", "T1", "T2"]
         data = dict(zip(keys, numbers, strict=False))
         return TroeBlendingFunction.model_validate(data)
 
