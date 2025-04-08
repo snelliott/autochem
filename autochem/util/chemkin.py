@@ -50,6 +50,51 @@ def read_equation_reagents(chem_str: str) -> tuple[list[str], list[str]]:
     return (res.reactants, res.products)
 
 
+# Thermo
+class ChemkinThermoParseResults(pydantic.BaseModel):
+    name: str
+    formula: dict[str, int]
+    T_low: float
+    T_high: float
+    coeffs: list[float]
+    phase: str = "G"
+    T_mid: float | None = None
+    date: str | None = None
+    comments: list[str] = pydantic.Field(default_factory=list)
+
+
+def parse_thermo(therm_str: str) -> ChemkinThermoParseResults:
+    """Extract all thermo information from a Chemkin thermo string.
+
+    :param therm_str: Chemkin string
+    :return: Parse results including name, formula, coefficients, etc.
+    """
+    comments, therm_str = read_extract_comments(therm_str)
+    line1, _, lines = therm_str.strip().partition("\n")
+
+    name = line1[:18].strip()
+    date = line1[18:24].strip()
+    form_str = line1[24:44].strip() + line1[73:78].strip()
+    form_dct = dict(FORM_ENTRIES.parse_string(form_str).as_list())
+    phase = line1[44]
+    temp_expr = THERM_TEMP("low") + THERM_TEMP("high") + pp.Opt(THERM_TEMP)("mid")
+    temp_dct = temp_expr.parse_string(line1[45:73]).as_dict()
+    coeffs = COEFFS.parse_string(lines).as_list()
+
+    return ChemkinThermoParseResults(
+        name=name,
+        formula=form_dct,
+        T_low=temp_dct.get("low"),
+        T_high=temp_dct.get("high"),
+        coeffs=coeffs,
+        phase=phase,
+        T_mid=temp_dct.get("mid"),
+        date=date,
+        comments=comments,
+    )
+
+
+# Rates
 class ChemkinRateParseResults(pydantic.BaseModel):
     reactants: list[str]
     products: list[str]
@@ -62,16 +107,16 @@ class ChemkinRateParseResults(pydantic.BaseModel):
     comments: list[str] = pydantic.Field(default_factory=list)
 
 
-def parse_equation(chem_str: str) -> ChemkinRateParseResults:
-    """Extract equation information from a Chemkin string.
+def parse_equation(reac_str: str) -> ChemkinRateParseResults:
+    """Extract equation information from a Chemkin reaction string.
 
     :param chem_str: Chemkin string
     :return: Parse results including reactants, products, reversible,
         pressure_dependent, and efficiencies (only contains third-body, with value 1.0)
     """
     # Split the reaction line off from the auxiliary lines
-    chem_str = read_without_comments(chem_str).strip()
-    eq, *_ = re.split(r"\n|$|\s[+-]?\d", chem_str, maxsplit=1)
+    reac_str = read_without_comments(reac_str).strip()
+    eq, *_ = re.split(r"\n|$|\s[+-]?\d", reac_str, maxsplit=1)
     rct, arrow, prd = re.split(r"(<=>|=>|=)", eq)
 
     # Assess reversibility
@@ -107,18 +152,18 @@ def parse_equation(chem_str: str) -> ChemkinRateParseResults:
     )
 
 
-def parse_rate(chem_str: str) -> ChemkinRateParseResults:
-    """Extract full rate information from a Chemkin string.
+def parse_rate(rate_str: str) -> ChemkinRateParseResults:
+    """Extract all rate information from a Chemkin rate string.
 
     :param chem_str: Chemkin string
     :return: Parse results including reactants, products, reversible,
         pressure_dependent, and efficiencies (only contains third-body, with value 1.0)
     """
     # Extract comments
-    comments, chem_str = read_extract_comments(chem_str)
+    comments, rate_str = read_extract_comments(rate_str)
 
     # Split the reaction line off from the auxiliary lines
-    rxn_line, aux_lines = re.split(r"\n|$", chem_str, maxsplit=1)
+    rxn_line, aux_lines = re.split(r"\n|$", rate_str, maxsplit=1)
 
     # Parse the reaction line
     rxn_res = REAC_LINE.parse_string(rxn_line)
@@ -340,3 +385,14 @@ FALLOFF = parenthetical(PLUS + pp.Word(pp.alphanums))
 REAC_SIDE_FALLOFF = pp.SkipTo(FALLOFF ^ pp.StringEnd())(Key.reagents) + pp.Opt(FALLOFF)(
     Key.falloff
 )
+#   - Thermo entry formula
+FORM_KEY = pp.OneOrMore(pp.Char(pp.alphas))
+FORM_VAL = ppc.integer
+FORM_ENTRY = pp.Group(FORM_KEY + FORM_VAL)
+FORM_ENTRIES = pp.OneOrMore(FORM_ENTRY)
+#   - Thermo entry temperatures
+THERM_TEMP = ppc.number
+#   - Coefficient numbers
+LINE_NUM = ppc.integer
+COEFF = ppc.sci_real
+COEFFS = pp.OneOrMore(pp.OneOrMore(COEFF) + pp.Suppress(LINE_NUM))
