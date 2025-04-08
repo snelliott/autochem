@@ -2,8 +2,9 @@
 
 import re
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
+import more_itertools as mit
 import numpy
 import pydantic
 import pyparsing as pp
@@ -284,6 +285,81 @@ def write_aux(
     return " " * indent + f"{key:<{key_width}} /{val_str:>{val_width}}/"
 
 
+def write_therm_entry_header(
+    name: str,
+    form_dct: dict[str, int],
+    T_low: float,  # noqa: N803
+    T_high: float,  # noqa: N803
+    T_mid: float | None = None,  # noqa: N803
+    charge: int = 0,
+    phase: str = "G",
+    date: str = "",
+):
+    """Write the header line for a Chemkin thermo entry.
+
+    :param name: Name of the species
+    :param form_dct: Dictionary of the species formula
+    :param T_low: Low temperature
+    :param T_high: High temperature
+    :param T_mid: Mid temperature, optional
+    :param charge: Charge, defaults to 0
+    :param date: Date, defaults to empty string
+    :return: Chemkin thermo entry header line
+    """
+    # Build formula strings
+    assert len(form_dct) <= 5, f"Too many elements for Chemkin: |{form_dct}| > 5"
+    form_items = [(k, form_dct.get(k)) for k in sorted(form_dct, key=symbol_sort_key())]
+    if charge:
+        form_items.append(("E", charge))
+    form_items1 = form_items[:4]
+    form_items2 = form_items[4:]
+    form_str1 = "".join(f"{k: <2}{v: >3}" for k, v in form_items1)
+    form_str2 = "".join(f"{k: <2}{v: >3}" for k, v in form_items2)
+
+    # Build temperature string
+    temp_str = f"{T_low:>10.1f}{T_high:>10.1f}"
+    temp_str += f"{T_mid:>8.1f}" if T_mid else ""
+
+    return (
+        f"{name: <18}{date: <6}{form_str1: <20}{phase:<1}{temp_str: <28}{form_str2: <5}"
+    )
+
+
+def write_therm_entry_coefficient_lines(coeffs: Sequence[float]) -> list[str]:
+    """Write the coefficient lines for a Chemkin thermo entry.
+
+    :param coeffs: Coefficients
+    :return: Chemkin thermo entry coefficient lines
+    """
+    num_fmt = "{:>15.8E}"
+    return ["".join(map(num_fmt.format, cs)) for cs in mit.chunked(coeffs, 5)]
+
+
+def symbol_sort_key(
+    symbs_first: Sequence[str] = ("C", "H"), symbs_last: Sequence[str] = ()
+) -> Callable[[str], tuple[int, str]]:
+    """Sort key for atomic symbols.
+
+    :param symbs_first: Symbols to sort first
+    :return: Sort ke
+    """
+    symbs_first = list(map(str.title, symbs_first))
+    symbs_last = list(map(str.title, symbs_last))
+
+    def _key(symb: str) -> tuple[int, str]:
+        """Symbol sort key."""
+        symb = symb.title()
+        if symb in symbs_first:
+            val = symbs_first.index(symb)
+        elif symb in symbs_last:
+            val = len(symbs_first) + symbs_last.index(symb) + 1
+        else:
+            val = len(symbs_first)
+        return val, symb
+
+    return _key
+
+
 # Helpers
 def write_numbers(
     nums: Sequence[float],
@@ -387,7 +463,7 @@ REAC_SIDE_FALLOFF = pp.SkipTo(FALLOFF ^ pp.StringEnd())(Key.reagents) + pp.Opt(F
 )
 #   - Thermo entry formula
 FORM_KEY = pp.OneOrMore(pp.Char(pp.alphas))
-FORM_VAL = ppc.integer
+FORM_VAL = ppc.signed_integer
 FORM_ENTRY = pp.Group(FORM_KEY + FORM_VAL)
 FORM_ENTRIES = pp.OneOrMore(FORM_ENTRY)
 #   - Thermo entry temperatures

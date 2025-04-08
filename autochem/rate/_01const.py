@@ -586,12 +586,12 @@ def chemkin_string(rate_const: RateConstantFit, eq_width: int = 0) -> str:
 def extract_rate_constant_from_chemkin_parse_results(
     res: chemkin.ChemkinRateParseResults, units: UnitsData | None = None
 ) -> RateConstantFit:
-    """Extract blending function from Chemkin parse results.
+    """Extract rate data from Chemkin parse results.
 
     Chemkin parse results are modified in-place
 
-    :param res: Chemkin parse results
-    :return: Blending function
+    :param res: Chemkin rate parse results
+    :return: Rate data
     """
     # Extract efficiencies
     efficiencies = res.efficiencies.copy()
