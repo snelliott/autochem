@@ -22,7 +22,7 @@ class ThermData(ThermBase):
 
     :param Ts: Temperatures (K)
     :param Z0s: Partition function natural logarithm, ln(Q)
-    :param Z1s: First derivative, d(ln(Q))/dT
+    :param Z1s: First derivative, d(ln(Q))/dT  (derivative w.r.t beta?? or T in energy units?)
     :param Z2s: Second derivative, d^2(ln(Q))/dT^2
     """
 
@@ -48,23 +48,25 @@ class ThermData(ThermBase):
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
         U = R * T**2 * Z1
-
-        # Determine output units
-        units = Units() if units is None else Units.model_validate(units)
         return U
 
+    @unit_.manage_units([], Dim.energy_per_substance / Dim.temperature)
     def entropy(self, units: UnitsData | None = None):
         """Calculatate entropy.
 
-        S = <E> / T + k_B ln(Q)
+        S = <E> / T + R ln(Q)
 
         :param units: Units
         :return: Entropy
         """
-        # Determine units
-        units = Units() if units is None else Units.model_validate(units)
-
         # Evaluate
+        U = self.internal_energy(units=UNITS)
+        R = unit_.system.gas_constant_value(UNITS)
+        T = numpy.array(self.Ts, dtype=numpy.float64)
+        Z0 = numpy.array(self.Z0s, dtype=numpy.float64)
+        S = U / T + R * Z0
+        print(S)
+        return S
 
 
 class ThermFit(ThermBase, abc.ABC):
