@@ -1,8 +1,8 @@
 """Thermodynamic functions."""
 
-from ._01species import SpeciesThermo, from_chemkin_string
+from ._01species import Species, from_chemkin_string
 
 __all__ = [
-    "SpeciesThermo",
+    "Species",
     "from_chemkin_string",
 ]

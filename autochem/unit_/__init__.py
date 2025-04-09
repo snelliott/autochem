@@ -3,10 +3,11 @@
 from . import system
 from ._manager import UnitManager, manage_units
 from ._unit import pretty_string, string
-from .system import UNITS, Dimension, Units, UnitsData
+from .system import UNITS, Dim, Dimension, Units, UnitsData
 
 __all__ = [
     "UNITS",
+    "Dim",
     "Dimension",
     "UnitManager",
     "Units",

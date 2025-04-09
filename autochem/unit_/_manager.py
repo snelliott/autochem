@@ -40,7 +40,6 @@ def manage_units(arg_dims: Sequence[Dimension], ret_dim: Dimension):
     :return: Function decorator
     """
 
-    # def manage_units_(func0: UnitMethod) -> UnitMethod:
     def manage_units_(func0):
 
         @functools.wraps(func0)

@@ -16,7 +16,7 @@ from numpy.typing import ArrayLike, NDArray
 from pydantic_core import core_schema
 
 from .. import unit_
-from ..unit_ import UNITS, Dimension, UnitManager, Units, UnitsData
+from ..unit_ import UNITS, Dim, Dimension, UnitManager, Units, UnitsData
 from ..util import chemkin
 from ..util.type_ import Frozen, NDArray_, Scalable, Scalers, SubclassTyped
 from ._00func import (
@@ -182,9 +182,9 @@ class RateConstant(BaseRateConstant):
     type_: ClassVar[str] = "raw"
     _scalers: ClassVar[Scalers] = {"k_array": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "Ts": Dimension.temperature,
-        "Ps": Dimension.pressure,
-        "data": Dimension.rate_constant,
+        "Ts": Dim.temperature,
+        "Ps": Dim.pressure,
+        "data": Dim.rate_constant,
     }
 
     @property
@@ -193,9 +193,7 @@ class RateConstant(BaseRateConstant):
             data=self.data, coords={self._T_key: self.Ts, self._P_key: self.Ps}
         )
 
-    @unit_.manage_units(
-        [Dimension.temperature, Dimension.pressure], Dimension.rate_constant
-    )
+    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -240,13 +238,11 @@ class ArrheniusRateConstantFit(RateConstantFit):
     type_: ClassVar[str] = "arrhenius"
     _scalers: ClassVar[Scalers] = {"A": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "A": Dimension.rate_constant,
-        "E": Dimension.energy_per_substance,
+        "A": Dim.rate_constant,
+        "E": Dim.energy_per_substance,
     }
 
-    @unit_.manage_units(
-        [Dimension.temperature, Dimension.pressure], Dimension.rate_constant
-    )
+    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -274,15 +270,13 @@ class FalloffRateConstantFit(RateConstantFit, abc.ABC):  # type: ignore[misc]
     type_: ClassVar[str] = "falloff"
     _scalers: ClassVar[Scalers] = {"A_high": numpy.multiply, "A_low": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "A_high": Dimension.rate_constant,
-        "E_high": Dimension.energy_per_substance,
-        "A_low": Dimension.rate_constant,
-        "E_low": Dimension.energy_per_substance,
+        "A_high": Dim.rate_constant,
+        "E_high": Dim.energy_per_substance,
+        "A_low": Dim.rate_constant,
+        "E_low": Dim.energy_per_substance,
     }
 
-    @unit_.manage_units(
-        [Dimension.temperature, Dimension.pressure], Dimension.rate_constant
-    )
+    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -362,14 +356,12 @@ class PlogRateConstantFit(RateConstantFit):
     type_: ClassVar[str] = "plog"
     _scalers: ClassVar[Scalers] = {"As": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "As": Dimension.rate_constant,
-        "Es": Dimension.energy_per_substance,
-        "Ps": Dimension.pressure,
+        "As": Dim.rate_constant,
+        "Es": Dim.energy_per_substance,
+        "Ps": Dim.pressure,
     }
 
-    @unit_.manage_units(
-        [Dimension.temperature, Dimension.pressure], Dimension.rate_constant
-    )
+    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -474,14 +466,12 @@ class ChebRateConstantFit(RateConstantFit):
     type_: ClassVar[str] = "cheb"
     _scalers: ClassVar[Scalers] = {"coeffs": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "coeffs": Dimension.rate_constant,
-        "T_range": Dimension.temperature,
-        "P_range": Dimension.pressure,
+        "coeffs": Dim.rate_constant,
+        "T_range": Dim.temperature,
+        "P_range": Dim.pressure,
     }
 
-    @unit_.manage_units(
-        [Dimension.temperature, Dimension.pressure], Dimension.rate_constant
-    )
+    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
