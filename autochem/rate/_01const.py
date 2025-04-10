@@ -16,7 +16,7 @@ from numpy.typing import ArrayLike, NDArray
 from pydantic_core import core_schema
 
 from .. import unit_
-from ..unit_ import UNITS, Dim, Dimension, UnitManager, Units, UnitsData
+from ..unit_ import UNITS, Dim, Dimension, UnitManager, Units, UnitsData, Const
 from ..util import chemkin
 from ..util.type_ import Frozen, NDArray_, Scalable, Scalers, SubclassTyped
 from ._00func import (
@@ -251,7 +251,7 @@ class ArrheniusRateConstantFit(RateConstantFit):
     ) -> NDArray[numpy.float64]:
         """Evaluate rate constant."""
         T_, P_ = self.process_input(T, P)
-        R = unit_.system.gas_constant_value(UNITS)
+        R = unit_.system.constant_value(Const.gas, UNITS)
         kTP = self.A * (T_**self.b) * numpy.exp(-self.E / (R * T_))
         return self.process_output(kTP, T, P)
 

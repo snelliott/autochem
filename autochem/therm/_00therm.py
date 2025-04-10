@@ -5,10 +5,11 @@ import itertools
 from typing import ClassVar
 
 import numpy
+import pint
 from numpy.typing import NDArray
 
 from .. import unit_
-from ..unit_ import UNITS, Dim, Dimension, UnitManager, Units, UnitsData, system
+from ..unit_ import UNITS, Const, Dim, Dimension, UnitManager, Units, UnitsData, system
 from ..util import chemkin
 from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
 
@@ -21,9 +22,9 @@ class ThermData(ThermBase):
     """Raw thermodynamic data.
 
     :param Ts: Temperatures (K)
-    :param Z0s: Partition function per volume natural logarithm, ln(Q [cm^-3])
-    :param Z1s: First derivative, d(ln(Q))/dT [K^-1]
-    :param Z2s: Second derivative, d^2(ln(Q))/dT^2 [K^-2]
+    :param Z0s: Logs of one-particle partition function per volume, ln(Q_1' [cm^-3])
+    :param Z1s: First temperature derivatives of Z0, d(ln(Q_1'))/dT [K^-1]
+    :param Z2s: Second temperature derivatives of Z0, d^2(ln(Q_1'))/dT^2 [K^-2]
     """
 
     Ts: list[float]
@@ -40,38 +41,41 @@ class ThermData(ThermBase):
         "Z2s": Dim.temperature**-2,
     }
 
-    @unit_.manage_units([], Dim.energy_per_substance)
-    def internal_energy(self, units: UnitsData | None = None) -> NDArray[numpy.float64]:
-        """Calculate internal energy.
-
-        U = <E> = R T^2 d(ln(Q))/dT
-
-        :param units: Units
-        :return: Internal energy
-        """
-        # Evaluate
-        R = unit_.system.gas_constant_value(UNITS)
-        T = numpy.array(self.Ts, dtype=numpy.float64)
-        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
-        U = R * T**2 * Z1
-        return U
-
     @unit_.manage_units([], Dim.energy_per_substance / Dim.temperature)
-    def entropy(self, units: UnitsData | None = None):
+    def entropy(self, P: float = 1, units: UnitsData | None = None):  # noqa: N803
         """Calculatate entropy.
 
-        S = <E> / T + R ln(Q)
+        Formula:
+
+            S = R (T d(ln(Q_1'))/dT + ln(Q_1') - ln(c) + 1)
+              = R (T Z1 + Z0 - ln(c) + 1)
+
+        in terms of the one-particle partition function per unit volume, Q_1',
+        and the standard concentration, c, N_A / V, which comes from accounting for
+        volume. The latter via the ideal gas law by a standard state pressure:
+
+           c = P / k_B T
+
+        This must be converted to interna
 
         :param units: Units
         :return: Entropy
         """
+        T = numpy.array(self.Ts, dtype=numpy.float64)
+
+        # Evaluate standard concentration (molecules* / volume) from pressure  *implicit
+        units = Units.model_validate(units) if units is not None else UNITS
+        k_B_ = pint.Quantity("boltzmann_constant")
+        T_ = pint.Quantity(T, UNITS.temperature)
+        P_ = pint.Quantity(P, units.pressure)
+        c = (P_ / (k_B_ * T_)).m_as("1/cm**3")
+
         # Evaluate
-        U = self.internal_energy(units=UNITS)
-        R = unit_.system.gas_constant_value(UNITS)
+        R = unit_.system.constant_value(Const.gas, UNITS)
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z0 = numpy.array(self.Z0s, dtype=numpy.float64)
-        S = U / T + R * Z0
-        print(S)
+        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
+        S = R * (T * Z1 + Z0 - numpy.log(c) + 1)
         return S
 
 
@@ -107,9 +111,7 @@ def extract_thermo_data_from_messpf_string(pf_str: str) -> ThermData:
     lines = list(itertools.dropwhile(lambda s: not s.startswith("Z_0"), lines))
     data = [list(map(float, line.split())) for line in lines[1:]]
     Ts, Z0s, Z1s, Z2s, *_ = map(list, zip(*data, strict=True))
-    # Correct MESS-PF single-decimal rounding error for consistency
-    Ts = [298.15 if T == 298.2 else T for T in Ts]
-    return ThermData(Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s, units={"length": "bohr"})
+    return ThermData(Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s)
 
 
 def extract_thermo_from_chemkin_parse_results(

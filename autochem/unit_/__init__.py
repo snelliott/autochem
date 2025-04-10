@@ -5,6 +5,7 @@ from ._manager import UnitManager, manage_units
 from ._unit import pretty_string, string
 from .system import (
     UNITS,
+    Const,
     Dim,
     Dimension,
     Units,
@@ -16,6 +17,7 @@ from .system import (
 
 __all__ = [
     "UNITS",
+    "Const",
     "Dim",
     "Dimension",
     "UnitManager",

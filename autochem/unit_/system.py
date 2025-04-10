@@ -1,16 +1,21 @@
-"""Unit system."""
+"""Unit system.
+
+To do: Refactor this as three separate submodules:
+ - system: For defining the unit system
+ - dim: For working with dimensions
+ - const: For defining physical constants
+"""
 
 import enum
 import functools
 import itertools
 import operator
 from collections.abc import Mapping, Sequence
-from typing import Any, ClassVar, TypeAlias
+from typing import Any, TypeAlias
 
 import more_itertools as mit
 import numpy
 import pint
-import pydantic
 from numpy.typing import NDArray
 
 from ..util.type_ import Frozen, Unit_
@@ -204,16 +209,22 @@ def from_unit_sequence(unit_seq: Sequence[pint.Unit]) -> Units:
     return Units.model_validate(data)
 
 
-# Properties
-def gas_constant_value(units: Units) -> float:
-    """Determine gas constant value in unit system.
+class Const(enum.Enum):
+    gas = ("molar_gas_constant", Dim.energy_per_substance / Dim.temperature)
+    boltzmann = ("boltzmann_constant", Dim.energy / Dim.temperature)
 
+
+# Properties
+def constant_value(const: Const, units: Units) -> float:
+    """Determine physical constant value in unit system.
+
+    :param const: Physical constant
     :param units: Unit system
-    :return: Gas constant value
+    :return: Value
     """
-    return pint.Quantity("molar_gas_constant").m_as(
-        units.energy_per_substance / units.temperature
-    )
+    name = const.value[0]
+    unit = dimension_unit(units, const.value[1])
+    return pint.Quantity(name).m_as(unit)
 
 
 def log(dim: DimensionData) -> Dimension:
@@ -282,4 +293,4 @@ def convert_dimension_value(
         units=units, new_units=new_units, dim=dim, **kwargs
     )
     val = numpy.array(val, dtype=numpy.float64)
-    return val if not dim.log else val + numpy.log(factor)
+    return val * factor if not dim.log else val + numpy.log(factor)
