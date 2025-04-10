@@ -42,7 +42,37 @@ class ThermData(ThermBase):
     }
 
     @unit_.manage_units([], Dim.energy_per_substance / Dim.temperature)
-    def entropy(self, P: float = 1, units: UnitsData | None = None):  # noqa: N803
+    def heat_capacity(
+        self,
+        const_P: bool = False,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Calculate the heat capacity at constant volume or pressure.
+
+        Formula:
+
+            C_v = R (2 T Z_1 + T^2 Z_2)
+            C_p = C_v + R = R (1 + 2 T Z_1 + T^2 Z_2)
+
+        :param units: Units
+        :param const_P: Calculate at constant pressure? Otherwise, constant volume.
+        :return: Heat capacity
+        """
+        # Evaluate
+        R = unit_.system.constant_value(Const.gas, UNITS)
+        T = numpy.array(self.Ts, dtype=numpy.float64)
+        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
+        Z2 = numpy.array(self.Z2s, dtype=numpy.float64)
+        C = R * (2 * T * Z1 + T**2 * Z2)
+        C += R if const_P else 0.0
+        return C
+
+    @unit_.manage_units([], Dim.energy_per_substance / Dim.temperature)
+    def entropy(
+        self,
+        P: float = 1,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
         """Calculatate entropy.
 
         Formula:
