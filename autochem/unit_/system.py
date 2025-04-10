@@ -37,9 +37,14 @@ class Units(Frozen):
         return pint.Unit(self.energy / self.substance)
 
     @functools.cached_property
+    def volume(self) -> pint.Unit:
+        """Volume unit."""
+        return pint.Unit(self.length**3)
+
+    @functools.cached_property
     def concentration(self) -> pint.Unit:
         """Concentration unit."""
-        return pint.Unit(self.substance / self.length**3)
+        return pint.Unit(self.substance / self.volume)
 
     def rate_constant(self, order: int) -> pint.Unit:
         """Rate constant unit.
@@ -65,20 +70,31 @@ class Dimension:
     """Dimension class."""
 
     _data: dict[str, int]
+    log: bool = False
 
     def __init__(
-        self, arg: "str | Mapping[str, int] | Dimension | None" = None, **kwargs
+        self,
+        arg: "str | Mapping[str, int] | Dimension | None" = None,
+        log: bool | None = None,
+        **kwargs,
     ):
         if arg is not None:
             assert not kwargs, f"Invalid arguments: {arg}, {kwargs}"
-        if isinstance(arg, self.__class__):
-            self._data = arg._data
-        elif isinstance(arg, str):
-            self._data = {arg: 1}
-        elif isinstance(arg, Mapping):
-            self._data = dict(arg)
-        else:
-            self._data = kwargs
+
+        match arg:
+            case Dimension():
+                self._data = arg._data
+                self.log = log or arg.log or False
+            case str():
+                self._data = {arg: 1}
+                self.log = log or False
+            case Mapping():
+                self.log = log or False
+                self._data = dict(arg)
+            case _:
+                assert arg is None, f"Cannot combine arg={arg} and kwargs={kwargs}"
+                self.log = kwargs.pop("log", log or False)
+                self._data = kwargs
 
         assert all(hasattr(UNITS, k) for k in self._data), (
             f"Invalid names: {self._data}"
@@ -92,6 +108,8 @@ class Dimension:
     def __repr__(self) -> str:
         """Represent as string."""
         data_str = ", ".join(f"{k}={v}" for k, v in self.items())
+        if self.log:
+            data_str += ", log=True"
         return f"{self.__class__.__name__}({data_str})"
 
     def __pow__(self, power: int) -> "Dimension":
@@ -100,6 +118,8 @@ class Dimension:
         :param power: Power
         :return: New dimension
         """
+        if self.log:
+            raise ValueError("Cannot raise logarithmic dimension to a power")
         data = {k: v * power for k, v in self._data.items()}
         return self.__class__(data)
 
@@ -109,6 +129,8 @@ class Dimension:
         :param other: Other dimension
         :return: New dimension
         """
+        if self.log or other.log:
+            raise ValueError("Cannot multiply logarithmic dimensions")
         data = {
             k: self._data.get(k, 0) + other._data.get(k, 0)
             for k in set(self._data) | set(other._data)
@@ -123,6 +145,8 @@ class Dimension:
         :param other: Other dimension
         :return: New dimension
         """
+        if self.log or other.log:
+            raise ValueError("Cannot divide logarithmic dimensions")
         data = {
             k: self._data.get(k, 0) - other._data.get(k, 0)
             for k in set(self._data) | set(other._data)
@@ -140,6 +164,7 @@ class Dim:
     pressure = Dimension("pressure")
     energy = Dimension("energy")
     energy_per_substance = Dimension("energy_per_substance")
+    volume = Dimension("volume")
     concentration = Dimension("concentration")
     rate_constant = Dimension("rate_constant")
 
@@ -191,6 +216,15 @@ def gas_constant_value(units: Units) -> float:
     )
 
 
+def log(dim: DimensionData) -> Dimension:
+    """Create logarithmic dimension.
+
+    :param dim: Dimension
+    :return: Logarithmic dimension
+    """
+    return Dimension(dim, log=True)
+
+
 def dimension_unit(units: Units, dim: DimensionData, **kwargs) -> pint.Unit:
     """Determine the unit for a dimension.
 
@@ -216,6 +250,10 @@ def dimension_conversion_factor(
 ) -> float:
     """Convert dimension value to new units.
 
+    For log dimensions, this is the conversion factor for the argument of the log
+    function. The conversion is performed by taking the log of this factor and adding it
+    to the original value.
+
     :param units: Units sytem
     :param new_units: New units system
     :param dim: Dimension
@@ -239,7 +277,9 @@ def convert_dimension_value(
     :param **kwargs: Extra arguments for unit determination
     :return: New value
     """
-    unit = dimension_unit(units, dim, **kwargs)
-    new_unit = dimension_unit(new_units, dim, **kwargs)
-    new_val = pint.Quantity(val, unit).m_as(new_unit)
-    return numpy.array(new_val, dtype=numpy.float64)
+    dim = Dimension(dim)
+    factor = dimension_conversion_factor(
+        units=units, new_units=new_units, dim=dim, **kwargs
+    )
+    val = numpy.array(val, dtype=numpy.float64)
+    return val if not dim.log else val + numpy.log(factor)

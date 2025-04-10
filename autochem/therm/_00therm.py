@@ -8,12 +8,12 @@ import numpy
 from numpy.typing import NDArray
 
 from .. import unit_
-from ..unit_ import UNITS, Dim, Units, UnitsData
+from ..unit_ import UNITS, Dim, Dimension, UnitManager, Units, UnitsData, system
 from ..util import chemkin
 from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
 
 
-class ThermBase(Frozen, Scalable, SubclassTyped, abc.ABC):
+class ThermBase(UnitManager, Frozen, SubclassTyped, abc.ABC):
     """Abstract base class for thermodynamic data."""
 
 
@@ -21,9 +21,9 @@ class ThermData(ThermBase):
     """Raw thermodynamic data.
 
     :param Ts: Temperatures (K)
-    :param Z0s: Partition function natural logarithm, ln(Q)
-    :param Z1s: First derivative, d(ln(Q))/dT  (derivative w.r.t beta?? or T in energy units?)
-    :param Z2s: Second derivative, d^2(ln(Q))/dT^2
+    :param Z0s: Partition function per volume natural logarithm, ln(Q [cm^-3])
+    :param Z1s: First derivative, d(ln(Q))/dT [K^-1]
+    :param Z2s: Second derivative, d^2(ln(Q))/dT^2 [K^-2]
     """
 
     Ts: list[float]
@@ -33,6 +33,12 @@ class ThermData(ThermBase):
 
     # Private attributes
     type_: ClassVar[str] = "data"
+    _dimensions: ClassVar[dict[str, Dimension]] = {
+        "Ts": Dim.temperature,
+        "Z0s": system.log(Dim.volume),
+        "Z1s": Dim.temperature**-1,
+        "Z2s": Dim.temperature**-2,
+    }
 
     @unit_.manage_units([], Dim.energy_per_substance)
     def internal_energy(self, units: UnitsData | None = None) -> NDArray[numpy.float64]:
@@ -69,7 +75,7 @@ class ThermData(ThermBase):
         return S
 
 
-class ThermFit(ThermBase, abc.ABC):
+class ThermFit(ThermBase, Scalable, abc.ABC):
     """Fitted thermodynamic data."""
 
     T_low: float
@@ -103,7 +109,7 @@ def extract_thermo_data_from_messpf_string(pf_str: str) -> ThermData:
     Ts, Z0s, Z1s, Z2s, *_ = map(list, zip(*data, strict=True))
     # Correct MESS-PF single-decimal rounding error for consistency
     Ts = [298.15 if T == 298.2 else T for T in Ts]
-    return ThermData(Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s)
+    return ThermData(Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s, units={"length": "bohr"})
 
 
 def extract_thermo_from_chemkin_parse_results(
