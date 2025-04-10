@@ -41,6 +41,31 @@ class ThermData(ThermBase):
         "Z2s": Dim.temperature**-2,
     }
 
+    # TODO: Fix unit handling here
+    @unit_.manage_units([], Dim.energy_per_substance)
+    def enthalpy(
+        self,
+        H0: float,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Calculate enthalpy.
+
+        Formula:
+
+            H = H_0 + R (T^2 d(ln(Q_1'))/dT + T)
+              = H_0 + R (T^2 Z_1 + T)
+
+        :param H0: Reference enthalpy
+        :param units: Units
+        :return: Enthalpy
+        """
+        # Evaluate
+        R = unit_.system.constant_value(Const.gas, UNITS)
+        T = numpy.array(self.Ts, dtype=numpy.float64)
+        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
+        H = H0 + R * (T**2 * Z1 + T)
+        return H
+
     @unit_.manage_units([], Dim.energy_per_substance / Dim.temperature)
     def heat_capacity(
         self,
@@ -51,7 +76,8 @@ class ThermData(ThermBase):
 
         Formula:
 
-            C_v = R (2 T Z_1 + T^2 Z_2)
+            C_v = R (2 T d(ln(Q_1'))/dT + T^2 d^2(ln(Q_1'))/dT^2)
+                = R (2 T Z_1 + T^2 Z_2)
             C_p = C_v + R = R (1 + 2 T Z_1 + T^2 Z_2)
 
         :param units: Units

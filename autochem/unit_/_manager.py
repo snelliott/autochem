@@ -32,6 +32,10 @@ class UnitManager(Frozen, abc.ABC):
 def manage_units(arg_dims: Sequence[Dimension], ret_dim: Dimension):
     """Transform function into a unit managing function.
 
+    TODO: Fix handling of args vs kwargs for input. This is currently broken when the
+    user passes in e.g. P=1 for the first argument (this gets passed in kwargs, not
+    args). To resolve this, have `arg_dims` be a dict of {name: dimension}
+
     Converts arguments to internal units, calls the function, then converts the return
     value back to desired units.
 
