@@ -2,8 +2,9 @@
 
 import re
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
+import more_itertools as mit
 import numpy
 import pydantic
 import pyparsing as pp
@@ -50,6 +51,51 @@ def read_equation_reagents(chem_str: str) -> tuple[list[str], list[str]]:
     return (res.reactants, res.products)
 
 
+# Thermo
+class ChemkinThermoParseResults(pydantic.BaseModel):
+    name: str
+    formula: dict[str, int]
+    T_low: float
+    T_high: float
+    coeffs: list[float]
+    phase: str = "G"
+    T_mid: float | None = None
+    date: str | None = None
+    comments: list[str] = pydantic.Field(default_factory=list)
+
+
+def parse_thermo(therm_str: str) -> ChemkinThermoParseResults:
+    """Extract all thermo information from a Chemkin thermo string.
+
+    :param therm_str: Chemkin string
+    :return: Parse results including name, formula, coefficients, etc.
+    """
+    comments, therm_str = read_extract_comments(therm_str)
+    line1, _, lines = therm_str.strip().partition("\n")
+
+    name = line1[:18].strip()
+    date = line1[18:24].strip()
+    form_str = line1[24:44].strip() + line1[73:78].strip()
+    form_dct = dict(FORM_ENTRIES.parse_string(form_str).as_list())
+    phase = line1[44]
+    temp_expr = THERM_TEMP("low") + THERM_TEMP("high") + pp.Opt(THERM_TEMP)("mid")
+    temp_dct = temp_expr.parse_string(line1[45:73]).as_dict()
+    coeffs = COEFFS.parse_string(lines).as_list()
+
+    return ChemkinThermoParseResults(
+        name=name,
+        formula=form_dct,
+        T_low=temp_dct.get("low"),
+        T_high=temp_dct.get("high"),
+        coeffs=coeffs,
+        phase=phase,
+        T_mid=temp_dct.get("mid"),
+        date=date,
+        comments=comments,
+    )
+
+
+# Rates
 class ChemkinRateParseResults(pydantic.BaseModel):
     reactants: list[str]
     products: list[str]
@@ -62,16 +108,16 @@ class ChemkinRateParseResults(pydantic.BaseModel):
     comments: list[str] = pydantic.Field(default_factory=list)
 
 
-def parse_equation(chem_str: str) -> ChemkinRateParseResults:
-    """Extract equation information from a Chemkin string.
+def parse_equation(reac_str: str) -> ChemkinRateParseResults:
+    """Extract equation information from a Chemkin reaction string.
 
     :param chem_str: Chemkin string
     :return: Parse results including reactants, products, reversible,
         pressure_dependent, and efficiencies (only contains third-body, with value 1.0)
     """
     # Split the reaction line off from the auxiliary lines
-    chem_str = read_without_comments(chem_str).strip()
-    eq, *_ = re.split(r"\n|$|\s[+-]?\d", chem_str, maxsplit=1)
+    reac_str = read_without_comments(reac_str).strip()
+    eq, *_ = re.split(r"\n|$|\s[+-]?\d", reac_str, maxsplit=1)
     rct, arrow, prd = re.split(r"(<=>|=>|=)", eq)
 
     # Assess reversibility
@@ -107,18 +153,18 @@ def parse_equation(chem_str: str) -> ChemkinRateParseResults:
     )
 
 
-def parse_rate(chem_str: str) -> ChemkinRateParseResults:
-    """Extract full rate information from a Chemkin string.
+def parse_rate(rate_str: str) -> ChemkinRateParseResults:
+    """Extract all rate information from a Chemkin rate string.
 
     :param chem_str: Chemkin string
     :return: Parse results including reactants, products, reversible,
         pressure_dependent, and efficiencies (only contains third-body, with value 1.0)
     """
     # Extract comments
-    comments, chem_str = read_extract_comments(chem_str)
+    comments, rate_str = read_extract_comments(rate_str)
 
     # Split the reaction line off from the auxiliary lines
-    rxn_line, aux_lines = re.split(r"\n|$", chem_str, maxsplit=1)
+    rxn_line, aux_lines = re.split(r"\n|$", rate_str, maxsplit=1)
 
     # Parse the reaction line
     rxn_res = REAC_LINE.parse_string(rxn_line)
@@ -239,6 +285,81 @@ def write_aux(
     return " " * indent + f"{key:<{key_width}} /{val_str:>{val_width}}/"
 
 
+def write_therm_entry_header(
+    name: str,
+    form_dct: dict[str, int],
+    T_low: float,  # noqa: N803
+    T_high: float,  # noqa: N803
+    T_mid: float | None = None,  # noqa: N803
+    charge: int = 0,
+    phase: str = "G",
+    date: str = "",
+):
+    """Write the header line for a Chemkin thermo entry.
+
+    :param name: Name of the species
+    :param form_dct: Dictionary of the species formula
+    :param T_low: Low temperature
+    :param T_high: High temperature
+    :param T_mid: Mid temperature, optional
+    :param charge: Charge, defaults to 0
+    :param date: Date, defaults to empty string
+    :return: Chemkin thermo entry header line
+    """
+    # Build formula strings
+    assert len(form_dct) <= 5, f"Too many elements for Chemkin: |{form_dct}| > 5"
+    form_items = [(k, form_dct.get(k)) for k in sorted(form_dct, key=symbol_sort_key())]
+    if charge:
+        form_items.append(("E", charge))
+    form_items1 = form_items[:4]
+    form_items2 = form_items[4:]
+    form_str1 = "".join(f"{k: <2}{v: >3}" for k, v in form_items1)
+    form_str2 = "".join(f"{k: <2}{v: >3}" for k, v in form_items2)
+
+    # Build temperature string
+    temp_str = f"{T_low:>10.1f}{T_high:>10.1f}"
+    temp_str += f"{T_mid:>8.1f}" if T_mid else ""
+
+    return (
+        f"{name: <18}{date: <6}{form_str1: <20}{phase:<1}{temp_str: <28}{form_str2: <5}"
+    )
+
+
+def write_therm_entry_coefficient_lines(coeffs: Sequence[float]) -> list[str]:
+    """Write the coefficient lines for a Chemkin thermo entry.
+
+    :param coeffs: Coefficients
+    :return: Chemkin thermo entry coefficient lines
+    """
+    num_fmt = "{:>15.8E}"
+    return ["".join(map(num_fmt.format, cs)) for cs in mit.chunked(coeffs, 5)]
+
+
+def symbol_sort_key(
+    symbs_first: Sequence[str] = ("C", "H"), symbs_last: Sequence[str] = ()
+) -> Callable[[str], tuple[int, str]]:
+    """Sort key for atomic symbols.
+
+    :param symbs_first: Symbols to sort first
+    :return: Sort ke
+    """
+    symbs_first = list(map(str.title, symbs_first))
+    symbs_last = list(map(str.title, symbs_last))
+
+    def _key(symb: str) -> tuple[int, str]:
+        """Symbol sort key."""
+        symb = symb.title()
+        if symb in symbs_first:
+            val = symbs_first.index(symb)
+        elif symb in symbs_last:
+            val = len(symbs_first) + symbs_last.index(symb) + 1
+        else:
+            val = len(symbs_first)
+        return val, symb
+
+    return _key
+
+
 # Helpers
 def write_numbers(
     nums: Sequence[float],
@@ -340,3 +461,14 @@ FALLOFF = parenthetical(PLUS + pp.Word(pp.alphanums))
 REAC_SIDE_FALLOFF = pp.SkipTo(FALLOFF ^ pp.StringEnd())(Key.reagents) + pp.Opt(FALLOFF)(
     Key.falloff
 )
+#   - Thermo entry formula
+FORM_KEY = pp.OneOrMore(pp.Char(pp.alphas))
+FORM_VAL = ppc.signed_integer
+FORM_ENTRY = pp.Group(FORM_KEY + FORM_VAL)
+FORM_ENTRIES = pp.OneOrMore(FORM_ENTRY)
+#   - Thermo entry temperatures
+THERM_TEMP = ppc.number
+#   - Coefficient numbers
+LINE_NUM = ppc.integer
+COEFF = ppc.sci_real
+COEFFS = pp.OneOrMore(pp.OneOrMore(COEFF) + pp.Suppress(LINE_NUM))
