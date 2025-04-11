@@ -14,11 +14,13 @@ from ..util import chemkin
 from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
 
 
-class ThermBase(UnitManager, Frozen, SubclassTyped, abc.ABC):
+class BaseTherm(UnitManager, Frozen, SubclassTyped, abc.ABC):
     """Abstract base class for thermodynamic data."""
 
+    pass
 
-class ThermData(ThermBase):
+
+class Therm(BaseTherm):
     """Raw thermodynamic data.
 
     :param Ts: Temperatures (K)
@@ -135,7 +137,7 @@ class ThermData(ThermBase):
         return S
 
 
-class ThermFit(ThermBase, Scalable, abc.ABC):
+class ThermFit(BaseTherm, Scalable, abc.ABC):
     """Fitted thermodynamic data."""
 
     T_low: float
@@ -157,7 +159,7 @@ class Nasa7ThermFit(ThermFit):
     }
 
 
-def extract_thermo_data_from_messpf_string(pf_str: str) -> ThermData:
+def from_messpf_output_string(pf_str: str) -> Therm:
     """Extract thermo data from MESS-PF output string.
 
     :param pf_str: MESS-PF output string
@@ -167,10 +169,10 @@ def extract_thermo_data_from_messpf_string(pf_str: str) -> ThermData:
     lines = list(itertools.dropwhile(lambda s: not s.startswith("Z_0"), lines))
     data = [list(map(float, line.split())) for line in lines[1:]]
     Ts, Z0s, Z1s, Z2s, *_ = map(list, zip(*data, strict=True))
-    return ThermData(Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s)
+    return Therm(Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s)
 
 
-def extract_thermo_from_chemkin_parse_results(
+def from_chemkin_parse_results(
     res: chemkin.ChemkinThermoParseResults,
     T_mid: float = 1000,  # noqa: N803
 ) -> ThermFit:

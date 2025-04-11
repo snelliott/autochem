@@ -2,7 +2,7 @@
 
 from ..util import chemkin
 from ..util.type_ import Frozen
-from ._00therm import Nasa7ThermFit, extract_thermo_from_chemkin_parse_results
+from . import data
 
 
 class Species(Frozen):
@@ -24,7 +24,7 @@ def from_chemkin_string(spc_str: str) -> Species:
     res = chemkin.parse_thermo(spc_str)
 
     # Extract thermo data
-    therm_data = extract_thermo_from_chemkin_parse_results(res)
+    therm_fit = data.from_chemkin_parse_results(res)
 
     # Determine charge, if any
     charge = 0
@@ -36,7 +36,7 @@ def from_chemkin_string(spc_str: str) -> Species:
         name=res.name,
         formula=form_dct,
         charge=charge,
-        therm=therm_data,
+        therm=therm_fit,
     )
 
 
@@ -49,7 +49,7 @@ def chemkin_string(spc: Species) -> str:
     therm = spc.therm
     T_low = T_high = T_mid = None
     match therm:
-        case Nasa7ThermFit():
+        case data.Nasa7ThermFit():
             T_low = therm.T_low
             T_high = therm.T_high
             T_mid = therm.T_mid

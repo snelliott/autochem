@@ -127,7 +127,7 @@ def chemkin_aux_lines(func: BlendingFunction, head_width: int = 55) -> list[str]
 
 
 # Parse helpers
-def extract_blending_function_from_chemkin_parse_results(
+def blending_function_from_chemkin_parse_results(
     res: chemkin.ChemkinRateParseResults,
 ) -> BlendingFunction:
     """Extract blending function from Chemkin parse results.
