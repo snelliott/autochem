@@ -29,7 +29,6 @@ class BlendingFunction(Frozen, Scalable, SubclassTyped, abc.ABC):
 
 
 class LindemannBlendingFunction(BlendingFunction):
-
     # Private attributes
     type_: ClassVar[str] = "lindemann"
 
@@ -127,7 +126,7 @@ def chemkin_aux_lines(func: BlendingFunction, head_width: int = 55) -> list[str]
 
 
 # Parse helpers
-def blending_function_from_chemkin_parse_results(
+def from_chemkin_parse_results(
     res: chemkin.ChemkinRateParseResults,
 ) -> BlendingFunction:
     """Extract blending function from Chemkin parse results.

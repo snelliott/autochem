@@ -9,7 +9,7 @@ import pint
 from numpy.typing import NDArray
 
 from .. import unit_
-from ..unit_ import UNITS, Const, Dim, Dimension, UnitManager, Units, UnitsData, system
+from ..unit_ import UNITS, C, UnitManager, Units, UnitsData, const, dim
 from ..util import chemkin
 from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
 
@@ -36,15 +36,15 @@ class Therm(BaseTherm):
 
     # Private attributes
     type_: ClassVar[str] = "data"
-    _dimensions: ClassVar[dict[str, Dimension]] = {
-        "Ts": Dim.temperature,
-        "Z0s": system.log(Dim.volume),
-        "Z1s": Dim.temperature**-1,
-        "Z2s": Dim.temperature**-2,
+    _dimensions: ClassVar[dict[str, dim.Dimension]] = {
+        "Ts": dim.D.temperature,
+        "Z0s": dim.log(dim.D.volume),
+        "Z1s": dim.D.temperature**-1,
+        "Z2s": dim.D.temperature**-2,
     }
 
     # TODO: Fix unit handling here
-    @unit_.manage_units([], Dim.energy_per_substance)
+    @unit_.manage_units([], dim.D.energy_per_substance)
     def enthalpy(
         self,
         H0: float,  # noqa: N803
@@ -62,16 +62,16 @@ class Therm(BaseTherm):
         :return: Enthalpy
         """
         # Evaluate
-        R = unit_.system.constant_value(Const.gas, UNITS)
+        R = const.value(C.gas, UNITS)
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
-        H = H0 + R * (T**2 * Z1 + T)
-        return H
+        enthalpy = H0 + R * (T**2 * Z1 + T)
+        return enthalpy
 
-    @unit_.manage_units([], Dim.energy_per_substance / Dim.temperature)
+    @unit_.manage_units([], dim.D.energy_per_substance / dim.D.temperature)
     def heat_capacity(
         self,
-        const_P: bool = False,  # noqa: N803
+        at_const_P: bool = False,  # noqa: N803
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float64]:
         """Calculate the heat capacity at constant volume or pressure.
@@ -87,15 +87,15 @@ class Therm(BaseTherm):
         :return: Heat capacity
         """
         # Evaluate
-        R = unit_.system.constant_value(Const.gas, UNITS)
+        R = const.value(C.gas, UNITS)
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
         Z2 = numpy.array(self.Z2s, dtype=numpy.float64)
-        C = R * (2 * T * Z1 + T**2 * Z2)
-        C += R if const_P else 0.0
-        return C
+        heat_capacity = R * (2 * T * Z1 + T**2 * Z2)
+        heat_capacity += R if at_const_P else 0.0
+        return heat_capacity
 
-    @unit_.manage_units([], Dim.energy_per_substance / Dim.temperature)
+    @unit_.manage_units([], dim.D.energy_per_substance / dim.D.temperature)
     def entropy(
         self,
         P: float = 1,  # noqa: N803
@@ -129,12 +129,12 @@ class Therm(BaseTherm):
         c = (P_ / (k_B_ * T_)).m_as("1/cm**3")
 
         # Evaluate
-        R = unit_.system.constant_value(Const.gas, UNITS)
+        R = const.value(C.gas, UNITS)
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z0 = numpy.array(self.Z0s, dtype=numpy.float64)
         Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
-        S = R * (T * Z1 + Z0 - numpy.log(c) + 1)
-        return S
+        entropy = R * (T * Z1 + Z0 - numpy.log(c) + 1)
+        return entropy
 
 
 class ThermFit(BaseTherm, Scalable, abc.ABC):

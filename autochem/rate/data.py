@@ -16,16 +16,11 @@ from numpy.typing import ArrayLike, NDArray
 from pydantic_core import core_schema
 
 from .. import unit_
-from ..unit_ import UNITS, Const, Dim, Dimension, UnitManager, Units, UnitsData
+from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, const
 from ..util import chemkin
 from ..util.type_ import Frozen, NDArray_, Scalable, Scalers, SubclassTyped
-from .blend import (
-    BlendingFunction_,
-    blending_function_from_chemkin_parse_results,
-)
-from .blend import (
-    chemkin_aux_lines as blending_function_chemkin_aux_lines,
-)
+from . import blend
+from .blend import BlendingFunction_
 
 COLOR_SEQUENCE = [
     "#0066ff",  # blue
@@ -182,9 +177,9 @@ class Rate(BaseRate):
     type_: ClassVar[str] = "raw"
     _scalers: ClassVar[Scalers] = {"k_array": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "Ts": Dim.temperature,
-        "Ps": Dim.pressure,
-        "data": Dim.rate_constant,
+        "Ts": D.temperature,
+        "Ps": D.pressure,
+        "data": D.rate_constant,
     }
 
     @property
@@ -193,7 +188,7 @@ class Rate(BaseRate):
             data=self.data, coords={self._T_key: self.Ts, self._P_key: self.Ps}
         )
 
-    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
+    @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -238,11 +233,11 @@ class ArrheniusRateFit(RateFit):
     type_: ClassVar[str] = "arrhenius"
     _scalers: ClassVar[Scalers] = {"A": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "A": Dim.rate_constant,
-        "E": Dim.energy_per_substance,
+        "A": D.rate_constant,
+        "E": D.energy_per_substance,
     }
 
-    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
+    @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -251,7 +246,7 @@ class ArrheniusRateFit(RateFit):
     ) -> NDArray[numpy.float64]:
         """Evaluate rate constant."""
         T_, P_ = self.process_input(T, P)
-        R = unit_.system.constant_value(Const.gas, UNITS)
+        R = const.value(C.gas, UNITS)
         kTP = self.A * (T_**self.b) * numpy.exp(-self.E / (R * T_))
         return self.process_output(kTP, T, P)
 
@@ -270,13 +265,13 @@ class FalloffRateFit(RateFit, abc.ABC):  # type: ignore[misc]
     type_: ClassVar[str] = "falloff"
     _scalers: ClassVar[Scalers] = {"A_high": numpy.multiply, "A_low": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "A_high": Dim.rate_constant,
-        "E_high": Dim.energy_per_substance,
-        "A_low": Dim.rate_constant,
-        "E_low": Dim.energy_per_substance,
+        "A_high": D.rate_constant,
+        "E_high": D.energy_per_substance,
+        "A_low": D.rate_constant,
+        "E_low": D.energy_per_substance,
     }
 
-    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
+    @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -320,7 +315,7 @@ class FalloffRateFit(RateFit, abc.ABC):  # type: ignore[misc]
         :return: Effective concentration(s)
         """
         # Evaluate, using pint to handle units
-        R_ = pint.Quantity("molar_gas_constant")
+        R_ = const.quantity(C.gas)
         T_ = pint.Quantity(T, UNITS.temperature)
         P_ = pint.Quantity(P, UNITS.pressure)
         m_ = P_ / (R_ * T_)
@@ -356,12 +351,12 @@ class PlogRateFit(RateFit):
     type_: ClassVar[str] = "plog"
     _scalers: ClassVar[Scalers] = {"As": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "As": Dim.rate_constant,
-        "Es": Dim.energy_per_substance,
-        "Ps": Dim.pressure,
+        "As": D.rate_constant,
+        "Es": D.energy_per_substance,
+        "Ps": D.pressure,
     }
 
-    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
+    @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -466,12 +461,12 @@ class ChebRateFit(RateFit):
     type_: ClassVar[str] = "cheb"
     _scalers: ClassVar[Scalers] = {"coeffs": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "coeffs": Dim.rate_constant,
-        "T_range": Dim.temperature,
-        "P_range": Dim.pressure,
+        "coeffs": D.rate_constant,
+        "T_range": D.temperature,
+        "P_range": D.pressure,
     }
 
-    @unit_.manage_units([Dim.temperature, Dim.pressure], Dim.rate_constant)
+    @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(
         self,
         T: ArrayLike,  # noqa: N803
@@ -557,9 +552,7 @@ def chemkin_string(rate_const: RateFit, eq_width: int = 0) -> str:
 
     if isinstance(rate_const, FalloffRateFit):
         aux_lines.extend(
-            blending_function_chemkin_aux_lines(
-                rate_const.function, head_width=head_width
-            )
+            blend.chemkin_aux_lines(rate_const.function, head_width=head_width)
         )
 
     eff_line = chemkin.write_efficiencies(
@@ -627,7 +620,7 @@ def from_chemkin_parse_results(
     if "LOW" in res.aux_numbers:
         A_high, b_high, E_high = res.arrhenius
         A_low, b_low, E_low = res.aux_numbers.pop("LOW")
-        function = blending_function_from_chemkin_parse_results(res)
+        function = blend.from_chemkin_parse_results(res)
         return FalloffRateFit(
             A_low=A_low,
             b_low=b_low,
@@ -645,7 +638,7 @@ def from_chemkin_parse_results(
     if "HIGH" in res.aux_numbers:
         A_low, b_low, E_low = res.arrhenius
         A_high, b_high, E_high = res.aux_numbers.pop("HIGH")
-        function = blending_function_from_chemkin_parse_results(res)
+        function = blend.from_chemkin_parse_results(res)
         return FalloffRateFit(
             A_low=A_low,
             b_low=b_low,
