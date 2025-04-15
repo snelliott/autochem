@@ -38,7 +38,7 @@ def dimension(const: str) -> Dimension:
     const = const.strip().lower()
     if const not in dim_dct:
         raise ValueError(f"Unknown constant: {const}")
-    return dim_dct.get(const)
+    return dim_dct[const]
 
 
 def value(const: str, units: Units) -> float:

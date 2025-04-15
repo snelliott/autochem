@@ -14,15 +14,8 @@ from numpy.typing import ArrayLike, NDArray
 from ..unit_ import UnitsData
 from ..util import chemkin
 from ..util.type_ import Scalable, Scalers
-from .data import (
-    ArrheniusRateFit,
-    Rate_,
-    RateFit,
-    from_chemkin_parse_results,
-)
-from .data import (
-    chemkin_string as rate_constant_chemkin_string,
-)
+from . import data
+from .data import ArrheniusRateFit, Rate_, RateFit
 
 
 class Reaction(Scalable):
@@ -31,6 +24,7 @@ class Reaction(Scalable):
     reactants: list[str]
     products: list[str]
     reversible: bool = True
+    # Change this to `rate`:
     rate_constant: Rate_ = pydantic.Field(
         default_factory=lambda data: ArrheniusRateFit(
             A=1, b=0, E=0, order=len(data["reactants"])
@@ -97,7 +91,7 @@ def from_chemkin_string(
     res = chemkin.parse_rate(rate_str)
 
     # Extract rate constant
-    rate_constant = from_chemkin_parse_results(res, units=units)
+    rate_constant = data.from_chemkin_parse_results(res, units=units)
 
     # Check that all information was used
     if strict:
@@ -115,7 +109,9 @@ def from_chemkin_string(
 
 
 # Transformations
-def expand_lumped(rate: Reaction, exp_dct: Mapping[str, Sequence[str]]) -> list[Reaction]:
+def expand_lumped(
+    rate: Reaction, exp_dct: Mapping[str, Sequence[str]]
+) -> list[Reaction]:
     """Expand a lumped reaction rates into its components.
 
     Assumes an even ratio among unlumped coefficients, in the absence of information.
@@ -219,7 +215,7 @@ def chemkin_string(rate: Reaction, eq_width: int = 55, dup: bool = False) -> str
     :return: Chemkin rate string
     """
     eq = chemkin_equation(rate)
-    rate_str = rate_constant_chemkin_string(rate.rate_constant, eq_width=eq_width)
+    rate_str = data.chemkin_string(rate.rate_constant, eq_width=eq_width)
     reac_str = f"{eq:<{eq_width}} {rate_str}"
     return chemkin.write_with_dup(reac_str, dup=dup)
 
