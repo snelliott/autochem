@@ -342,7 +342,7 @@ def from_chemkin_parse_results(
 
 # Helpers
 KJ_TO_CAL = pint.Quantity(1, "kJ").m_as("cal")
-ENTHALPY_CHANGE_0K_TO_298K = {
+ENTHALPY_CHANGE_0K_TO_298K: dict[str, float] = {
     # Monatomic values (kJ)
     "He": 6.197,
     "Ne": 6.197,
@@ -396,4 +396,7 @@ def elemental_delta_enthalpy_room_temperature(
     :param formula: Formula
     """
     formula = form.normalize_input(formula)
-    return sum(ENTHALPY_CHANGE_0K_TO_298K.get(k) * v for k, v in formula.items())
+    assert all(k in ENTHALPY_CHANGE_0K_TO_298K for k in formula), (
+        f"Invalid symbols: {formula}"
+    )
+    return sum(ENTHALPY_CHANGE_0K_TO_298K[k] * v for k, v in formula.items())

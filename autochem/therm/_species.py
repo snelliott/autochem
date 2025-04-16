@@ -173,7 +173,7 @@ def pac99_input_line(
     return line
 
 
-def pac99_number(num: float | None = None, decimals: int = 3) -> str:
+def pac99_number(num: float | None = None, decimals: int = 3) -> str | None:
     """Format number for PAC99 input."""
     if num is None:
         return None
