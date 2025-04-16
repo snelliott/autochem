@@ -1,5 +1,5 @@
 """Data types for non-molecular chemical information."""
 
-from . import rate, unit_, util
+from . import rate, therm, unit_, util
 
-__all__ = ["rate", "unit_", "util"]
+__all__ = ["rate", "therm", "unit_", "util"]

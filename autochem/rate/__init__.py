@@ -1,40 +1,43 @@
 """Rate constants."""
 
-from ._00func import (
-    BlendingFunction,
-    LindemannBlendingFunction,
-    SriBlendingFunction,
-    TroeBlendingFunction,
-)
-from ._01const import (
-    ArrheniusRateConstantFit,
-    BaseRateConstant,
-    ChebRateConstantFit,
-    FalloffRateConstantFit,
-    PlogRateConstantFit,
-    RateConstant,
-    RateConstantFit,
-)
-from ._02rate import (
-    Rate,
+from . import blend, data
+from ._reaction import (
+    Reaction,
     chemkin_equation,
     chemkin_string,
     display,
     expand_lumped,
     from_chemkin_string,
 )
+from .blend import (
+    BlendingFunction,
+    LindemannBlendingFunction,
+    SriBlendingFunction,
+    TroeBlendingFunction,
+)
+from .data import (
+    ArrheniusRateFit,
+    BaseRate,
+    ChebRateFit,
+    FalloffRateFit,
+    PlogRateFit,
+    Rate,
+    RateFit,
+)
 
 __all__ = [
-    "ArrheniusRateConstantFit",
-    "BaseRateConstant",
+    "blend",
+    "data",
+    "ArrheniusRateFit",
+    "BaseRate",
     "BlendingFunction",
-    "ChebRateConstantFit",
-    "FalloffRateConstantFit",
+    "ChebRateFit",
+    "FalloffRateFit",
     "LindemannBlendingFunction",
-    "PlogRateConstantFit",
+    "PlogRateFit",
+    "Reaction",
     "Rate",
-    "RateConstant",
-    "RateConstantFit",
+    "RateFit",
     "SriBlendingFunction",
     "TroeBlendingFunction",
     "chemkin_equation",

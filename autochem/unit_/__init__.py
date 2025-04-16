@@ -1,33 +1,32 @@
 """Units functions."""
 
-from . import system
+from . import const, dim, system
 from ._manager import UnitManager, manage_units
 from ._unit import pretty_string, string
+from .const import C
+from .dim import D, Dimension, DimensionData
 from .system import (
     UNITS,
-    Const,
-    Dim,
-    Dimension,
     Units,
     UnitsData,
-    convert_dimension_value,
-    dimension_conversion_factor,
-    dimension_unit,
 )
 
 __all__ = [
-    "UNITS",
-    "Const",
-    "Dim",
-    "Dimension",
-    "UnitManager",
-    "Units",
-    "UnitsData",
-    "convert_dimension_value",
-    "dimension_conversion_factor",
-    "dimension_unit",
+    # Functions:
     "manage_units",
     "pretty_string",
     "string",
+    # Modules:
+    "const",
+    "dim",
     "system",
+    # Classes:
+    "UnitManager",
+    "C",
+    "D",
+    "Dimension",
+    "DimensionData",
+    "UNITS",
+    "Units",
+    "UnitsData",
 ]

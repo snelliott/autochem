@@ -9,22 +9,20 @@ import numpy
 from numpy.typing import NDArray
 
 from ..util.type_ import Frozen
-from . import system
-from .system import UNITS, Dimension, Units, UnitsData
+from . import dim
+from .dim import Dimension
+from .system import UNITS, Units, UnitsData
 
 
 class UnitManager(Frozen, abc.ABC):
-
     _dimensions: ClassVar[dict[str, Dimension]]
 
     def __init__(self, units: UnitsData | None = None, **kwargs):
         if units is not None:
             units0 = Units.model_validate(units)
-            for key, dim in self.__class__._dimensions.items():
+            for key, dim_ in self.__class__._dimensions.items():
                 val0 = kwargs.get(key)
-                kwargs[key] = system.convert_dimension_value(
-                    units0, UNITS, dim, val0, **kwargs
-                )
+                kwargs[key] = dim.convert(units0, UNITS, dim_, val0, **kwargs)
 
         super().__init__(**kwargs)
 
@@ -45,7 +43,6 @@ def manage_units(arg_dims: Sequence[Dimension], ret_dim: Dimension):
     """
 
     def manage_units_(func0):
-
         @functools.wraps(func0)
         def func(
             self, *args, units: UnitsData | None = None, **kwargs
@@ -59,19 +56,15 @@ def manage_units(arg_dims: Sequence[Dimension], ret_dim: Dimension):
 
             # Convert arguments
             args_ = tuple(
-                system.convert_dimension_value(
-                    units0, UNITS, dim, arg, **self.model_dump()
-                )
-                for dim, arg in zip(arg_dims, args, strict=True)
+                dim.convert(units0, UNITS, dim_, arg, **self.model_dump())
+                for dim_, arg in zip(arg_dims, args, strict=True)
             )
 
             # Call function
             ret = func0(self, *args_, units=units, **kwargs)
 
             # Convert return
-            ret_ = system.convert_dimension_value(
-                UNITS, units0, ret_dim, ret, **self.model_dump()
-            )
+            ret_ = dim.convert(UNITS, units0, ret_dim, ret, **self.model_dump())
             return ret_
 
         return func

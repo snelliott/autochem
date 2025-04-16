@@ -1,14 +1,14 @@
 """Utility functions for parsing Chemkin data."""
-
+import numpy
 import re
 from collections import defaultdict
 from collections.abc import Callable, Sequence
 
 import more_itertools as mit
-import numpy
 import pydantic
 import pyparsing as pp
 from pyparsing import common as ppc
+
 
 COMMENT_REGEX = re.compile(r"# .*$|!.*$", flags=re.M)
 
@@ -388,7 +388,7 @@ def write_number(
     """Write a number to a formatted string.
 
     :param num: The number
-    :param digits: How many digitst to include, defaults to 4
+    :param digits: How many digits to include, defaults to 4
     :param always_sci: Whether to always use scientific notation
     :param as_int: Whether to write integer values
     :return: The formatted number string

@@ -14,25 +14,19 @@ from numpy.typing import ArrayLike, NDArray
 from ..unit_ import UnitsData
 from ..util import chemkin
 from ..util.type_ import Scalable, Scalers
-from ._01const import (
-    ArrheniusRateConstantFit,
-    RateConstant_,
-    RateConstantFit,
-    extract_rate_constant_from_chemkin_parse_results,
-)
-from ._01const import (
-    chemkin_string as rate_constant_chemkin_string,
-)
+from . import data
+from .data import ArrheniusRateFit, Rate_, RateFit
 
 
-class Rate(Scalable):
+class Reaction(Scalable):
     """Rate class."""
 
     reactants: list[str]
     products: list[str]
     reversible: bool = True
-    rate_constant: RateConstant_ = pydantic.Field(
-        default_factory=lambda data: ArrheniusRateConstantFit(
+    # Change this to `rate`:
+    rate_constant: Rate_ = pydantic.Field(
+        default_factory=lambda data: ArrheniusRateFit(
             A=1, b=0, E=0, order=len(data["reactants"])
         )
     )
@@ -48,7 +42,7 @@ class Rate(Scalable):
     @property
     def third_body(self) -> str | None:
         """Third body."""
-        if isinstance(self.rate_constant, RateConstantFit):
+        if isinstance(self.rate_constant, RateFit):
             return self.rate_constant.third_body
 
         return None
@@ -56,7 +50,7 @@ class Rate(Scalable):
     @property
     def is_pressure_dependent(self) -> bool:
         """Whether the rate is pressure dependent."""
-        return not isinstance(self.rate_constant, ArrheniusRateConstantFit)
+        return not isinstance(self.rate_constant, ArrheniusRateFit)
 
     def __call__(
         self,
@@ -85,7 +79,7 @@ class Rate(Scalable):
 # Constructors
 def from_chemkin_string(
     rate_str: str, units: UnitsData | None = None, strict: bool = True
-) -> Rate:
+) -> Reaction:
     """Read rate from Chemkin string.
 
     :param rate_str: Chemkin string
@@ -97,7 +91,7 @@ def from_chemkin_string(
     res = chemkin.parse_rate(rate_str)
 
     # Extract rate constant
-    rate_constant = extract_rate_constant_from_chemkin_parse_results(res, units=units)
+    rate_constant = data.from_chemkin_parse_results(res, units=units)
 
     # Check that all information was used
     if strict:
@@ -106,7 +100,7 @@ def from_chemkin_string(
         assert not res.efficiencies, f"Unused efficiencies: {res.efficiencies}"
 
     # Instantiate object
-    return Rate(
+    return Reaction(
         reactants=res.reactants,
         products=res.products,
         reversible=res.reversible,
@@ -115,7 +109,9 @@ def from_chemkin_string(
 
 
 # Transformations
-def expand_lumped(rate: Rate, exp_dct: Mapping[str, Sequence[str]]) -> list[Rate]:
+def expand_lumped(
+    rate: Reaction, exp_dct: Mapping[str, Sequence[str]]
+) -> list[Reaction]:
     """Expand a lumped reaction rates into its components.
 
     Assumes an even ratio among unlumped coefficients, in the absence of information.
@@ -195,7 +191,7 @@ def expand_lumped(rate: Rate, exp_dct: Mapping[str, Sequence[str]]) -> list[Rate
 
 
 # Conversions
-def chemkin_equation(rate: Rate) -> str:
+def chemkin_equation(rate: Reaction) -> str:
     """Get Chemkin equation string.
 
     :param rate: Rate
@@ -210,7 +206,7 @@ def chemkin_equation(rate: Rate) -> str:
     )
 
 
-def chemkin_string(rate: Rate, eq_width: int = 55, dup: bool = False) -> str:
+def chemkin_string(rate: Reaction, eq_width: int = 55, dup: bool = False) -> str:
     """Get Chemkin rate string.
 
     :param rate: Rate
@@ -219,15 +215,15 @@ def chemkin_string(rate: Rate, eq_width: int = 55, dup: bool = False) -> str:
     :return: Chemkin rate string
     """
     eq = chemkin_equation(rate)
-    rate_str = rate_constant_chemkin_string(rate.rate_constant, eq_width=eq_width)
+    rate_str = data.chemkin_string(rate.rate_constant, eq_width=eq_width)
     reac_str = f"{eq:<{eq_width}} {rate_str}"
     return chemkin.write_with_dup(reac_str, dup=dup)
 
 
 # Display
 def display(
-    rate: Rate,
-    comp_rates: Sequence[Rate] = (),
+    rate: Reaction,
+    comp_rates: Sequence[Reaction] = (),
     comp_labels: Sequence[str] = (),
     T_range: tuple[float, float] = (400, 1250),  # noqa: N803
     P: float = 1,  # noqa: N803
