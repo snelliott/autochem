@@ -224,6 +224,13 @@ class Therm(BaseTherm):
             T=298, method="nearest"
         ) - elemental_delta_enthalpy_room_temperature(self.formula)
 
+    @unit_.manage_units([], D.energy_per_substance)
+    def enthalpy_of_formation_room_temperature(
+        self, units: UnitsData | None = None
+    ) -> float:
+        """Calculate enthalpy of formation at room temperature."""
+        return self.Hf + self.delta_enthalpy_of_formation_room_temperature()
+
 
 class ThermFit(BaseTherm, Scalable, abc.ABC):
     """Fitted thermodynamic data."""
