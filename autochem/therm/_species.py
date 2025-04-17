@@ -5,7 +5,7 @@ import datetime
 import pyparsing as pp
 
 from ..unit_ import UnitsData
-from ..util import FormulaData, chemkin, form
+from ..util import FormulaData, chemkin, form, pac99
 from ..util.type_ import Frozen
 from . import data
 from .data import Nasa7ThermFit, Therm, Therm_
@@ -23,7 +23,7 @@ class Species(Frozen):
 def from_chemkin_string(spc_str: str) -> Species:
     """Read species thermo from Chemkin string.
 
-    :param spc_therm_str: Chemkin species therm string
+    :param spc_str: Chemkin species therm string
     :return: Species thermo
     """
     # Parse string
@@ -64,13 +64,19 @@ def from_messpf_output_string(
     return Species(name=name, therm=therm)
 
 
-# def from_pac99_ouput_string(c97_str: str) -> Species:
-#     """Read species thermo from PAC99 output string.
+def from_pac99_output_string(spc_str: str) -> Species:
+    """Read species thermo from PAC99 output string.
 
-#     :param c97_str: PAC99 .c97 output string
-#     :return: Species thermo
-#     """
-#     print(c97_str)
+    :param spc_str: PAC99 .c97 output string
+    :return: Species thermo
+    """
+    # Parse string
+    res = pac99.parse_thermo(spc_str)
+
+    # Extract thermo data
+    therm_fit = data.from_pac99_output_parse_results(res)
+
+    return Species(name=res.name, therm=therm_fit)
 
 
 def chemkin_string(spc: Species) -> str:
@@ -80,11 +86,11 @@ def chemkin_string(spc: Species) -> str:
     :return: Chemkin thermo string
     """
     therm = spc.therm
-    T_low = T_high = T_mid = None
+    T_min = T_max = T_mid = None
     match therm:
         case Nasa7ThermFit():
-            T_low = therm.T_low
-            T_high = therm.T_high
+            T_min = therm.T_min
+            T_max = therm.T_max
             T_mid = therm.T_mid
             coeffs = therm.coeffs_high + therm.coeffs_low
         case _:
@@ -95,8 +101,8 @@ def chemkin_string(spc: Species) -> str:
     line1 = chemkin.write_therm_entry_header(
         name=spc.name,
         form_dct=therm.formula,
-        T_low=T_low,
-        T_high=T_high,
+        T_min=T_min,
+        T_max=T_max,
         T_mid=T_mid,
         charge=therm.charge,
     )
@@ -108,9 +114,9 @@ def chemkin_string(spc: Species) -> str:
 
 def pac99_input_string(
     spc: Species,
-    Tmin: float = 200,  # noqa: N803
-    Tmid: float = 1000,  # noqa: N803
-    Tmax: float = 3000,  # noqa: N803
+    T_min: float = 200,  # noqa: N803
+    T_mid: float = 1000,  # noqa: N803
+    T_max: float = 3000,  # noqa: N803
 ) -> str:
     """Generate a PAC99 input string for fitting to a NASA-7 polynomial.
 
@@ -136,9 +142,9 @@ def pac99_input_string(
             pac99_input_line("DATE", date),
             pac99_input_line("REFN", "ME"),
             pac99_input_line(
-                "LSTS", "OLD", None, "T", Tmin, "T", Tmin, "T", Tmid, decimals=0
+                "LSTS", "OLD", None, "T", T_min, "T", T_min, "T", T_mid, decimals=0
             ),
-            pac99_input_line("LSTS", "T", Tmax, decimals=0),
+            pac99_input_line("LSTS", "T", T_max, decimals=0),
             pac99_input_line("OUTP", "LSQS"),
             pac99_input_line("METH", "READIN", None, "KJOULE", None, "BAR"),
             pac99_input_line(None, "T", 0, "CP", 0, "S", 0, "H-H2", -dH298),

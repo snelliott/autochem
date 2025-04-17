@@ -13,7 +13,7 @@ from pydantic_core import core_schema
 
 from .. import unit_
 from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, dim
-from ..util import FormulaData, chemkin, form
+from ..util import FormulaData, chemkin, form, pac99
 from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
 from .func import Bounded, Nasa7Calculator, ThermCalculator
 
@@ -419,17 +419,21 @@ def from_messpf_output_string(
     )
 
 
-def from_chemkin_string(spc_str: str) -> ThermFit:
+def from_chemkin_string(
+    therm_str: str,
+    T_mid: float = 1000,  # noqa: N803
+) -> ThermFit:
     """Read species thermo from Chemkin string.
 
-    :param spc_therm_str: Chemkin species therm string
+    :param therm_str: Chemkin species therm string
+    :param T_mid: Default mid-point temperature
     :return: Species thermo
     """
     # Parse string
-    res = chemkin.parse_thermo(spc_str)
+    res = chemkin.parse_thermo(therm_str)
 
     # Extract thermo data
-    return from_chemkin_parse_results(res)
+    return from_chemkin_parse_results(res, T_mid=T_mid)
 
 
 def from_chemkin_parse_results(
@@ -446,7 +450,7 @@ def from_chemkin_parse_results(
     charge = 0
     formula = res.formula.copy()
     if "E" in formula:
-        charge = formula.pop("E")
+        charge = -formula.pop("E")
 
     # Read in coefficients
     if len(res.coeffs) == 14:
@@ -461,6 +465,52 @@ def from_chemkin_parse_results(
         )
 
     raise ValueError(f"Unable to interpret parse results: {res}")
+
+
+def from_pac99_output_string(therm_str: str) -> Nasa7ThermFit:
+    """Read species thermo from PAC99 output string.
+
+    :param therm_str: PAC99 .c97 output string
+    :return: NASA7 thermo fit
+    """
+    # Parse string
+    res = pac99.parse_thermo(therm_str)
+
+    # Extract thermo data
+    return from_pac99_output_parse_results(res)
+
+
+def from_pac99_output_parse_results(
+    res: pac99.Pac99ThermoParseResults,
+) -> Nasa7ThermFit:
+    """Extract thermo data from Chemkin parse results.
+
+    :param res: Chemkin thermo parse results
+    :param T_mid: Default mid-point temperature
+    :return: Thermo data fit
+    """
+    # Determine charge, if any
+    charge = 0
+    formula = res.formula.copy()
+    if "E" in formula:
+        charge = -formula.pop("E")
+
+    assert len(res.ranges) == len(res.coeffs_lst) == 2, res
+
+    coeffs_low, coeffs_high = res.coeffs_lst
+    (T_min, T_mid), (T_mid_, T_max) = res.ranges
+    assert T_mid == T_mid_, f"{T_mid} != {T_mid_}"
+
+    # Read in coefficients
+    return Nasa7ThermFit(
+        T_min=T_min,
+        T_max=T_max,
+        coeffs_low=coeffs_low,
+        coeffs_high=coeffs_high,
+        T_mid=T_mid,
+        formula=formula,
+        charge=charge,
+    )
 
 
 # Helpers

@@ -1,4 +1,4 @@
-"""Utility functions for parsing Chemkin data."""
+"""Utility functions for reading and writing Chemkin data."""
 
 import re
 from collections import defaultdict
@@ -71,7 +71,7 @@ def parse_thermo(therm_str: str) -> ChemkinThermoParseResults:
     :return: Parse results including name, formula, coefficients, etc.
     """
     comments, therm_str = read_extract_comments(therm_str)
-    line1, _, lines = therm_str.strip().partition("\n")
+    line1, _, coeff_str = therm_str.strip().partition("\n")
 
     name = line1[:18].strip()
     date = line1[18:24].strip()
@@ -80,7 +80,7 @@ def parse_thermo(therm_str: str) -> ChemkinThermoParseResults:
     phase = line1[44]
     temp_expr = THERM_TEMP(Key.min) + THERM_TEMP(Key.max) + pp.Opt(THERM_TEMP)(Key.mid)
     temp_dct = temp_expr.parse_string(line1[45:73]).as_dict()
-    coeffs = COEFFS.parse_string(lines).as_list()
+    coeffs = COEFFS.parse_string(coeff_str).as_list()
 
     return ChemkinThermoParseResults(
         name=name,
@@ -288,8 +288,8 @@ def write_aux(
 def write_therm_entry_header(
     name: str,
     form_dct: dict[str, int],
-    T_low: float,  # noqa: N803
-    T_high: float,  # noqa: N803
+    T_min: float,  # noqa: N803
+    T_max: float,  # noqa: N803
     T_mid: float | None = None,  # noqa: N803
     charge: int = 0,
     phase: str = "G",
@@ -299,8 +299,8 @@ def write_therm_entry_header(
 
     :param name: Name of the species
     :param form_dct: Dictionary of the species formula
-    :param T_low: Low temperature
-    :param T_high: High temperature
+    :param T_min: Minimum temperature
+    :param T_max: Maximum temperature
     :param T_mid: Mid temperature, optional
     :param charge: Charge, defaults to 0
     :param date: Date, defaults to empty string
@@ -317,7 +317,7 @@ def write_therm_entry_header(
     form_str2 = "".join(f"{k: <2}{v: >3}" for k, v in form_items2)
 
     # Build temperature string
-    temp_str = f"{T_low:>10.1f}{T_high:>10.1f}"
+    temp_str = f"{T_min:>10.1f}{T_max:>10.1f}"
     temp_str += f"{T_mid:>8.1f}" if T_mid else ""
 
     return (
