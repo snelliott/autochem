@@ -1,14 +1,14 @@
 """Utility functions for parsing Chemkin data."""
-import numpy
+
 import re
 from collections import defaultdict
 from collections.abc import Callable, Sequence
 
 import more_itertools as mit
+import numpy
 import pydantic
 import pyparsing as pp
 from pyparsing import common as ppc
-
 
 COMMENT_REGEX = re.compile(r"# .*$|!.*$", flags=re.M)
 
@@ -55,8 +55,8 @@ def read_equation_reagents(chem_str: str) -> tuple[list[str], list[str]]:
 class ChemkinThermoParseResults(pydantic.BaseModel):
     name: str
     formula: dict[str, int]
-    T_low: float
-    T_high: float
+    T_min: float
+    T_max: float
     coeffs: list[float]
     phase: str = "G"
     T_mid: float | None = None
@@ -78,18 +78,18 @@ def parse_thermo(therm_str: str) -> ChemkinThermoParseResults:
     form_str = line1[24:44].strip() + line1[73:78].strip()
     form_dct = dict(FORM_ENTRIES.parse_string(form_str).as_list())
     phase = line1[44]
-    temp_expr = THERM_TEMP("low") + THERM_TEMP("high") + pp.Opt(THERM_TEMP)("mid")
+    temp_expr = THERM_TEMP(Key.min) + THERM_TEMP(Key.max) + pp.Opt(THERM_TEMP)(Key.mid)
     temp_dct = temp_expr.parse_string(line1[45:73]).as_dict()
     coeffs = COEFFS.parse_string(lines).as_list()
 
     return ChemkinThermoParseResults(
         name=name,
         formula=form_dct,
-        T_low=temp_dct.get("low"),
-        T_high=temp_dct.get("high"),
+        T_min=temp_dct.get(Key.min),
+        T_max=temp_dct.get(Key.max),
         coeffs=coeffs,
         phase=phase,
-        T_mid=temp_dct.get("mid"),
+        T_mid=temp_dct.get(Key.mid),
         date=date,
         comments=comments,
     )
@@ -435,6 +435,9 @@ class Key:
     misc = "misc"
     reagents = "reagents"
     falloff = "falloff"
+    mid = "mid"
+    min = "min"
+    max = "max"
 
 
 #  - Pyparsing expressions

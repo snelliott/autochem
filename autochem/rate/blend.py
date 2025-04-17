@@ -1,29 +1,27 @@
 """Blending function models."""
 
 import abc
-from typing import Annotated, ClassVar, TypeVar
+from typing import Annotated, ClassVar
 
 import numpy
 import pydantic
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from pydantic_core import core_schema
 
 from ..util import chemkin
 from ..util.type_ import Frozen, Scalable, SubclassTyped
-
-F = TypeVar("F", bound="BlendingFunction")
 
 
 class BlendingFunction(Frozen, Scalable, SubclassTyped, abc.ABC):
     """Abstract base class for blending functions."""
 
     @abc.abstractmethod
-    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
-        """Evaluate blending function, f(T, P_r).
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
+        """Evaluate function, f(T, P_r).
 
         :param T: Temperature(s)
         :param P_r: Reduced pressure(s)
-        :return: Blending function value(s)
+        :return: Function value(s)
         """
         pass
 
@@ -32,7 +30,7 @@ class LindemannBlendingFunction(BlendingFunction):
     # Private attributes
     type_: ClassVar[str] = "lindemann"
 
-    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
         """Evaluate blending function, f(T, P_r)."""
         return numpy.array(1.0)
 
@@ -46,27 +44,27 @@ class TroeBlendingFunction(BlendingFunction):
     # Private attributes
     type_: ClassVar[str] = "troe"
 
-    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
         """Evaluate blending function, f(T, P_r)."""
         log_f = numpy.log10(self.f_cent(T)) / (1 + self.f1(T, P_r) ** 2)
         return numpy.power(10, log_f)
 
-    def f_cent(self, T: ArrayLike) -> numpy.ndarray:  # noqa: N803
+    def f_cent(self, T: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
         """Evaluate center broadening factor."""
         f_cent = (1 - self.A) * numpy.exp(-numpy.divide(T, self.T3))
         f_cent += self.A * numpy.exp(-numpy.divide(T, self.T1))
         f_cent += 0.0 if self.T2 is None else numpy.exp(-numpy.divide(self.T2, T))
         return f_cent
 
-    def n(self, T: ArrayLike) -> numpy.ndarray:  # noqa: N803
+    def n(self, T: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
         """Evaluate N."""
         return 0.75 - 1.27 * numpy.log10(self.f_cent(T))
 
-    def c(self, T: ArrayLike) -> numpy.ndarray:  # noqa: N803
+    def c(self, T: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
         """Evaluate C."""
         return -0.4 - 0.67 * numpy.log10(self.f_cent(T))
 
-    def f1(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+    def f1(self, T: ArrayLike, P_r: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
         """Evaluate f1."""
         n = self.n(T)
         c = self.c(T)
@@ -84,7 +82,7 @@ class SriBlendingFunction(BlendingFunction):
     # Private attributes
     type_: ClassVar[str] = "sri"
 
-    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> numpy.ndarray:  # noqa: N803
+    def __call__(self, T: ArrayLike, P_r: ArrayLike) -> NDArray[numpy.float64]:  # noqa: N803
         """Evaluate blending function, f(T, P_r)."""
         a, b, c, d, e = (self.a, self.b, self.c, self.d, self.e)
         return (
@@ -95,6 +93,7 @@ class SriBlendingFunction(BlendingFunction):
         )
 
 
+# Annotated type for use in pydantic models
 BlendingFunction_ = Annotated[
     pydantic.SkipValidation[BlendingFunction],
     pydantic.BeforeValidator(lambda x: BlendingFunction.model_validate(x)),

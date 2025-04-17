@@ -3,10 +3,12 @@
 import functools
 import itertools
 from collections.abc import Mapping, Sequence
-from typing import TypeAlias
+from typing import Annotated, TypeAlias
 
 import more_itertools as mit
 import pint
+import pydantic
+from pydantic_core import core_schema
 
 from ..util.type_ import Frozen, Unit_
 
@@ -50,6 +52,17 @@ class Units(Frozen):
             return pint.Unit(self.time**-1)
 
         return pint.Unit(self.concentration ** (1 - order) * self.time**-1)
+
+
+# Annotated type for use in pydantic models
+Units_ = Annotated[
+    pydantic.SkipValidation[Units],
+    pydantic.BeforeValidator(lambda x: Units.model_validate(x)),
+    pydantic.PlainSerializer(lambda x: Units.model_validate(x).model_dump()),
+    pydantic.GetPydanticSchema(
+        lambda _, handler: core_schema.with_default_schema(handler(pydantic.BaseModel))
+    ),
+]
 
 
 # Alias for unit-convertible data

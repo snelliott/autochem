@@ -2,7 +2,7 @@
 
 import abc
 import itertools
-from typing import Annotated, ClassVar
+from typing import Annotated, ClassVar, Literal
 
 import numpy
 import pint
@@ -12,12 +12,15 @@ from numpy.typing import ArrayLike, NDArray
 from pydantic_core import core_schema
 
 from .. import unit_
-from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, const, dim
+from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, dim
 from ..util import FormulaData, chemkin, form
 from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
+from .func import Bounded, Nasa7Calculator, ThermCalculator
 
 
-class BaseTherm(UnitManager, Frozen, SubclassTyped, abc.ABC):
+# TODO: Add `ThermCalculator` ABC to `BaseTherm` to ensure that all therm objects act as
+# standardized therm calculators
+class BaseTherm(ThermCalculator, UnitManager, Frozen, SubclassTyped, abc.ABC):
     """Abstract base class for thermodynamic data."""
 
     formula: dict[str, int]
@@ -98,8 +101,8 @@ class Therm(BaseTherm):
             "Z2": self.Z2s,
             "H": self.delta_enthalpy_data(),
             "S": self.entropy_data(),
-            "Cv": self.heat_capacity_data(at_const_P=False),
-            "Cp": self.heat_capacity_data(at_const_P=True),
+            "Cv": self.heat_capacity_data(const="V"),
+            "Cp": self.heat_capacity_data(const="P"),
         }
         return xarray.Dataset(
             data_vars={k: ([coord_key], v) for k, v in data_arrs.items()},
@@ -123,7 +126,7 @@ class Therm(BaseTherm):
         :return: Enthalpy
         """
         # Evaluate
-        R = const.value(C.gas, UNITS)
+        R = unit_.const.value(C.gas, UNITS)
         Ts = numpy.array(self.Ts, dtype=numpy.float64)
         Z1s = numpy.array(self.Z1s, dtype=numpy.float64)
         Hs = R * (Ts**2 * Z1s + Ts)
@@ -153,7 +156,7 @@ class Therm(BaseTherm):
     @unit_.manage_units([], D.energy_per_substance / D.temperature)
     def heat_capacity_data(
         self,
-        at_const_P: bool = False,  # noqa: N803
+        const: Literal["P", "V"] = "P",
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float64]:
         """Calculate the heat capacity at constant volume or pressure.
@@ -165,17 +168,17 @@ class Therm(BaseTherm):
             C_p = C_v + R = R (1 + 2 T Z_1 + T^2 Z_2)
 
         :param units: Units
-        :param const_P: Calculate at constant pressure? Otherwise, constant volume.
+        :param const: Whether to hold pressure ("P") or volume ("V") constant
         :return: Heat capacity
         """
         # Evaluate
-        R = const.value(C.gas, UNITS)
+        R = unit_.const.value(C.gas, UNITS)
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
         Z2 = numpy.array(self.Z2s, dtype=numpy.float64)
-        heat_capacity = R * (2 * T * Z1 + T**2 * Z2)
-        heat_capacity += R if at_const_P else 0.0
-        return heat_capacity
+        C_ = R * (1 + 2 * T * Z1 + T**2 * Z2)
+        C_ -= R if const == "V" else 0.0
+        return C_
 
     @unit_.manage_units([], D.energy_per_substance / D.temperature)
     def entropy_data(
@@ -190,13 +193,13 @@ class Therm(BaseTherm):
             S = R (T d(ln(Q_1'))/dT + ln(Q_1') - ln(c) + 1)
               = R (T Z1 + Z0 - ln(c) + 1)
 
-        in terms of the one-particle partition function per unit volume, Q_1',
-        and the standard concentration, c, N_A / V, which comes from accounting for
-        volume. The latter via the ideal gas law by a standard state pressure:
+        in terms of the one-particle partition function per unit volume, Q_1', and the
+        standard concentration, c = N_A / V, which comes from accounting for volume.
+        The latter is determined for a standard state pressure via the ideal gas law:
 
            c = P / k_B T
 
-        This must be converted to interna
+        This must be converted to internal units.
 
         :param units: Units
         :return: Entropy
@@ -211,7 +214,7 @@ class Therm(BaseTherm):
         c = (P_ / (k_B_ * T_)).m_as("1/cm**3")
 
         # Evaluate
-        R = const.value(C.gas, UNITS)
+        R = unit_.const.value(C.gas, UNITS)
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z0 = numpy.array(self.Z0s, dtype=numpy.float64)
         Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
@@ -231,30 +234,55 @@ class Therm(BaseTherm):
         """Calculate enthalpy of formation at room temperature."""
         return self.Hf + self.delta_enthalpy_of_formation_room_temperature()
 
+    def heat_capacity(
+        self,
+        T: ArrayLike,  # noqa: N803
+        const: Literal["P", "V"] = "P",
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate heat capacity, C_V(T) or C_P(T).
 
-class ThermFit(BaseTherm, Scalable, abc.ABC):
+        :param T: Temperature(s)
+        :param const: Whether to hold pressure ("P") or volume ("V") constant
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        pass
+
+    def enthalpy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate enthalpy, H(T).
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        pass
+
+    def entropy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate entropy, S(T).
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        pass
+
+
+class ThermFit(BaseTherm, Bounded, Scalable, abc.ABC):
     """Fitted thermodynamic data."""
 
-    T_low: float
-    T_high: float
+    pass
 
 
-class ShomateFit(ThermFit):
-    """Fitted thermodynamic data."""
-
-    T_mid: float
-    coeffs_low: list[float]
-    coeffs_high: list[float]
-
-    # Private attributes
-    type_: ClassVar[str] = "shomate"
-    _scalers: ClassVar[Scalers] = {
-        "coeffs_low": numpy.multiply,
-        "coeffs_high": numpy.multiply,
-    }
-
-
-class Nasa7ThermFit(ThermFit):
+class Nasa7ThermFit(ThermFit, ThermCalculator):
     """Fitted thermodynamic data."""
 
     T_mid: float
@@ -267,6 +295,86 @@ class Nasa7ThermFit(ThermFit):
         "coeffs_low": numpy.multiply,
         "coeffs_high": numpy.multiply,
     }
+
+    def piecewise_calculators(self) -> list[Nasa7Calculator]:
+        """Get calculators for a numpy.piecewise evaluation.
+
+        :return: Pair of calculators
+        """
+        coeff_keys = ("a0", "a1", "a2", "a3", "a4", "a5", "a6")
+        calc_low = Nasa7Calculator(
+            T_min=self.T_min,
+            T_max=self.T_mid,
+            **dict(zip(coeff_keys, self.coeffs_low, strict=True)),
+        )
+        calc_high = Nasa7Calculator(
+            T_min=self.T_mid,
+            T_max=self.T_max,
+            **dict(zip(coeff_keys, self.coeffs_high, strict=True)),
+        )
+        return [calc_low, calc_high]
+
+    def piecewise_conditions(
+        self,
+        T: ArrayLike,  # noqa: N803
+    ) -> list[NDArray[numpy.bool_]]:
+        """Get conditions for a numpy.piecewise evaluation.
+
+        :param T: Temperature(s)
+        :return: Pair of boolean arrays
+        """
+        calc_low, calc_high = self.piecewise_calculators()
+        return [
+            calc_low.in_bounds(T, include_max=False),
+            calc_high.in_bounds(T, include_max=True),
+        ]
+
+    def heat_capacity(
+        self,
+        T: ArrayLike,  # noqa: N803
+        const: Literal["P", "V"] = "P",
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate heat capacity, C_V(T) or C_P(T).
+
+        :param T: Temperature(s)
+        :param const: Whether to hold pressure ("P") or volume ("V") constant
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        conds = self.piecewise_conditions(T)
+        funcs = [calc.heat_capacity for calc in self.piecewise_calculators()]
+        return numpy.piecewise(T, conds, funcs)
+
+    def enthalpy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate enthalpy, H(T).
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        conds = self.piecewise_conditions(T)
+        funcs = [calc.enthalpy for calc in self.piecewise_calculators()]
+        return numpy.piecewise(T, conds, funcs)
+
+    def entropy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate entropy, S(T).
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        conds = self.piecewise_conditions(T)
+        funcs = [calc.entropy for calc in self.piecewise_calculators()]
+        return numpy.piecewise(T, conds, funcs)
 
 
 Therm_ = Annotated[
@@ -311,6 +419,19 @@ def from_messpf_output_string(
     )
 
 
+def from_chemkin_string(spc_str: str) -> ThermFit:
+    """Read species thermo from Chemkin string.
+
+    :param spc_therm_str: Chemkin species therm string
+    :return: Species thermo
+    """
+    # Parse string
+    res = chemkin.parse_thermo(spc_str)
+
+    # Extract thermo data
+    return from_chemkin_parse_results(res)
+
+
 def from_chemkin_parse_results(
     res: chemkin.ChemkinThermoParseResults,
     T_mid: float = 1000,  # noqa: N803
@@ -330,8 +451,8 @@ def from_chemkin_parse_results(
     # Read in coefficients
     if len(res.coeffs) == 14:
         return Nasa7ThermFit(
-            T_low=res.T_low,
-            T_high=res.T_high,
+            T_min=res.T_min,
+            T_max=res.T_max,
             coeffs_low=res.coeffs[7:],
             coeffs_high=res.coeffs[:7],
             T_mid=res.T_mid or T_mid,

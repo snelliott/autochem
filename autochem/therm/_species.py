@@ -11,6 +11,8 @@ from . import data
 from .data import Nasa7ThermFit, Therm, Therm_
 
 
+# TODO: Make it so that the `therm` type can be indicated as `Species[Therm]` or
+# `Species[ThermFit]`, like with lists
 class Species(Frozen):
     """A species with thermodynamic data."""
 
@@ -41,8 +43,8 @@ def from_messpf_output_string(
     Hf: float | None = None,  # noqa: N803
     Tf: float = 0,  # noqa: N803
     units: UnitsData | None = None,
-) -> data.Therm:
-    """Build species thermo from MESS-PF output string.
+) -> Species:
+    """Read species thermo from MESS-PF output string.
 
     :param pf_str: MESS-PF output string
     :param formula: Species formula, as string or dict
@@ -60,6 +62,15 @@ def from_messpf_output_string(
         pf_str, formula=formula, charge=charge, Hf=Hf, Tf=Tf, units=units
     )
     return Species(name=name, therm=therm)
+
+
+# def from_pac99_ouput_string(c97_str: str) -> Species:
+#     """Read species thermo from PAC99 output string.
+
+#     :param c97_str: PAC99 .c97 output string
+#     :return: Species thermo
+#     """
+#     print(c97_str)
 
 
 def chemkin_string(spc: Species) -> str:
@@ -116,7 +127,7 @@ def pac99_input_string(
     # Entropy and heat capacity are always in Joules
     # (see https://ntrs.nasa.gov/citations/19930003779, p. 33)
     Ss = spc.therm.entropy_data(P=1, units={"pressure": "bar", "energy": "J"})
-    Cs = spc.therm.heat_capacity_data(at_const_P=True, units={"energy": "J"})
+    Cs = spc.therm.heat_capacity_data(const="P", units={"energy": "J"})
     date = format(datetime.date.today(), r"%Y%m%d")
     return "\n".join(
         [

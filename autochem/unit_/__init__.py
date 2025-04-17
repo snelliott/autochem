@@ -8,6 +8,7 @@ from .dim import D, Dimension, DimensionData
 from .system import (
     UNITS,
     Units,
+    Units_,
     UnitsData,
 )
 
@@ -28,5 +29,6 @@ __all__ = [
     "DimensionData",
     "UNITS",
     "Units",
+    "Units_",
     "UnitsData",
 ]
