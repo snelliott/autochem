@@ -304,6 +304,8 @@ def from_messpf_output_string(
     lines = list(itertools.dropwhile(lambda s: not s.startswith("Z_0"), lines))
     data = [list(map(float, line.split())) for line in lines[1:]]
     Ts, Z0s, Z1s, Z2s, *_ = map(list, zip(*data, strict=True))
+    # Replace 298.2 with 298.15 (needed for PAC99 input to run)
+    Ts = [298.15 if round(T) == 298 else T for T in Ts]
     return Therm(
         Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s, Hf=Hf, Tf=Tf, formula=formula, charge=charge
     )
