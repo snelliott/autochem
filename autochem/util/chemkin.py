@@ -1,14 +1,14 @@
-"""Utility functions for parsing Chemkin data."""
-import numpy
+"""Utility functions for reading and writing Chemkin data."""
+
 import re
 from collections import defaultdict
 from collections.abc import Callable, Sequence
 
 import more_itertools as mit
+import numpy
 import pydantic
 import pyparsing as pp
 from pyparsing import common as ppc
-
 
 COMMENT_REGEX = re.compile(r"# .*$|!.*$", flags=re.M)
 
@@ -55,8 +55,8 @@ def read_equation_reagents(chem_str: str) -> tuple[list[str], list[str]]:
 class ChemkinThermoParseResults(pydantic.BaseModel):
     name: str
     formula: dict[str, int]
-    T_low: float
-    T_high: float
+    T_min: float
+    T_max: float
     coeffs: list[float]
     phase: str = "G"
     T_mid: float | None = None
@@ -71,25 +71,25 @@ def parse_thermo(therm_str: str) -> ChemkinThermoParseResults:
     :return: Parse results including name, formula, coefficients, etc.
     """
     comments, therm_str = read_extract_comments(therm_str)
-    line1, _, lines = therm_str.strip().partition("\n")
+    line1, _, coeff_str = therm_str.strip().partition("\n")
 
     name = line1[:18].strip()
     date = line1[18:24].strip()
     form_str = line1[24:44].strip() + line1[73:78].strip()
     form_dct = dict(FORM_ENTRIES.parse_string(form_str).as_list())
     phase = line1[44]
-    temp_expr = THERM_TEMP("low") + THERM_TEMP("high") + pp.Opt(THERM_TEMP)("mid")
+    temp_expr = THERM_TEMP(Key.min) + THERM_TEMP(Key.max) + pp.Opt(THERM_TEMP)(Key.mid)
     temp_dct = temp_expr.parse_string(line1[45:73]).as_dict()
-    coeffs = COEFFS.parse_string(lines).as_list()
+    coeffs = COEFFS.parse_string(coeff_str).as_list()
 
     return ChemkinThermoParseResults(
         name=name,
         formula=form_dct,
-        T_low=temp_dct.get("low"),
-        T_high=temp_dct.get("high"),
+        T_min=temp_dct.get(Key.min),
+        T_max=temp_dct.get(Key.max),
         coeffs=coeffs,
         phase=phase,
-        T_mid=temp_dct.get("mid"),
+        T_mid=temp_dct.get(Key.mid),
         date=date,
         comments=comments,
     )
@@ -288,8 +288,8 @@ def write_aux(
 def write_therm_entry_header(
     name: str,
     form_dct: dict[str, int],
-    T_low: float,  # noqa: N803
-    T_high: float,  # noqa: N803
+    T_min: float,  # noqa: N803
+    T_max: float,  # noqa: N803
     T_mid: float | None = None,  # noqa: N803
     charge: int = 0,
     phase: str = "G",
@@ -299,8 +299,8 @@ def write_therm_entry_header(
 
     :param name: Name of the species
     :param form_dct: Dictionary of the species formula
-    :param T_low: Low temperature
-    :param T_high: High temperature
+    :param T_min: Minimum temperature
+    :param T_max: Maximum temperature
     :param T_mid: Mid temperature, optional
     :param charge: Charge, defaults to 0
     :param date: Date, defaults to empty string
@@ -317,7 +317,7 @@ def write_therm_entry_header(
     form_str2 = "".join(f"{k: <2}{v: >3}" for k, v in form_items2)
 
     # Build temperature string
-    temp_str = f"{T_low:>10.1f}{T_high:>10.1f}"
+    temp_str = f"{T_min:>10.1f}{T_max:>10.1f}"
     temp_str += f"{T_mid:>8.1f}" if T_mid else ""
 
     return (
@@ -435,6 +435,9 @@ class Key:
     misc = "misc"
     reagents = "reagents"
     falloff = "falloff"
+    mid = "mid"
+    min = "min"
+    max = "max"
 
 
 #  - Pyparsing expressions

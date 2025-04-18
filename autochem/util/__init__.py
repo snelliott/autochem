@@ -1,6 +1,13 @@
 """Utilities."""
 
-from . import chemkin, form, type_
+from . import chemkin, form, pac99, type_
 from .form import FormulaData
 
-__all__ = ["chemkin", "type_", "FormulaData", "form"]
+__all__ = [
+    "type_",
+    "FormulaData",
+    "form",
+    # I/O
+    "chemkin",
+    "pac99",
+]
