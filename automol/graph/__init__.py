@@ -248,6 +248,7 @@ from .base._02algo import (
     spiros,
     subgraph_isomorphism,
     unique,
+    unique_with_counts,
 )
 
 # kekule functions:
@@ -560,6 +561,7 @@ __all__ = [
     "isomorphism",
     "isomorphic",
     "unique",
+    "unique_with_counts",
     "sequence_isomorphism",
     "subgraph_isomorphism",
     "equivalent_atoms",
