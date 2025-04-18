@@ -1,4 +1,4 @@
-""" algorithm functions
+"""algorithm functions
 
 BEFORE ADDING ANYTHING, SEE IMPORT HIERARCHY IN __init__.py!!!!
 """
@@ -116,24 +116,49 @@ def unique(gras, backbone_only=False, stereo=True, dummy=True):
     :returns: The isomorphism mapping `gra1` onto `gra2`
     :rtype: dict
     """
+    gras_with_counts = unique_with_counts(
+        gras, backbone_only=backbone_only, stereo=stereo, dummy=dummy
+    )
+    gras, *_ = zip(*gras_with_counts)
+    return gras
+
+
+def unique_with_counts(gras, backbone_only=False, stereo=True, dummy=True):
+    """Get the subset of non-isomorphic graphs from a list with redundancies
+
+    :param backbone_only: Compare backbone atoms only?
+    :type backbone_only: bool
+    :param stereo: Consider stereo?
+    :type stereo: bool
+    :param dummy: Consider dummy atoms?
+    :type dummy: bool
+    :returns: The isomorphism mapping `gra1` onto `gra2`
+    :rtype: dict
+    """
 
     def _equiv(gra1, gra2):
         return isomorphic(
             gra1, gra2, backbone_only=backbone_only, stereo=stereo, dummy=dummy
         )
 
-    gras = _unique(gras, equiv=_equiv)
-    return gras
+    gras_with_counts = _unique_with_counts(gras, equiv=_equiv)
+    return gras_with_counts
 
 
-def _unique(itms, equiv):
+def _unique_with_counts(items, equiv):
     """unique items from a list, according to binary comparison `equiv`"""
-    uniq_itms = []
-    for itm in itms:
-        if not any(map(functools.partial(equiv, itm), uniq_itms)):
-            uniq_itms.append(itm)
+    items0 = items
+    items = []
+    counts = []
+    for item in items0:
+        idx = next((ix for ix, it in enumerate(items) if equiv(item, it)), None)
+        if idx is not None:
+            counts[idx] += 1
+        else:
+            items.append(item)
+            counts.append(1)
 
-    return tuple(uniq_itms)
+    return list(zip(items, counts, strict=True))
 
 
 def sequence_isomorphism(gras1, gras2, backbone_only=False, stereo=True, dummy=True):
