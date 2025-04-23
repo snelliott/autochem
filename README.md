@@ -40,7 +40,7 @@ One can generate a new rate constant object from a Chemkin string as follows.
 ```
 >>> import autochem as ac
 >>>
->>> rate = ac.rate.from_chemkin_string(
+>>> rxn = ac.rate.from_chemkin_string(
 >>>     """
 >>>     C2H4+OH=PC2H4OH          2.560E+36    -7.752     6946
 >>>         PLOG /   1.000E-02   1.740E+43   -10.460     7699 /
@@ -52,38 +52,38 @@ One can generate a new rate constant object from a Chemkin string as follows.
 >>>     """,
 >>>     units={"energy": "cal"},
 >>> )
->>> rate.model_dump()
+>>> rxn_dct = rxn.model_dump()
+>>> rxn
 {
     "reactants": ["C2H4", "OH"],
     "products": ["PC2H4OH"],
     "reversible": True,
-    "rate_constant": {
+    "rate": {
         "order": 2,
         "efficiencies": {},
         "As": [1.74e43, 3.25e37, 1.84e35, 2.56e36, 3.7e33, 1.12e26],
         "bs": [-10.46, -8.629, -7.75, -7.752, -6.573, -4.101],
         "Es": [7699.0, 5215.0, 4909.0, 6946.0, 7606.0, 5757.0],
-        "ps": [0.01, 0.025, 0.1, 1.0, 10.0, 100.0],
-        "type": "plog"
-    }
+        "Ps": [0.01, 0.025, 0.1, 1.0, 10.0, 100.0],
+        "type": "plog",
+    },
 }
 ```
-This `Rate` object is a Pydantic model that includes all of the information
+This `Reaction` object is a Pydantic model that includes all of the information
 needed to add this rate to a kinetic mechanism for simulation, including the
 reactants and products, whether or not the reaction is reversible, and the rate
 constant.
-The `rate_constant` attribute stores either raw rate constant data or a rate
+The `rate` attribute stores either raw rate constant data or a rate
 constant parametrization, using one of several specific `RateConstant` subtypes.
 In this case, it stores a `PlogRateConstant`.
 ```
->>> rate.rate_constant
-PlogRateConstant(order=2, efficiencies={}, ..., type='plog')
+>>> rxn.rate
+PlogRateFit(order=2, efficiencies={}, ..., type='plog')
 ```
 The dictionary above can be used to instantiate a new object.
 ```
->>> rate_dct = <dictionary from above>
->>> ac.rate.Rate.model_validate(rate_dct)
-Rate(reactants=..., rate_constant=PlogRateConstant(...))
+>>> ac.rate.Reaction.model_validate(rxn_dct)
+Reaction(reactants=['C2H4', 'OH'], products=['PC2H4OH'], ..., rate=PlogRateFit(...))
 ```
 This allows one to, for example, retrieve stored rate constant data from JSON files with
 minimal hassle.
@@ -91,15 +91,15 @@ minimal hassle.
 *Scalar multiplication.*
 Rate objects can also be multiplied by scalars.
 ```
->>> doubled_rate = 2 * rate
->>> doubled_rate.rate_constant.model_dump()
+>>> rxn_times_2 = rxn * 2
+>>> rxn_times_2.rate.model_dump()
 {
     "order": 2,
     "efficiencies": {},
     "As": [3.48e43, 6.5e37, 3.68e35, 5.12e36, 7.4e33, 2.24e26],
     "bs": [-10.46, -8.629, -7.75, -7.752, -6.573, -4.101],
     "Es": [7699.0, 5215.0, 4909.0, 6946.0, 7606.0, 5757.0],
-    "ps": [0.01, 0.025, 0.1, 1.0, 10.0, 100.0],
+    "Ps": [0.01, 0.025, 0.1, 1.0, 10.0, 100.0],
     "type": "plog",
 }
 ```
@@ -107,19 +107,19 @@ Rate objects can also be multiplied by scalars.
 *Plotting.* One can generate Arrhenius plots of rate constants using the
 function `autochem.rate.display`.
 ```
->>> ac.rate.display(rate)
+>>> ac.rate.display(rxn)
 ```
 <img src=".github/plog-rate.svg" height="360">
 
 For convenience, one can also plot multiple rates against each other with a legend.
 ```
->>> doubled_rate = 2 * rate
->>> halved_rate = 0.5 * rate
-
+>>> rxn_times_2 = rxn * 2
+>>> rxn_divided_by_2 = rxn / 2
+>>>
 >>> ac.rate.display(
->>>     rate,
+>>>     rxn,
 >>>     label="original",
->>>     comp_rates=[doubled_rate, halved_rate],
+>>>     comp_rates=[rxn_times_2, rxn_divided_by_2],
 >>>     comp_labels=["doubled", "halved"],
 >>> )
 ```
@@ -139,7 +139,7 @@ For example, the activation energies might be given in kcal.
 ```
 >>> import autochem as ac
 >>>
->>> rate = ac.rate.from_chemkin_string(
+>>> rxn = ac.rate.from_chemkin_string(
 >>>     """
 >>>     C2H4+OH=PC2H4OH          2.560E+36    -7.752     6.946
 >>>         PLOG /   1.000E-02   1.740E+43   -10.460     7.699 /
@@ -149,9 +149,10 @@ For example, the activation energies might be given in kcal.
 >>>         PLOG /   1.000E+01   3.700E+33    -6.573     7.606 /
 >>>         PLOG /   1.000E+02   1.120E+26    -4.101     5.757 /
 >>>     """,
->>>     units={"energy": "kcal"}
+>>>     units={"energy": "kcal"},
 >>> )
->>> rate.model_dump()
+>>> rxn_dct = rxn.model_dump()
+>>> rxn_dct
 <dictionary from above>
 ```
 Under the hood, the [Pint](https://pint.readthedocs.io/) library is used for unit handling.
