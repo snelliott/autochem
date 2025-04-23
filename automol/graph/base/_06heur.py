@@ -1,13 +1,13 @@
-""" functions for working with rotational bonds and groups
+"""functions for working with rotational bonds and groups
 
 BEFORE ADDING ANYTHING, SEE IMPORT HIERARCHY IN __init__.py!!!!
 """
+
 import itertools
 from typing import List, Optional
 
 import more_itertools as mit
 import numpy
-
 from phydat import phycon
 
 from ...util import heuristic
@@ -32,6 +32,7 @@ from ._02algo import branch_atom_keys, rings_bond_keys
 from ._03kekule import (
     atom_hybridizations,
     kekules_bond_orders_collated,
+    linear_atoms_neighbor_atom_keys,
     linear_segments_atom_keys,
     rigid_planar_bonds,
     sigma_radical_atom_bond_keys,
@@ -223,7 +224,7 @@ def rotational_segment_keys(
     bord_dct = kekules_bond_orders_collated(gra)
     rng_bkeys = list(itertools.chain(*rings_bond_keys(gra)))
 
-    def _is_rotational_bond(bkey,):
+    def _is_rotational_bond(bkey):
         """Not guaranteed to have out-of-line neighbors
 
         This is taken care of below by subtracting bonds in linear segments
@@ -252,7 +253,8 @@ def rotational_segment_keys(
 
     # 2. Find the linear segments, extended to include in-line neighbors
     lin_seg_keys_lst = linear_segments_atom_keys(
-        gra, lin_keys=lin_keys, extend=extend_lin_seg)
+        gra, lin_keys=lin_keys, extend=extend_lin_seg
+    )
 
     # 3. Start the rotational segment key list with linear segments that can rotate
     keys_lst = []
@@ -278,7 +280,7 @@ def rotational_coordinates(
     lin_keys: Optional[List[int]] = None,
     with_h_rotors: bool = True,
     with_ch_rotors: bool = True,
-    extend_lin_seg: bool = True
+    extend_lin_seg: bool = True,
 ):
     """Get torsion coordinates for rotational segments
 
@@ -307,7 +309,7 @@ def rotational_coordinates(
         lin_keys=lin_keys,
         with_h_rotors=with_h_rotors,
         with_ch_rotors=with_ch_rotors,
-        extend_lin_seg=extend_lin_seg
+        extend_lin_seg=extend_lin_seg,
     )
 
     coo_keys = []
@@ -347,13 +349,18 @@ def rotational_groups(gra, key1, key2, dummy=False):
 
 
 def rotational_symmetry_number(gra, key1, key2, lin_keys=None):
-    """get the rotational symmetry number along a given rotational axis
+    """Get the rotational symmetry number along a given rotational axis.
 
     :param gra: the graph
     :param key1: the first atom key
     :param key2: the second atom key
     """
-    ngb_keys_dct = atoms_neighbor_atom_keys(without_dummy_atoms(gra))
+    err_msg = f"gra = {gra}\n  key1 = {key1}\n  key2 = {key2}"
+    nkeys_dct = atoms_neighbor_atom_keys(
+        without_dummy_atoms(without_reacting_bonds(gra))
+    )
+    lin_nkeys_dct = linear_atoms_neighbor_atom_keys(gra)
+
     imp_hyd_dct = atom_implicit_hydrogens(implicit(gra))
 
     axis_keys = {key1, key2}
@@ -361,20 +368,28 @@ def rotational_symmetry_number(gra, key1, key2, lin_keys=None):
     # symmetry number calculation
     lin_keys_lst = linear_segments_atom_keys(gra, lin_keys=lin_keys)
     for keys in lin_keys_lst:
-        if key1 in keys or key2 in keys:
+        if key1 in keys and key2 in keys:
+            # If there is only one atom in the linear chain, it should have exactly two
+            # neighbors
             if len(keys) == 1:
-                key1, key2 = sorted(ngb_keys_dct[keys[0]])
+                lin_nkeys = lin_nkeys_dct[keys[0]]
+                assert len(lin_nkeys) == 2, err_msg
+                key1, key2 = sorted(lin_nkeys)
             else:
-                (key1,) = ngb_keys_dct[keys[0]] - {keys[1]}
-                (key2,) = ngb_keys_dct[keys[-1]] - {keys[-2]}
+                lin_nkey1s = lin_nkeys_dct[keys[0]] - {keys[1]}
+                lin_nkey2s = lin_nkeys_dct[keys[-1]] - {keys[-2]}
+                assert len(lin_nkey1s) == 1, err_msg
+                assert len(lin_nkey2s) == 1, err_msg
+                (key1,) = lin_nkey1s
+                (key2,) = lin_nkey2s
                 axis_keys |= set(keys)
                 break
 
     sym_num = 1
     for key in (key1, key2):
         if key in imp_hyd_dct:
-            ngb_keys = ngb_keys_dct[key] - axis_keys
-            if len(ngb_keys) == imp_hyd_dct[key] == 3:
+            nkeys = nkeys_dct[key] - axis_keys
+            if len(nkeys) == imp_hyd_dct[key] == 3:
                 sym_num = 3
                 break
     return sym_num

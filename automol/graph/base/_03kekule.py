@@ -1,4 +1,4 @@
-""" graph functions associated with kekule (resonance) structures
+"""graph functions associated with kekule (resonance) structures
 
 BEFORE ADDING ANYTHING, SEE IMPORT HIERARCHY IN __init__.py!!!!
 """
@@ -248,7 +248,7 @@ def ts_linear_reacting_atom_keys(
 
 
 def linear_atom_keys(gra, dummy=True):
-    """Atoms forming linear bonds, based on their hybridization
+    """Find linear atoms, based on their hybridization.
 
     For TS graphs, includes atoms that are linear for *either* the reactants
     *or* the products. This both simplifies the way Reaction objects can be
@@ -262,27 +262,55 @@ def linear_atom_keys(gra, dummy=True):
     :returns: the linear atom keys
     :rtype: tuple[int]
     """
+    return frozenset(linear_atoms_neighbor_atom_keys(gra, dummy=dummy))
+
+
+def linear_atoms_neighbor_atom_keys(gra, dummy=True):
+    """Find linear atoms and their in-line neighbors, based on hybridization.
+
+    For TS graphs, includes atoms that are linear for *either* the reactants
+    *or* the products. This both simplifies the way Reaction objects can be
+    handled and anticipates cases where the TS structure is close to either
+    reactants or products.
+
+    :param gra: the graph
+    :param dummy: whether or not to consider atoms connected to dummy atoms as
+        linear, if different from what would be predicted based on their
+        hybridization
+    :returns: the linear atom keys
+    :rtype: tuple[int]
+    """
+    gra0 = without_dummy_atoms(gra)
+    nkeys_dct0 = atoms_neighbor_atom_keys(gra0)
     ts_ = is_ts_graph(gra)
     gras = ts_reagents_graphs_without_stereo(gra) if ts_ else [gra]
 
-    lin_atm_keys = set()
+    lin_nkeys_dct = {}
     for gra_ in gras:
+        gra_ = without_dummy_atoms(gra_)
         nkeys_dct = atoms_neighbor_atom_keys(gra_)
         # To be linear, an atom must be both (a.) sp1 hybridized and (b.) have more than
         # 1 neighbor (exactly 2)
         atm_hyb_dct = atom_hybridizations(gra_)
         sp1_atm_keys = dict_.keys_by_value(atm_hyb_dct, lambda x: x == 1)
-        lin_atm_keys |= set(k for k in sp1_atm_keys if len(nkeys_dct[k]) > 1)
+        lin_nkeys_dct.update(
+            {k: nkeys_dct[k] for k in sp1_atm_keys if len(nkeys_dct[k]) > 1}
+        )
 
     # If requested, include all keys associated with dummy atoms
     if dummy:
-        dum_ngb_key_dct = dummy_source_dict(gra, dir_=False)
-        lin_atm_keys |= set(dum_ngb_key_dct.values())
+        dum_src_keys = list(dummy_source_dict(gra, dir_=False).values())
+        lin_nkeys_dct.update(
+            {k: nkeys_dct0[k] for k in dum_src_keys if k not in lin_nkeys_dct}
+        )
 
     if ts_:
-        lin_atm_keys |= ts_linear_reacting_atom_keys(gra, ring=False)
+        lin_keys = ts_linear_reacting_atom_keys(gra, ring=False)
+        lin_nkeys_dct.update(
+            {k: nkeys_dct0[k] for k in lin_keys if k not in lin_nkeys_dct}
+        )
 
-    return frozenset(lin_atm_keys)
+    return lin_nkeys_dct
 
 
 def linear_segment_cap_keys(
