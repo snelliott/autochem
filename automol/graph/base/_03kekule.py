@@ -19,7 +19,6 @@ from ._00core import (
     atom_implicit_hydrogens,
     atom_keys,
     atom_lone_pairs,
-    atom_neighbor_atom_key,
     atom_unpaired_electrons,
     atoms,
     atoms_bond_keys,
@@ -316,8 +315,8 @@ def linear_atoms_neighbor_atom_keys(gra, dummy=True):
 def linear_segment_cap_keys(
     gra, lin_keys: Optional[List[int]] = None, extend: bool = False
 ) -> Dict[List[int], Tuple[Optional[int], Optional[int]]]:
-    """Linear segments in the graph, along with the keys of their "capping" atoms, that
-    is the final in-line atom on either side
+    """Find linear segments in the graph, along with the keys of their "capping" atoms,
+    that is the final in-line atom on either side.
 
     For sigma radicals and linear nitrogens, the capping atom is the same as the last
     atom in the segment.
@@ -326,7 +325,6 @@ def linear_segment_cap_keys(
     falls within the line of the linear segment.
 
     Examples:
-
         H3C-C#C-C#C-C#C-CH3
           ^(* * * * * *)^
 
@@ -353,8 +351,10 @@ def linear_segment_cap_keys(
     :returns: A dictionary mapping linear segments onto their in-line neighbors
     :rtype: Dict[List[int], Tuple[Optional[int], Optional[int]]]
     """
+    err_msg = f"gra = {gra}\n  lin_keys = {lin_keys}\n  extend = {extend}"
 
-    lin_keys = linear_atom_keys(gra, dummy=True) if lin_keys is None else lin_keys
+    lin_nkeys_dct = linear_atoms_neighbor_atom_keys(gra, dummy=True)
+    lin_keys = frozenset(lin_nkeys_dct.keys()) if lin_keys is None else lin_keys
 
     # 1. Get graphs for each linear segment
     segs = connected_components(subgraph(gra, lin_keys))
@@ -377,27 +377,34 @@ def linear_segment_cap_keys(
 
     # 3. If requested, extend the ends
     keys_lst = list(map(tuple, keys_lst))
-
     lin_seg_dct = {}
-    gra_ = without_dummy_atoms(gra)
     for keys in keys_lst:
         end_key1 = keys[0]
         end_key2 = keys[-1]
 
         # Identify in-line neighbors
         excl_keys = set(keys)
-        ext_key1 = atom_neighbor_atom_key(gra_, end_key1, excl_keys=excl_keys)
+        ext_nkey1s = lin_nkeys_dct[end_key1] - excl_keys
 
-        excl_keys.add(ext_key1)
-        ext_key2 = atom_neighbor_atom_key(gra_, end_key2, excl_keys=excl_keys)
+        excl_keys |= ext_nkey1s
+        ext_nkey2s = lin_nkeys_dct[end_key2] - excl_keys
+
+        # Split up neighbor keys if this is a single-atom segment
+        if end_key1 == end_key2:
+            assert len(ext_nkey1s) == 2, f"{err_msg}\n  ext_nkey1s = {ext_nkey1s}"
+            ext_nkeys = sorted(ext_nkey1s)
+            ext_nkey1s = ext_nkeys[:1]
+            ext_nkey2s = ext_nkeys[1:]
 
         # Add in-line neighbors to the extended keys list, if not None
         ext_keys = keys
-        if ext_key1 is not None:
-            ext_keys = (ext_key1,) + ext_keys
+        if ext_nkey1s:
+            assert len(ext_nkey1s) == 1, f"{err_msg}\n  ext_nkey1s = {ext_nkey1s}"
+            ext_keys = (*ext_nkey1s, *ext_keys)
 
-        if ext_key2 is not None:
-            ext_keys = ext_keys + (ext_key2,)
+        if ext_nkey2s:
+            assert len(ext_nkey1s) == 1, f"{err_msg}\n  ext_nkey2s = {ext_nkey2s}"
+            ext_keys = (*ext_keys, *ext_nkey2s)
 
         if extend:
             keys = ext_keys
