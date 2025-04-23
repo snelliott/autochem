@@ -779,12 +779,12 @@ C5H4_TSG = (
     },
 )
 
-# Tricky rotational symmetry number case (triple bond insertion)
+# Tricky linearity case (triple bond insertion)
 #
 # CC=[C]O => C#CO + [CH3]
 #            - -
 # [- marks a potentially linear atom]
-C3H5O_TSG = (
+C3H5O_TSG1 = (
     {
         0: ("C", 0, None),
         1: ("C", 0, None),
@@ -805,6 +805,66 @@ C3H5O_TSG = (
         frozenset({5, 6}): (1, None),
         frozenset({5, 8}): (1, None),
         frozenset({5, 7}): (1, None),
+    },
+)
+
+# Tricky linearity case (triple bond insertion)
+#
+# CC=[C]O => CC#CO + [H]
+#             - -
+# [- marks a potentially linear atom]
+C3H5O_TSG2 = (
+    {
+        0: ("C", 0, None),
+        1: ("C", 0, None),
+        2: ("C", 0, None),
+        3: ("O", 0, None),
+        4: ("H", 0, None),
+        5: ("H", 0, None),
+        6: ("H", 0, None),
+        7: ("H", 0, None),
+        8: ("H", 0, None),
+    },
+    {
+        frozenset({0, 6}): (1, None),
+        frozenset({2, 3}): (1, None),
+        frozenset({3, 7}): (1, None),
+        frozenset({1, 2}): (1, False),
+        frozenset({0, 1}): (1, None),
+        frozenset({0, 4}): (1, None),
+        frozenset({0, 5}): (1, None),
+        frozenset({1, 8}): (0.9, None),
+    },
+)
+
+# Tricky linearity case (triple bond sigma addition)
+#
+# C#[C] + [OH] => C#CO
+# -  -            - -
+# [- marks a potentially linear atom]
+C4H6_TSG = (
+    {
+        0: ("C", 0, None),
+        1: ("C", 0, None),
+        2: ("C", 0, None),
+        3: ("H", 0, None),
+        4: ("H", 0, None),
+        5: ("H", 0, None),
+        6: ("C", 0, None),
+        7: ("H", 0, None),
+        8: ("H", 0, None),
+        9: ("H", 0, None),
+    },
+    {
+        frozenset({6, 9}): (1, None),
+        frozenset({1, 2}): (1, None),
+        frozenset({2, 6}): (0.1, None),
+        frozenset({0, 3}): (1, None),
+        frozenset({0, 1}): (1, None),
+        frozenset({6, 7}): (1, None),
+        frozenset({0, 4}): (1, None),
+        frozenset({0, 5}): (1, None),
+        frozenset({6, 8}): (1, None),
     },
 )
 
@@ -1264,10 +1324,31 @@ def test__linear_atom_keys():
 
 
 @pytest.mark.parametrize(
+    "formula, tsg, extend, lin_seg_keys0",
+    [
+        ("C4H6", C4H6_TSG, False, ((1, 2),)),
+        ("C4H6", C4H6_TSG, True, ((0, 1, 2, 6),)),
+        ("C5H4", C5H4_TSG, False, ((1, 4, 5, 6),)),
+        ("C5H4", C5H4_TSG, True, ((0, 1, 4, 5, 6, 7),)),
+        ("C3H5O-1", C3H5O_TSG1, False, ((0, 1),)),
+        ("C3H5O-1", C3H5O_TSG1, True, ((3, 0, 1, 2),)),
+        ("C3H5O-2", C3H5O_TSG2, False, ((1, 2),)),
+        ("C3H5O-2", C3H5O_TSG2, True, ((0, 1, 2, 3),)),
+    ],
+)
+def test__linear_segments_atom_keys(formula, tsg, extend, lin_seg_keys0):
+    """Test graph.rotational_symmetry_number."""
+    print(f"{formula}: testing rotational_symmetry_number")
+    lin_seg_keys = graph.linear_segments_atom_keys(tsg, extend=extend)
+    assert lin_seg_keys == lin_seg_keys0, f"{lin_seg_keys} != {lin_seg_keys0}"
+
+
+@pytest.mark.parametrize(
     "formula, tsg, bkey, sym_num0",
     [
-        ("C3H5O", C3H5O_TSG, (0, 1), 1),
-        ("C3H5O", C3H5O_TSG, (0, 5), 3),
+        ("C4H6", C4H6_TSG, (2, 6), 3),
+        ("C3H5O-1", C3H5O_TSG1, (0, 5), 3),
+        ("C3H5O-2", C3H5O_TSG2, (2, 3), 1),
     ],
 )
 def test__rotational_symmetry_number(formula, tsg, bkey, sym_num0):
