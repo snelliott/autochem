@@ -20,11 +20,12 @@ Goodlett and Nathaniel L. Kitzmiller (see [here](molsym/README.md) for details).
 
 ## Installation
 
-After installing [Pixi](https://pixi.sh/latest/) [^1], you can run the following to install the code in developer mode.
+This package can be installed from source as follows.
 ```
-pixi install
+pip install .
+# add -e for editable install
+# use .[dev] to include developer dependencies
 ```
-You can test your installation by running `pytest autochem` and `pytest automol`.
 
 ## AutoChem
 
