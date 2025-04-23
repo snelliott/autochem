@@ -1,4 +1,4 @@
-""" graph functions associated with kekule (resonance) structures
+"""graph functions associated with kekule (resonance) structures
 
 BEFORE ADDING ANYTHING, SEE IMPORT HIERARCHY IN __init__.py!!!!
 """
@@ -19,7 +19,6 @@ from ._00core import (
     atom_implicit_hydrogens,
     atom_keys,
     atom_lone_pairs,
-    atom_neighbor_atom_key,
     atom_unpaired_electrons,
     atoms,
     atoms_bond_keys,
@@ -37,7 +36,6 @@ from ._00core import (
     local_stereo_priorities,
     set_bond_orders,
     subgraph,
-    ts_breaking_bond_keys,
     ts_forming_bond_keys,
     ts_reactants_graph_without_stereo,
     ts_reagents_graphs_without_stereo,
@@ -218,37 +216,48 @@ def kekules_bond_orders_averaged(gra):
 
 
 # # derived properties
-def ts_linear_reacting_atom_keys(
-    tsg, breaking: bool = True, ring: bool = False
-) -> List[int]:
-    """Identify linear reacting atoms in a TS graph
+def ts_linear_reacting_atoms(tsg, ring: bool = False) -> dict[int, tuple[int, int]]:
+    """Identify linear reacting atoms in a TS graph, along with their in-line neighbors.
+
+    :param tsg: TS graph
+    :param ring: Include atoms in rings?; default `False`
+    :return: Mapping of linear reacting atom keys onto their in-line neighbors
+    """
+    rcts_gra = ts_reactants_graph_without_stereo(tsg)
+
+    # Start with transferring atoms
+    lin_dct = ts_transferring_atoms(tsg)
+
+    # Add bond-forming sigma radicals
+    sig_dct = sigma_radical_atom_bond_keys(rcts_gra)
+    for sig_key, sig_bkey in sig_dct.items():
+        frm_bkey = next((bk for bk in ts_forming_bond_keys(tsg) if sig_key in bk), None)
+        if frm_bkey is not None:
+            (att_key,) = frm_bkey - sig_bkey
+            (sig_nkey,) = sig_bkey - frm_bkey
+            lin_dct[sig_key] = tuple(sorted([att_key, sig_nkey]))
+
+    # If requested, remove ring atoms
+    if not ring:
+        rng_keys = set(itertools.chain(*rings_atom_keys(tsg)))
+        lin_dct = {k: v for k, v in lin_dct.items() if k not in rng_keys}
+
+    return lin_dct
+
+
+def ts_linear_reacting_atom_keys(tsg, ring: bool = False) -> list[int]:
+    """Identify linear reacting atoms in a TS graph.
 
     :param tsg: TS graph
     :type tsg: automol graph data structure
-    :param breaking: Include breaking bonds?; default `True`
-    :type breaking: bool, optional
     :param ring: Include atoms in rings?; default `False`
-    :type ring: bool, optional
-    :returns: `True` if it is, `False` if it isn't
-    :rtype: bool
+    :return: Linear reacting atom keys
     """
-    rcts_gra = ts_reactants_graph_without_stereo(tsg)
-    tra_keys = set(ts_transferring_atoms(tsg).keys())
-    sig_keys = set(sigma_radical_atom_bond_keys(rcts_gra).keys())
-
-    key_pool = set(itertools.chain(*ts_forming_bond_keys(tsg)))
-    if breaking:
-        key_pool |= set(itertools.chain(*ts_breaking_bond_keys(tsg)))
-
-    if not ring:
-        key_pool -= set(itertools.chain(*rings_atom_keys(tsg)))
-
-    lin_keys = [k for k in key_pool if k in tra_keys or k in sig_keys]
-    return frozenset(lin_keys)
+    return frozenset(ts_linear_reacting_atoms(tsg, ring=ring).keys())
 
 
 def linear_atom_keys(gra, dummy=True):
-    """Atoms forming linear bonds, based on their hybridization
+    """Find linear atoms, based on their hybridization.
 
     For TS graphs, includes atoms that are linear for *either* the reactants
     *or* the products. This both simplifies the way Reaction objects can be
@@ -262,34 +271,61 @@ def linear_atom_keys(gra, dummy=True):
     :returns: the linear atom keys
     :rtype: tuple[int]
     """
+    return frozenset(linear_atoms_neighbor_atom_keys(gra, dummy=dummy))
+
+
+def linear_atoms_neighbor_atom_keys(gra, dummy=True):
+    """Find linear atoms and their in-line neighbors, based on hybridization.
+
+    For TS graphs, includes atoms that are linear for *either* the reactants
+    *or* the products. This both simplifies the way Reaction objects can be
+    handled and anticipates cases where the TS structure is close to either
+    reactants or products.
+
+    :param gra: the graph
+    :param dummy: whether or not to consider atoms connected to dummy atoms as
+        linear, if different from what would be predicted based on their
+        hybridization
+    :returns: the linear atom keys
+    :rtype: tuple[int]
+    """
+    gra0 = without_dummy_atoms(gra)
+    nkeys_dct0 = atoms_neighbor_atom_keys(gra0)
     ts_ = is_ts_graph(gra)
     gras = ts_reagents_graphs_without_stereo(gra) if ts_ else [gra]
 
-    lin_atm_keys = set()
+    lin_nkeys_dct = {}
     for gra_ in gras:
+        gra_ = without_dummy_atoms(gra_)
         nkeys_dct = atoms_neighbor_atom_keys(gra_)
         # To be linear, an atom must be both (a.) sp1 hybridized and (b.) have more than
         # 1 neighbor (exactly 2)
         atm_hyb_dct = atom_hybridizations(gra_)
         sp1_atm_keys = dict_.keys_by_value(atm_hyb_dct, lambda x: x == 1)
-        lin_atm_keys |= set(k for k in sp1_atm_keys if len(nkeys_dct[k]) > 1)
+        lin_nkeys_dct.update(
+            {k: nkeys_dct[k] for k in sp1_atm_keys if len(nkeys_dct[k]) > 1}
+        )
 
     # If requested, include all keys associated with dummy atoms
     if dummy:
-        dum_ngb_key_dct = dummy_source_dict(gra, dir_=False)
-        lin_atm_keys |= set(dum_ngb_key_dct.values())
+        dum_src_keys = list(dummy_source_dict(gra, dir_=False).values())
+        lin_nkeys_dct.update(
+            {k: nkeys_dct0[k] for k in dum_src_keys if k not in lin_nkeys_dct}
+        )
 
     if ts_:
-        lin_atm_keys |= ts_linear_reacting_atom_keys(gra, ring=False)
+        lin_nkeys_dct.update(
+            dict_.transform_values(ts_linear_reacting_atoms(gra, ring=False), frozenset)
+        )
 
-    return frozenset(lin_atm_keys)
+    return lin_nkeys_dct
 
 
 def linear_segment_cap_keys(
     gra, lin_keys: Optional[List[int]] = None, extend: bool = False
 ) -> Dict[List[int], Tuple[Optional[int], Optional[int]]]:
-    """Linear segments in the graph, along with the keys of their "capping" atoms, that
-    is the final in-line atom on either side
+    """Find linear segments in the graph, along with the keys of their "capping" atoms,
+    that is the final in-line atom on either side.
 
     For sigma radicals and linear nitrogens, the capping atom is the same as the last
     atom in the segment.
@@ -298,7 +334,6 @@ def linear_segment_cap_keys(
     falls within the line of the linear segment.
 
     Examples:
-
         H3C-C#C-C#C-C#C-CH3
           ^(* * * * * *)^
 
@@ -325,8 +360,10 @@ def linear_segment_cap_keys(
     :returns: A dictionary mapping linear segments onto their in-line neighbors
     :rtype: Dict[List[int], Tuple[Optional[int], Optional[int]]]
     """
+    err_msg = f"gra = {gra}\n  lin_keys = {lin_keys}\n  extend = {extend}"
 
-    lin_keys = linear_atom_keys(gra, dummy=True) if lin_keys is None else lin_keys
+    lin_nkeys_dct = linear_atoms_neighbor_atom_keys(gra, dummy=True)
+    lin_keys = frozenset(lin_nkeys_dct.keys()) if lin_keys is None else lin_keys
 
     # 1. Get graphs for each linear segment
     segs = connected_components(subgraph(gra, lin_keys))
@@ -349,27 +386,34 @@ def linear_segment_cap_keys(
 
     # 3. If requested, extend the ends
     keys_lst = list(map(tuple, keys_lst))
-
     lin_seg_dct = {}
-    gra_ = without_dummy_atoms(gra)
     for keys in keys_lst:
         end_key1 = keys[0]
         end_key2 = keys[-1]
 
         # Identify in-line neighbors
         excl_keys = set(keys)
-        ext_key1 = atom_neighbor_atom_key(gra_, end_key1, excl_keys=excl_keys)
+        ext_nkey1s = lin_nkeys_dct[end_key1] - excl_keys
 
-        excl_keys.add(ext_key1)
-        ext_key2 = atom_neighbor_atom_key(gra_, end_key2, excl_keys=excl_keys)
+        excl_keys |= ext_nkey1s
+        ext_nkey2s = lin_nkeys_dct[end_key2] - excl_keys
+
+        # Split up neighbor keys if this is a single-atom segment
+        if end_key1 == end_key2:
+            assert len(ext_nkey1s) == 2, f"{err_msg}\n  ext_nkey1s = {ext_nkey1s}"
+            ext_nkeys = sorted(ext_nkey1s)
+            ext_nkey1s = ext_nkeys[:1]
+            ext_nkey2s = ext_nkeys[1:]
 
         # Add in-line neighbors to the extended keys list, if not None
         ext_keys = keys
-        if ext_key1 is not None:
-            ext_keys = (ext_key1,) + ext_keys
+        if ext_nkey1s:
+            assert len(ext_nkey1s) == 1, f"{err_msg}\n  ext_nkey1s = {ext_nkey1s}"
+            ext_keys = (*ext_nkey1s, *ext_keys)
 
-        if ext_key2 is not None:
-            ext_keys = ext_keys + (ext_key2,)
+        if ext_nkey2s:
+            assert len(ext_nkey1s) == 1, f"{err_msg}\n  ext_nkey2s = {ext_nkey2s}"
+            ext_keys = (*ext_keys, *ext_nkey2s)
 
         if extend:
             keys = ext_keys
