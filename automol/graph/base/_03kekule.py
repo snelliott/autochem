@@ -36,7 +36,6 @@ from ._00core import (
     local_stereo_priorities,
     set_bond_orders,
     subgraph,
-    ts_breaking_bond_keys,
     ts_forming_bond_keys,
     ts_reactants_graph_without_stereo,
     ts_reagents_graphs_without_stereo,
@@ -217,33 +216,44 @@ def kekules_bond_orders_averaged(gra):
 
 
 # # derived properties
-def ts_linear_reacting_atom_keys(
-    tsg, breaking: bool = True, ring: bool = False
-) -> List[int]:
-    """Identify linear reacting atoms in a TS graph
+def ts_linear_reacting_atoms(tsg, ring: bool = False) -> dict[int, tuple[int, int]]:
+    """Identify linear reacting atoms in a TS graph, along with their in-line neighbors.
+
+    :param tsg: TS graph
+    :param ring: Include atoms in rings?; default `False`
+    :return: Mapping of linear reacting atom keys onto their in-line neighbors
+    """
+    rcts_gra = ts_reactants_graph_without_stereo(tsg)
+
+    # Start with transferring atoms
+    lin_dct = ts_transferring_atoms(tsg)
+
+    # Add bond-forming sigma radicals
+    sig_dct = sigma_radical_atom_bond_keys(rcts_gra)
+    for sig_key, sig_bkey in sig_dct.items():
+        frm_bkey = next((bk for bk in ts_forming_bond_keys(tsg) if sig_key in bk), None)
+        if frm_bkey is not None:
+            (att_key,) = frm_bkey - sig_bkey
+            (sig_nkey,) = sig_bkey - frm_bkey
+            lin_dct[sig_key] = tuple(sorted([att_key, sig_nkey]))
+
+    # If requested, remove ring atoms
+    if not ring:
+        rng_keys = set(itertools.chain(*rings_atom_keys(tsg)))
+        lin_dct = {k: v for k, v in lin_dct.items() if k not in rng_keys}
+
+    return lin_dct
+
+
+def ts_linear_reacting_atom_keys(tsg, ring: bool = False) -> list[int]:
+    """Identify linear reacting atoms in a TS graph.
 
     :param tsg: TS graph
     :type tsg: automol graph data structure
-    :param breaking: Include breaking bonds?; default `True`
-    :type breaking: bool, optional
     :param ring: Include atoms in rings?; default `False`
-    :type ring: bool, optional
-    :returns: `True` if it is, `False` if it isn't
-    :rtype: bool
+    :return: Linear reacting atom keys
     """
-    rcts_gra = ts_reactants_graph_without_stereo(tsg)
-    tra_keys = set(ts_transferring_atoms(tsg).keys())
-    sig_keys = set(sigma_radical_atom_bond_keys(rcts_gra).keys())
-
-    key_pool = set(itertools.chain(*ts_forming_bond_keys(tsg)))
-    if breaking:
-        key_pool |= set(itertools.chain(*ts_breaking_bond_keys(tsg)))
-
-    if not ring:
-        key_pool -= set(itertools.chain(*rings_atom_keys(tsg)))
-
-    lin_keys = [k for k in key_pool if k in tra_keys or k in sig_keys]
-    return frozenset(lin_keys)
+    return frozenset(ts_linear_reacting_atoms(tsg, ring=ring).keys())
 
 
 def linear_atom_keys(gra, dummy=True):
@@ -304,9 +314,8 @@ def linear_atoms_neighbor_atom_keys(gra, dummy=True):
         )
 
     if ts_:
-        lin_keys = ts_linear_reacting_atom_keys(gra, ring=False)
         lin_nkeys_dct.update(
-            {k: nkeys_dct0[k] for k in lin_keys if k not in lin_nkeys_dct}
+            dict_.transform_values(ts_linear_reacting_atoms(gra, ring=False), frozenset)
         )
 
     return lin_nkeys_dct

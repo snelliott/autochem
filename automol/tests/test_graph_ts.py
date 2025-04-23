@@ -1334,6 +1334,8 @@ def test__linear_atom_keys():
         ("C3H5O-1", C3H5O_TSG1, True, ((3, 0, 1, 2),)),
         ("C3H5O-2", C3H5O_TSG2, False, ((1, 2),)),
         ("C3H5O-2", C3H5O_TSG2, True, ((0, 1, 2, 3),)),
+        ("CH4CLFNO", CH4CLFNO_TSG, False, ((0,),)),
+        ("CH4CLFNO", CH4CLFNO_TSG, True, ((1, 0, 7),)),
     ],
 )
 def test__linear_segments_atom_keys(formula, tsg, extend, lin_seg_keys0):
