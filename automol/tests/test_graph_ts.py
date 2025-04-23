@@ -1,10 +1,8 @@
-""" test graph.ts
-"""
-
-import numpy
-import pytest
+"""test graph.ts"""
 
 import automol
+import numpy
+import pytest
 from automol import graph
 
 # Sn2 Atom Stereo
@@ -781,6 +779,35 @@ C5H4_TSG = (
     },
 )
 
+# Tricky rotational symmetry number case (triple bond insertion)
+#
+# CC=[C]O => C#CO + [CH3]
+#            - -
+# [- marks a potentially linear atom]
+C3H5O_TSG = (
+    {
+        0: ("C", 0, None),
+        1: ("C", 0, None),
+        2: ("O", 0, None),
+        3: ("H", 0, None),
+        4: ("H", 0, None),
+        5: ("C", 0, None),
+        6: ("H", 0, None),
+        7: ("H", 0, None),
+        8: ("H", 0, None),
+    },
+    {
+        frozenset({1, 2}): (1, None),
+        frozenset({0, 3}): (1, None),
+        frozenset({0, 1}): (1, False),
+        frozenset({0, 5}): (0.9, None),
+        frozenset({2, 4}): (1, None),
+        frozenset({5, 6}): (1, None),
+        frozenset({5, 8}): (1, None),
+        frozenset({5, 7}): (1, None),
+    },
+)
+
 # Bridghead Atom Stereo Pair
 # OO[C@@H]1CC=C[CH]1 => C=1[C@H]2C[C@H](C=1)O2 + [OH]
 #    *          *           *      *
@@ -1234,6 +1261,20 @@ def test__linear_atom_keys():
     assert graph.linear_atom_keys(tsg) == frozenset({1, 4, 5, 6})
     assert graph.linear_atom_keys(rgra) == frozenset({4, 5, 6})
     assert graph.linear_atom_keys(pgra) == frozenset({1, 4, 5, 6})
+
+
+@pytest.mark.parametrize(
+    "formula, tsg, bkey, sym_num0",
+    [
+        ("C3H5O", C3H5O_TSG, (0, 1), 1),
+        ("C3H5O", C3H5O_TSG, (0, 5), 3),
+    ],
+)
+def test__rotational_symmetry_number(formula, tsg, bkey, sym_num0):
+    """Test graph.rotational_symmetry_number."""
+    print(f"{formula}: testing rotational_symmetry_number")
+    sym_num = graph.rotational_symmetry_number(tsg, *bkey)
+    assert sym_num == sym_num0, f"{sym_num} != {sym_num0}"
 
 
 def test__rotational_bond_keys():
