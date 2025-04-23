@@ -24,33 +24,32 @@ class Reaction(Scalable):
     reactants: list[str]
     products: list[str]
     reversible: bool = True
-    # Change this to `rate`:
-    rate_constant: Rate_ = pydantic.Field(
+    rate: Rate_ = pydantic.Field(
         default_factory=lambda data: ArrheniusRateFit(
             A=1, b=0, E=0, order=len(data["reactants"])
         )
     )
 
     # Private attributes
-    _scalers: ClassVar[Scalers] = {"rate_constant": (lambda c, x: c * x)}
+    _scalers: ClassVar[Scalers] = {"rate": (lambda c, x: c * x)}
 
     @property
     def unit(self) -> pint.Unit:
         """Unit."""
-        return self.rate_constant.unit
+        return self.rate.unit
 
     @property
     def third_body(self) -> str | None:
         """Third body."""
-        if isinstance(self.rate_constant, RateFit):
-            return self.rate_constant.third_body
+        if isinstance(self.rate, RateFit):
+            return self.rate.third_body
 
         return None
 
     @property
     def is_pressure_dependent(self) -> bool:
         """Whether the rate is pressure dependent."""
-        return not isinstance(self.rate_constant, ArrheniusRateFit)
+        return not isinstance(self.rate, ArrheniusRateFit)
 
     def __call__(
         self,
@@ -73,7 +72,7 @@ class Reaction(Scalable):
         :param units: Input / desired output units
         :return: Value(s)
         """
-        return self.rate_constant(T=T, P=P, units=units)
+        return self.rate(T=T, P=P, units=units)
 
 
 # Constructors
@@ -104,7 +103,7 @@ def from_chemkin_string(
         reactants=res.reactants,
         products=res.products,
         reversible=res.reversible,
-        rate_constant=rate_constant,
+        rate=rate_constant,
     )
 
 
@@ -215,7 +214,7 @@ def chemkin_string(rate: Reaction, eq_width: int = 55, dup: bool = False) -> str
     :return: Chemkin rate string
     """
     eq = chemkin_equation(rate)
-    rate_str = data.chemkin_string(rate.rate_constant, eq_width=eq_width)
+    rate_str = data.chemkin_string(rate.rate, eq_width=eq_width)
     reac_str = f"{eq:<{eq_width}} {rate_str}"
     return chemkin.write_with_dup(reac_str, dup=dup)
 
@@ -244,8 +243,8 @@ def display(
     :param y_label: Y-axis label
     :return: Chart
     """
-    return rate.rate_constant.display(
-        others=[r.rate_constant for r in comp_rates],
+    return rate.rate.display(
+        others=[r.rate for r in comp_rates],
         labels=comp_labels,
         T_range=T_range,
         P=P,
