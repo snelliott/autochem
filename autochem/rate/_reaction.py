@@ -7,7 +7,6 @@ from typing import ClassVar
 
 import altair
 import numpy
-import pint
 import pydantic
 from numpy.typing import ArrayLike, NDArray
 
@@ -33,51 +32,10 @@ class Reaction(Scalable):
     # Private attributes
     _scalers: ClassVar[Scalers] = {"rate": (lambda c, x: c * x)}
 
-    @property
-    def unit(self) -> pint.Unit:
-        """Unit."""
-        return self.rate.unit
-
-    @property
-    def third_body(self) -> str | None:
-        """Third body."""
-        if isinstance(self.rate, RateFit):
-            return self.rate.third_body
-
-        return None
-
-    @property
-    def is_pressure_dependent(self) -> bool:
-        """Whether the rate is pressure dependent."""
-        return not isinstance(self.rate, ArrheniusRateFit)
-
-    def __call__(
-        self,
-        T: ArrayLike,  # noqa: N803
-        P: ArrayLike = 1,  # noqa: N803
-        units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
-        """Evaluate rate constant.
-
-        Uses:
-        - If temperature and pressure are both numbers, the rate constant will be
-          returned as a number, k(T, P).
-        - If either temperature or pressure are both lists, the rate constant will be
-          returned as a 1D array, [k(T1, P), k(T2, P), ...] or [k(T, P1), k(T, P2), ...]
-        - If temperature and pressure are lists, the rate constant will be returned as a
-          2D array, [[k(T1, P1), k(T1, P2), ...], [k(T2, P1), k(T2, P2), ...]]
-
-        :param T: Temperature(s)
-        :param P: Pressure(s)
-        :param units: Input / desired output units
-        :return: Value(s)
-        """
-        return self.rate(T=T, P=P, units=units)
-
 
 # Constructors
 def from_chemkin_string(
-    rate_str: str, units: UnitsData | None = None, strict: bool = True
+    rxn_str: str, units: UnitsData | None = None, strict: bool = True
 ) -> Reaction:
     """Read rate from Chemkin string.
 
@@ -87,10 +45,10 @@ def from_chemkin_string(
     :return: Rate
     """
     # Parse string
-    res = chemkin.parse_rate(rate_str)
+    res = chemkin.parse_rate(rxn_str)
 
     # Extract rate constant
-    rate_constant = data.from_chemkin_parse_results(res, units=units)
+    rate = data.from_chemkin_parse_results(res, units=units)
 
     # Check that all information was used
     if strict:
@@ -103,20 +61,20 @@ def from_chemkin_string(
         reactants=res.reactants,
         products=res.products,
         reversible=res.reversible,
-        rate=rate_constant,
+        rate=rate,
     )
 
 
 # Transformations
 def expand_lumped(
-    rate: Reaction, exp_dct: Mapping[str, Sequence[str]]
+    rxn: Reaction, exp_dct: Mapping[str, Sequence[str]]
 ) -> list[Reaction]:
     """Expand a lumped reaction rates into its components.
 
     Assumes an even ratio among unlumped coefficients, in the absence of information.
 
-        unlumped rate coefficient
-        = lumped rate coefficient x
+        unlumped rate
+        = lumped rate x
             nexp ^ stoich / multiset(nexp, stoich) for each lumped reactant
             1             / multiset(nexp, stoich) for each lumped product
 
@@ -127,9 +85,9 @@ def expand_lumped(
     be unphysical. This only serves to reproduce the same net rate while distinguishing
     lump components.
 
-    :param rate: Rate
+    :param rxn: Reaction
     :param exp_dct: Mapping of lumped species to lump components
-    :return: Component rates
+    :return: Component reactions
     """
 
     def _expand(name: str, rev: bool) -> tuple[float, list[dict[int, str]]]:
@@ -144,7 +102,7 @@ def expand_lumped(
             return 1.0, [{}]
 
         # Get name combinations
-        name_pool = rate.products if rev else rate.reactants
+        name_pool = rxn.products if rev else rxn.reactants
         stoich = name_pool.count(name)
         name_combs = list(itertools.combinations_with_replacement(exp, stoich))
         # Determine factor
@@ -157,15 +115,15 @@ def expand_lumped(
         ]
         return factor, exp_dcts
 
-    rexps = [_expand(n, rev=False) for n in set(rate.reactants) if n in exp_dct]
-    pexps = [_expand(n, rev=True) for n in set(rate.products) if n in exp_dct]
+    rexps = [_expand(n, rev=False) for n in set(rxn.reactants) if n in exp_dct]
+    pexps = [_expand(n, rev=True) for n in set(rxn.products) if n in exp_dct]
 
     rfactors, rexp_dcts = zip(*rexps, strict=True) if rexps else ((), ())
     pfactors, pexp_dcts = zip(*pexps, strict=True) if pexps else ((), ())
 
     # Scale rate by calculated factor
-    rate0 = rate.model_copy()
-    rate0 *= math.prod(rfactors + pfactors)
+    rxn0 = rxn.model_copy()
+    rxn0 *= math.prod(rfactors + pfactors)
 
     # Expand reactions
     rexp_combs = [
@@ -174,54 +132,56 @@ def expand_lumped(
     pexp_combs = [
         {k: v for d in ds for k, v in d.items()} for ds in itertools.product(*pexp_dcts)
     ]
-    rates = []
+    rxns = []
     for rexp_comb, pexp_comb in itertools.product(rexp_combs, pexp_combs):
-        rate_ = rate0.model_copy()
-        rate_.reactants = [
+        rxn_ = rxn0.model_copy()
+        rxn_.reactants = [
             rexp_comb.get(i) if i in rexp_comb else s
-            for i, s in enumerate(rate0.reactants)
+            for i, s in enumerate(rxn0.reactants)
         ]
-        rate_.products = [
+        rxn_.products = [
             pexp_comb.get(i) if i in pexp_comb else s
-            for i, s in enumerate(rate0.products)
+            for i, s in enumerate(rxn0.products)
         ]
-        rates.append(rate_)
-    return rates
+        rxns.append(rxn_)
+    return rxns
 
 
 # Conversions
-def chemkin_equation(rate: Reaction) -> str:
+def chemkin_equation(rxn: Reaction) -> str:
     """Get Chemkin equation string.
 
-    :param rate: Rate
+    :param rxn: Reaction
     :return: Chemkin equation string
     """
+    assert isinstance(rxn.rate, RateFit), "Rate must be a RateFit"
+
     return chemkin.write_equation(
-        reactants=rate.reactants,
-        products=rate.products,
-        reversible=rate.reversible,
-        third_body=rate.third_body,
-        pressure_dependent=rate.is_pressure_dependent,
+        reactants=rxn.reactants,
+        products=rxn.products,
+        reversible=rxn.reversible,
+        third_body=rxn.rate.third_body,
+        pressure_dependent=rxn.rate.is_pressure_dependent,
     )
 
 
-def chemkin_string(rate: Reaction, eq_width: int = 55, dup: bool = False) -> str:
+def chemkin_string(rxn: Reaction, eq_width: int = 55, dup: bool = False) -> str:
     """Get Chemkin rate string.
 
-    :param rate: Rate
+    :param rxn: Reaction
     :param eq_width: Width for equation
     :param duplicate: Whether this is a duplicate reaction
     :return: Chemkin rate string
     """
-    eq = chemkin_equation(rate)
-    rate_str = data.chemkin_string(rate.rate, eq_width=eq_width)
-    reac_str = f"{eq:<{eq_width}} {rate_str}"
-    return chemkin.write_with_dup(reac_str, dup=dup)
+    eq = chemkin_equation(rxn)
+    rate_str = data.chemkin_string(rxn.rate, eq_width=eq_width)
+    rxn_str = f"{eq:<{eq_width}} {rate_str}"
+    return chemkin.write_with_dup(rxn_str, dup=dup)
 
 
 # Display
 def display(
-    rate: Reaction,
+    rxn: Reaction,
     comp_rates: Sequence[Reaction] = (),
     comp_labels: Sequence[str] = (),
     T_range: tuple[float, float] = (400, 1250),  # noqa: N803
@@ -233,7 +193,7 @@ def display(
 ) -> altair.Chart:
     """Display as an Arrhenius plot, optionally comparing to other rates.
 
-    :param rate: Rate
+    :param rxn: Reaction
     :param comp_rates: Rates for comparison
     :param comp_labels: Labels for comparison
     :param t_range: Temperature range
@@ -243,7 +203,7 @@ def display(
     :param y_label: Y-axis label
     :return: Chart
     """
-    return rate.rate.display(
+    return rxn.rate.display(
         others=[r.rate for r in comp_rates],
         labels=comp_labels,
         T_range=T_range,
