@@ -2,7 +2,7 @@
 
 import datetime
 from collections.abc import Sequence
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 import altair
 import pyparsing as pp
@@ -167,14 +167,39 @@ def pac99_input_string(
 # Display
 def display(
     spc: Species,
-    comp_spcs: Sequence[Species] = (),
-    comp_labels: Sequence[str] = (),
+    props: Sequence[Literal["Cv", "Cp", "S", "H", "dH"]] = ("Cp", "S", "H"),
+    others: Sequence[Species] = (),
+    others_labels: Sequence[str] = (),
     T_range: tuple[float, float] = (200, 3000),  # noqa: N803
     units: UnitsData | None = None,
     label: str = "This work",
     x_label: str = "T",
+    y_labels: Sequence[str | None] | None = None,
+    horizontal: bool = False,
 ) -> altair.Chart:
-    pass
+    """Display as an Arrhenius plot, optionally comparing to other rates.
+
+    :param spc: Species thermo
+    :param props: Thermodynamic properties to display
+    :param others: Other reaction rates for comparison
+    :param others_labels: Labels for other reaction rates
+    :param t_range: Temperature range
+    :param p: Pressure
+    :param units: Units
+    :param x_label: X-axis label
+    :param y_label: Y-axis label
+    :return: Chart
+    """
+    return spc.therm.display(
+        others=[o.therm for o in others],
+        others_labels=others_labels,
+        T_range=T_range,
+        units=units,
+        label=label,
+        x_label=x_label,
+        y_labels=y_labels,
+        horizontal=horizontal,
+    )
 
 
 # Helpers

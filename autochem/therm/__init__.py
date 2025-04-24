@@ -4,6 +4,7 @@ from . import data
 from ._species import (
     Species,
     chemkin_string,
+    display,
     from_chemkin_string,
     from_messpf_output_string,
     from_pac99_output_string,
@@ -11,11 +12,16 @@ from ._species import (
 )
 
 __all__ = [
+    # Types
     "Species",
+    # Conversions
     "from_chemkin_string",
     "from_messpf_output_string",
     "from_pac99_output_string",
     "pac99_input_string",
     "chemkin_string",
+    # Display
+    "display",
+    # Submodules
     "data",
 ]

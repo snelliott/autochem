@@ -51,7 +51,8 @@ class BaseTherm(ThermCalculator, UnitManager, Frozen, Scalable, SubclassTyped, a
         units: UnitsData | None = None,
         label: str = "This work",
         x_label: str = "T",
-        y_labels: Sequence[str] | None = None,
+        y_labels: Sequence[str | None] | None = None,
+        horizontal: bool = False,
     ) -> altair.Chart:
         """Display as a thermodynamic function plot.
 
@@ -62,8 +63,25 @@ class BaseTherm(ThermCalculator, UnitManager, Frozen, Scalable, SubclassTyped, a
         :param units: Units
         :param x_label: X-axis label
         :param y_labels: Y-axis labels, by property
+        :param horizontal: Whether to display horizontally
         :return: Chart
         """
+        y_labels = y_labels or [None] * len(props)
+        charts = [
+            self._display(
+                prop=prop,
+                others=others,
+                others_labels=others_labels,
+                T_range=T_range,
+                units=units,
+                label=label,
+                x_label=x_label,
+                y_label=y_label,
+            )
+            for prop, y_label in zip(props, y_labels, strict=True)
+        ]
+        concat_ = altair.hconcat if horizontal else altair.vconcat
+        return concat_(*charts)
 
     def _display(
         self,

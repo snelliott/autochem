@@ -202,7 +202,7 @@ def display(
     :return: Chart
     """
     return rxn.rate.display(
-        others=[r.rate for r in others],
+        others=[o.rate for o in others],
         others_labels=others_labels,
         T_range=T_range,
         P=P,
