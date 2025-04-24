@@ -109,43 +109,102 @@ CHO2(38)(+M)=H(4)+CO2(12)(+M)                       1.000e+00 0.000     0.000
 )
 def test__from_chemkin_string(name, data, check_roundtrip: bool):
     units = data.get("units")
-    chem_str = data.get("chemkin")
+    rxn_str0 = data.get("chemkin")
 
     # Read
-    k = rate.from_chemkin_string(chem_str, units=units)
+    rxn = rate.from_chemkin_string(rxn_str0, units=units)
+    rxn_ = rate.Reaction.model_validate(rxn.model_dump())
+
+    # Check roundtrip
+    if check_roundtrip:
+        assert rxn == rxn_, f"\n   {rxn}\n!= {rxn_}"
+
+    # Scale
+    rxn_times_2 = rxn * 2
+    rxn_divided_by_2 = rxn / 2
+
+    # Plot
+    rate.display(rxn)
+    rate.display(
+        rxn,
+        label="original",
+        comp_rates=[rxn_times_2, rxn_divided_by_2],
+        comp_labels=["doubled", "halved"],
+    )
 
     # Evaluate
     T0 = 500
     T1 = [500, 600, 700, 800]
     P0 = 1.0
     P1 = [0.1, 1.0, 10.0]
-    kT0P0 = k(T0, P0)
+    kT0P0 = rxn.rate(T0, P0)
     assert numpy.shape(kT0P0) == (), kT0P0
-    kT1P0 = k(T1, P0)
+    kT1P0 = rxn.rate(T1, P0)
     assert numpy.shape(kT1P0) == (4,), kT1P0
-    kT0P1 = k(T0, P1)
+    kT0P1 = rxn.rate(T0, P1)
     assert numpy.shape(kT0P1) == (3,), kT0P1
-    kT1P1 = k(T1, P1)
+    kT1P1 = rxn.rate(T1, P1)
     assert numpy.shape(kT1P1) == (4, 3), kT1P1
 
     # Write
-    chem_str_ = rate.chemkin_string(k)
-    print(chem_str_)
-    k_ = rate.from_chemkin_string(chem_str_)
+    rxn_str = rate.chemkin_string(rxn)
+    print(rxn_str)
+    rxn_ = rate.from_chemkin_string(rxn_str)
 
     # Check roundtrip
     if check_roundtrip:
-        assert k == k_, f"\n   {k}\n!= {k_}"
+        assert rxn == rxn_, f"\n   {rxn}\n!= {rxn_}"
 
-    # Plot against another rate
-    copm_units = SIMPLE.get("units")
-    copm_chem_str = SIMPLE.get("chemkin")
-    comp_k = rate.from_chemkin_string(copm_chem_str, units=copm_units)
-    rate.display(k, comp_rates=[comp_k], comp_labels=["comp"])
+    # Read with units and plot against another rate
+    comp_units = SIMPLE.get("units")
+    comp_rxn_str = SIMPLE.get("chemkin")
+    comp_rxn = rate.from_chemkin_string(comp_rxn_str, units=comp_units)
+    rate.display(rxn, comp_rates=[comp_rxn], comp_labels=["comp"])
+
+
+@pytest.mark.parametrize(
+    "name, data, exp_dct, count, factor",
+    [
+        (
+            "PLOG",
+            PLOG,
+            {
+                "C2H4": ["C2H4a", "C2H4b", "C2H4c"],
+                "OH": ["OHa", "OHb", "OHc", "OHd"],
+                "PC2H4OH": ["PC2H4OHa", "PC2H4OHb"],
+            },
+            24,
+            1 / 2.0,
+        ),
+    ],
+)
+def test__expand_lumped(name, data, exp_dct, count: int, factor: float):
+    units = data.get("units")
+    rxn_str0 = data.get("chemkin")
+
+    # Read
+    rxn = rate.from_chemkin_string(rxn_str0, units=units)
+    rxns = rate.expand_lumped(rxn, exp_dct)
+    assert len(rxns) == count, f"{len(rxns)} != {count}"
+
+    assert all(rxn.rate * factor == r.rate for r in rxns), (
+        f"{rxn.rate} * {factor} != {rxns[0].rate}"
+    )
 
 
 if __name__ == "__main__":
     # test__from_chemkin_string("FALLOFF", FALLOFF)
     # test__from_chemkin_string("THREEBODY", THREEBODY)
     # test__from_chemkin_string("PLOG", PLOG)
-    test__from_chemkin_string("CHEB", CHEB, False)
+    # test__from_chemkin_string("CHEB", CHEB, False)
+    test__expand_lumped(
+        "PLOG",
+        PLOG,
+        {
+            "C2H4": ["C2H4a", "C2H4b", "C2H4c"],
+            "OH": ["OHa", "OHb", "OHc", "OHd"],
+            "PC2H4OH": ["PC2H4OHa", "PC2H4OHb"],
+        },
+        24,
+        1 / 2.0,
+    )

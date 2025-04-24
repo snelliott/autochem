@@ -216,6 +216,11 @@ class RateFit(BaseRate):
 
         return next((c for c, e in eff.items() if e == 1.0), None)
 
+    @property
+    def is_pressure_dependent(self) -> bool:
+        """Determine if the rate is pressure dependent."""
+        return True
+
     @pydantic.field_validator("efficiencies", mode="before")
     @classmethod
     def sanitize_efficiencies(cls, value: object) -> object:
@@ -236,6 +241,11 @@ class ArrheniusRateFit(RateFit):
         "A": D.rate_constant,
         "E": D.energy_per_substance,
     }
+
+    @property
+    def is_pressure_dependent(self) -> bool:
+        """Determine if the rate is pressure dependent."""
+        return False
 
     @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(

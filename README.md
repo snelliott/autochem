@@ -1,18 +1,166 @@
-# AutoChem
+# AutoChem / AutoMol
 
 Andreas V. Copan, Kevin B. Moore III, Sarah N. Elliott, and Stephen J. Klippenstein
 
+
 ## Description
 
-This repository includes four modules:
- - AutoMol: A library for manipulating and interconverting molecular descriptors
- - PhyDat: A small, supporting library of physical constants and chemical data
- - [MolSym](molsym/README.md): An externally-developed package for handling molecular
- symmetry, by Stephen M. Goodlett and Nathaniel L. Kitzmiller (see
- [here](molsym/README.md) for details)
+This repository is a clean-up version of
+[AutoChem](https://github.com/avcopan/autochem), which implements the
+cheminformatics routines used by the AutoMech project.
 
-The central module is AutoMol, which provides an extensive library of functions for
-working with various molecular descriptors, including:
+It consists of two primary modules:
+ - AutoChem: A library for manipulating and interconverting kinetic and thermochemical data formats.
+ - AutoMol: A library for manipulating and interconverting molecular representations.
+
+Also included in this repository is [MolSym](molsym/README.md), an
+externally-developed package for handling molecular symmetry, by Stephen M.
+Goodlett and Nathaniel L. Kitzmiller (see [here](molsym/README.md) for details).
+
+
+## Installation
+
+This package can be installed from source as follows.
+```
+pip install .
+# add -e for editable install
+# use .[dev] to include developer dependencies
+```
+
+## AutoChem
+
+This is a prototype of a planned revision of AutoMech's code for handling
+kinetic and thermochemical data.
+So far, it only implements handling of rate constant data, which can be found in `autochem.rate`.
+
+### Rates
+
+*Data storage.*
+One can generate a new rate constant object from a Chemkin string as follows.
+```
+>>> import autochem as ac
+>>>
+>>> rxn = ac.rate.from_chemkin_string(
+>>>     """
+>>>     C2H4+OH=PC2H4OH          2.560E+36    -7.752     6946
+>>>         PLOG /   1.000E-02   1.740E+43   -10.460     7699 /
+>>>         PLOG /   2.500E-02   3.250E+37    -8.629     5215 /
+>>>         PLOG /   1.000E-01   1.840E+35    -7.750     4909 /
+>>>         PLOG /   1.000E+00   2.560E+36    -7.752     6946 /
+>>>         PLOG /   1.000E+01   3.700E+33    -6.573     7606 /
+>>>         PLOG /   1.000E+02   1.120E+26    -4.101     5757 /
+>>>     """,
+>>>     units={"energy": "cal"},
+>>> )
+>>> rxn_dct = rxn.model_dump()
+>>> rxn
+{
+    "reactants": ["C2H4", "OH"],
+    "products": ["PC2H4OH"],
+    "reversible": True,
+    "rate": {
+        "order": 2,
+        "efficiencies": {},
+        "As": [1.74e43, 3.25e37, 1.84e35, 2.56e36, 3.7e33, 1.12e26],
+        "bs": [-10.46, -8.629, -7.75, -7.752, -6.573, -4.101],
+        "Es": [7699.0, 5215.0, 4909.0, 6946.0, 7606.0, 5757.0],
+        "Ps": [0.01, 0.025, 0.1, 1.0, 10.0, 100.0],
+        "type": "plog",
+    },
+}
+```
+This `Reaction` object is a Pydantic model that includes all of the information
+needed to add this rate to a kinetic mechanism for simulation, including the
+reactants and products, whether or not the reaction is reversible, and the rate
+constant.
+The `rate` attribute stores either raw rate constant data or a rate
+constant parametrization, using one of several specific `RateConstant` subtypes.
+In this case, it stores a `PlogRateConstant`.
+```
+>>> rxn.rate
+PlogRateFit(order=2, efficiencies={}, ..., type='plog')
+```
+The dictionary above can be used to instantiate a new object.
+```
+>>> ac.rate.Reaction.model_validate(rxn_dct)
+Reaction(reactants=['C2H4', 'OH'], products=['PC2H4OH'], ..., rate=PlogRateFit(...))
+```
+This allows one to, for example, retrieve stored rate constant data from JSON files with
+minimal hassle.
+
+*Scalar multiplication.*
+Rate objects can also be multiplied by scalars.
+```
+>>> rxn_times_2 = rxn * 2
+>>> rxn_times_2.rate.model_dump()
+{
+    "order": 2,
+    "efficiencies": {},
+    "As": [3.48e43, 6.5e37, 3.68e35, 5.12e36, 7.4e33, 2.24e26],
+    "bs": [-10.46, -8.629, -7.75, -7.752, -6.573, -4.101],
+    "Es": [7699.0, 5215.0, 4909.0, 6946.0, 7606.0, 5757.0],
+    "Ps": [0.01, 0.025, 0.1, 1.0, 10.0, 100.0],
+    "type": "plog",
+}
+```
+
+*Plotting.* One can generate Arrhenius plots of rate constants using the
+function `autochem.rate.display`.
+```
+>>> ac.rate.display(rxn)
+```
+<img src=".github/plog-rate.svg" height="360">
+
+For convenience, one can also plot multiple rates against each other with a legend.
+```
+>>> rxn_times_2 = rxn * 2
+>>> rxn_divided_by_2 = rxn / 2
+>>>
+>>> ac.rate.display(
+>>>     rxn,
+>>>     label="original",
+>>>     comp_rates=[rxn_times_2, rxn_divided_by_2],
+>>>     comp_labels=["doubled", "halved"],
+>>> )
+```
+<img src=".github/plog-rate-comparison.svg" height="360">
+
+*Units.* Above, we assumed that the rate constant data matches the internal units used by AutoChem, which are as follows (see `autochem.unit_.system`):
+ - time: s
+ - temperature: K
+ - length: cm
+ - substance: mol
+ - pressure: atm
+ - energy: cal
+
+When this is not the case, one can specify units for each of the dimensions
+listed above.
+For example, the activation energies might be given in kcal.
+```
+>>> import autochem as ac
+>>>
+>>> rxn = ac.rate.from_chemkin_string(
+>>>     """
+>>>     C2H4+OH=PC2H4OH          2.560E+36    -7.752     6.946
+>>>         PLOG /   1.000E-02   1.740E+43   -10.460     7.699 /
+>>>         PLOG /   2.500E-02   3.250E+37    -8.629     5.215 /
+>>>         PLOG /   1.000E-01   1.840E+35    -7.750     4.909 /
+>>>         PLOG /   1.000E+00   2.560E+36    -7.752     6.946 /
+>>>         PLOG /   1.000E+01   3.700E+33    -6.573     7.606 /
+>>>         PLOG /   1.000E+02   1.120E+26    -4.101     5.757 /
+>>>     """,
+>>>     units={"energy": "kcal"},
+>>> )
+>>> rxn_dct = rxn.model_dump()
+>>> rxn_dct
+<dictionary from above>
+```
+Under the hood, the [Pint](https://pint.readthedocs.io/) library is used for unit handling.
+
+## AutoMol
+
+Automol provides an extensive library of functions for working with various
+molecular descriptors, including:
  - Molecular graphs (molecules and transition states): `automol.graph`
  - Cartesian geometries (molecules and transition states): `automol.geom`
  - Z-matrix geometries (molecules and transition states): `automol.zmat`
@@ -29,11 +177,6 @@ Other notable functionalities include...
  - Reaction mapping for combustion reaction classes: `automol.reac`
  - Stereochemistry handling for molecules **and transition states**: `automol.graph.expand_stereo()`
  - Geometry embedding for molecules **and transition states**: `automol.graph.geometry()`
-
-
-## Installation
-
-## Basic Usage
 
 ### Molecules
 
@@ -131,7 +274,7 @@ bonds:
   2-4: {order: 0, stereo_parity: null}
   2-5: {order: 1, stereo_parity: null}
 ```
-We can see the connectivity more easily by displaying the graph.[^1]
+We can see the connectivity more easily by displaying the graph.[^2]
 ```
 >>> automol.graph.display(zgra, exp=True, label=True)
 ```
@@ -230,11 +373,14 @@ AMChI=1/C4H9O3/c1-3-6-4(2)7-5-8-3/h3-4H,1-2H3/t3-,4-/m1/s1/k8-5/f8-3/r1
 Standard chemical identifiers like SMILES and InChI cannot describe individual
 transition states.
 AutoMol comes with its own string identifier for this purpose, the AMChI ("AutoMech
-Chemical Identifier").[^2]
+Chemical Identifier").[^3]
 
 
 <!-- Footnotes -->
 
-[^1]: Dummy atoms are represented as Helium atoms for RDKit display.
+[^1]: Pixi installation command: `curl -fsSL https://pixi.sh/install.sh | sh`
 
-[^2]: See Copan, Moore, Elliott, Mulvihill, Pratali Maffei, Klippenstein. J. Phys. Chem. A 2024, 128, 18, 3711–3725
+[^2]: Dummy atoms are represented as Helium atoms for RDKit display.
+
+[^3]: See Copan, Moore, Elliott, Mulvihill, Pratali Maffei, Klippenstein. J. Phys. Chem. A 2024, 128, 18, 3711–3725
+

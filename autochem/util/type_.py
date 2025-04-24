@@ -111,7 +111,7 @@ class Scalable(pydantic.BaseModel, abc.ABC):
         """Scalar multiplication.
 
         :param c: Scalar value to multiply by
-        :return: Scaled function
+        :return: Scaled object
         """
         data = self.model_dump()
 
@@ -120,6 +120,14 @@ class Scalable(pydantic.BaseModel, abc.ABC):
                 data[key] = scaler(c, getattr(self, key))
 
         return self.model_validate(data)
+
+    def __truediv__(self, c: ArrayLike):
+        """Scalar division.
+
+        :param c: Scalar value to divide by
+        :return: Scaled object
+        """
+        return self.__mul__(1 / c)
 
     __rmul__ = __mul__
 
