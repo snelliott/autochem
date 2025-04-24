@@ -118,6 +118,8 @@ class Scalable(pydantic.BaseModel, abc.ABC):
         if self._scalers is not None:
             for key, scaler in self._scalers.items():
                 data[key] = scaler(c, getattr(self, key))
+        else:
+            raise NotImplementedError("Scalar multiplication not implemented.")
 
         return self.model_validate(data)
 

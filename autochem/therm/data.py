@@ -36,7 +36,7 @@ class Key:
     Z2 = "Z2"
 
 
-class BaseTherm(ThermCalculator, UnitManager, Frozen, SubclassTyped, abc.ABC):
+class BaseTherm(ThermCalculator, UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
     """Abstract base class for thermodynamic data."""
 
     formula: dict[str, int]
@@ -73,7 +73,7 @@ class BaseTherm(ThermCalculator, UnitManager, Frozen, SubclassTyped, abc.ABC):
         T_range: tuple[float, float] = (200, 3000),  # noqa: N803
         units: UnitsData | None = None,
         label: str = "This work",
-        x_label: str = "T",
+        x_label: str = "𝑇",  # noqa: RUF001
         y_label: str | None = None,
     ) -> altair.Chart:
         """Display as a thermodynamic function plot.
@@ -425,7 +425,7 @@ class Therm(BaseTherm):
         return self.data_set[Key.dH].sel(T=T, method=method).data
 
 
-class ThermFit(BaseTherm, Bounded, Scalable, abc.ABC):
+class ThermFit(BaseTherm, Bounded, abc.ABC):
     """Fitted thermodynamic data."""
 
     pass

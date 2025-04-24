@@ -2,24 +2,28 @@
 
 import datetime
 from collections.abc import Sequence
+from typing import ClassVar
 
 import altair
 import pyparsing as pp
 
 from ..unit_ import UnitsData
 from ..util import FormulaData, chemkin, form, pac99
-from ..util.type_ import Frozen
+from ..util.type_ import Scalable, Scalers
 from . import data
 from .data import Nasa7ThermFit, Therm, Therm_
 
 
 # TODO: Make it so that the `therm` type can be indicated as `Species[Therm]` or
 # `Species[ThermFit]`, like with lists
-class Species(Frozen):
+class Species(Scalable):
     """A species with thermodynamic data."""
 
     name: str
     therm: Therm_
+
+    # Private attributes
+    _scalers: ClassVar[Scalers] = {"therm": (lambda c, x: c * x)}
 
 
 # Conversions
