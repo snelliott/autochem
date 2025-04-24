@@ -1,7 +1,9 @@
 """Thermodynamic data."""
 
 import datetime
+from collections.abc import Sequence
 
+import altair
 import pyparsing as pp
 
 from ..unit_ import UnitsData
@@ -20,6 +22,7 @@ class Species(Frozen):
     therm: Therm_
 
 
+# Conversions
 def from_chemkin_string(spc_str: str) -> Species:
     """Read species thermo from Chemkin string.
 
@@ -157,6 +160,20 @@ def pac99_input_string(
     )
 
 
+# Display
+def display(
+    spc: Species,
+    comp_spcs: Sequence[Species] = (),
+    comp_labels: Sequence[str] = (),
+    T_range: tuple[float, float] = (200, 3000),  # noqa: N803
+    units: UnitsData | None = None,
+    label: str = "This work",
+    x_label: str = "T",
+) -> altair.Chart:
+    pass
+
+
+# Helpers
 def pac99_input_line(
     key: str | None = None,
     label1: str | None = None,

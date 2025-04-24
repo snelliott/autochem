@@ -128,8 +128,8 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     rate.display(
         rxn,
         label="original",
-        comp_rates=[rxn_times_2, rxn_divided_by_2],
-        comp_labels=["doubled", "halved"],
+        others=[rxn_times_2, rxn_divided_by_2],
+        others_labels=["doubled", "halved"],
     )
 
     # Evaluate
@@ -159,7 +159,7 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     comp_units = SIMPLE.get("units")
     comp_rxn_str = SIMPLE.get("chemkin")
     comp_rxn = rate.from_chemkin_string(comp_rxn_str, units=comp_units)
-    rate.display(rxn, comp_rates=[comp_rxn], comp_labels=["comp"])
+    rate.display(rxn, others=[comp_rxn], others_labels=["comp"])
 
 
 @pytest.mark.parametrize(

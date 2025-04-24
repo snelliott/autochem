@@ -6,9 +6,7 @@ from collections.abc import Mapping, Sequence
 from typing import ClassVar
 
 import altair
-import numpy
 import pydantic
-from numpy.typing import ArrayLike, NDArray
 
 from ..unit_ import UnitsData
 from ..util import chemkin
@@ -182,8 +180,8 @@ def chemkin_string(rxn: Reaction, eq_width: int = 55, dup: bool = False) -> str:
 # Display
 def display(
     rxn: Reaction,
-    comp_rates: Sequence[Reaction] = (),
-    comp_labels: Sequence[str] = (),
+    others: Sequence[Reaction] = (),
+    others_labels: Sequence[str] = (),
     T_range: tuple[float, float] = (400, 1250),  # noqa: N803
     P: float = 1,  # noqa: N803
     units: UnitsData | None = None,
@@ -193,9 +191,9 @@ def display(
 ) -> altair.Chart:
     """Display as an Arrhenius plot, optionally comparing to other rates.
 
-    :param rxn: Reaction
-    :param comp_rates: Rates for comparison
-    :param comp_labels: Labels for comparison
+    :param rxn: Reaction rate
+    :param others: Other reaction rates for comparison
+    :param others_labels: Labels for other reaction rates
     :param t_range: Temperature range
     :param p: Pressure
     :param units: Units
@@ -204,8 +202,8 @@ def display(
     :return: Chart
     """
     return rxn.rate.display(
-        others=[r.rate for r in comp_rates],
-        labels=comp_labels,
+        others=[r.rate for r in others],
+        others_labels=others_labels,
         T_range=T_range,
         P=P,
         units=units,

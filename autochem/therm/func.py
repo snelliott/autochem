@@ -9,7 +9,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from .. import unit_
 from ..unit_ import UNITS, C, D, UnitsData
-from ..util.type_ import Frozen, Scalable, SubclassTyped
+from ..util.type_ import Frozen
 
 
 class Bounded(pydantic.BaseModel):
@@ -63,10 +63,50 @@ class ThermCalculator(Frozen, abc.ABC):
         const: Literal["P", "V"] = "P",
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float64]:
-        """Evaluate heat capacity, C_V(T) or C_P(T).
+        """Evaluate heat capacity, Cv(T) or Cp(T).
 
         :param T: Temperature(s)
         :param const: Whether to hold pressure ("P") or volume ("V") constant
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        pass
+
+    def heat_capacity_constant_pressure(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate heat capacity at constant pressure, Cp(T).
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        return self.heat_capacity(T, const="P", units=units)
+
+    def heat_capacity_constant_volume(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate heat capacity at constant volume, Cv(T).
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        return self.heat_capacity(T, const="V", units=units)
+
+    @abc.abstractmethod
+    def entropy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate entropy, S(T).
+
+        :param T: Temperature(s)
         :param units: Unit system
         :return: Function value(s)
         """
@@ -87,12 +127,12 @@ class ThermCalculator(Frozen, abc.ABC):
         pass
 
     @abc.abstractmethod
-    def entropy(
+    def delta_enthalpy(
         self,
         T: ArrayLike,  # noqa: N803
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float64]:
-        """Evaluate entropy, S(T).
+        """Evaluate enthalpy change, dH(T).
 
         :param T: Temperature(s)
         :param units: Unit system
@@ -120,11 +160,11 @@ class Nasa7Calculator(Bounded, ThermCalculator):
         const: Literal["P", "V"] = "P",
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float64]:
-        """Evaluate heat capacity, C_V(T) or C_P(T).
+        """Evaluate heat capacity, Cv(T) or Cp(T).
 
         Formula:
-            C_P(T) = R (a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4)
-            C_V(T) = C_P(T) - R
+            Cp(T) = R (a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4)
+            Cv(T) = Cp(T) - R
 
         :param T: Temperature(s)
         :param const: Whether to hold pressure ("P") or volume ("V") constant
@@ -140,37 +180,6 @@ class Nasa7Calculator(Bounded, ThermCalculator):
         )
         C_ -= R if const == "V" else 0.0
         return C_
-
-    @unit_.manage_units([], D.energy_per_substance)
-    def enthalpy(
-        self,
-        T: ArrayLike,  # noqa: N803
-        units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
-        """Evaluate enthalpy, H(T).
-
-        Formula:
-            H(T) = R (a0 T + (a1/2) T^2 + (a2/3) T^3 + (a3/4) T^4 + (a4/5) T^5 + a5)
-
-        Coefficient a5 is defined to satisfy H(298.15) = heat of formation at 298.15.
-
-        :param T: Temperature(s)
-        :param units: Unit system
-        :return: Function value(s)
-        """
-        self.assert_all_in_bounds(T)
-
-        R = unit_.const.value(C.gas, UNITS)
-        T = numpy.array(T, dtype=numpy.float64)
-        H = R * (
-            self.a0 * T
-            + (self.a1 / 2) * T**2
-            + (self.a2 / 3) * T**3
-            + (self.a3 / 4) * T**4
-            + (self.a4 / 5) * T**5
-            + self.a5
-        )
-        return H
 
     @unit_.manage_units([], D.energy_per_substance / D.temperature)
     def entropy(
@@ -200,3 +209,53 @@ class Nasa7Calculator(Bounded, ThermCalculator):
             + self.a6
         )
         return S
+
+    @unit_.manage_units([], D.energy_per_substance)
+    def enthalpy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate enthalpy, H(T).
+
+        Formula:
+            H(T) = R (a0 T + (a1/2) T^2 + (a2/3) T^3 + (a3/4) T^4 + (a4/5) T^5 + a5)
+
+        Coefficient a5 is defined to satisfy H(298.15) = heat of formation at 298.15.
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        self.assert_all_in_bounds(T)
+
+        R = unit_.const.value(C.gas, UNITS)
+        return R * self.a5 + self.delta_enthalpy(T)
+
+    @unit_.manage_units([], D.energy_per_substance)
+    def delta_enthalpy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Evaluate enthalpy change, dH(T).
+
+        Formula:
+            dH(T) = R (a0 T + (a1/2) T^2 + (a2/3) T^3 + (a3/4) T^4 + (a4/5) T^5)
+
+        :param T: Temperature(s)
+        :param units: Unit system
+        :return: Function value(s)
+        """
+        self.assert_all_in_bounds(T)
+
+        R = unit_.const.value(C.gas, UNITS)
+        T = numpy.array(T, dtype=numpy.float64)
+        dH = R * (
+            self.a0 * T
+            + (self.a1 / 2) * T**2
+            + (self.a2 / 3) * T**3
+            + (self.a3 / 4) * T**4
+            + (self.a4 / 5) * T**5
+        )
+        return dH
