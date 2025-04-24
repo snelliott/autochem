@@ -465,7 +465,7 @@ REAC_SIDE_FALLOFF = pp.SkipTo(FALLOFF ^ pp.StringEnd())(Key.reagents) + pp.Opt(F
     Key.falloff
 )
 #   - Thermo entry formula
-FORM_KEY = pp.OneOrMore(pp.Char(pp.alphas))
+FORM_KEY = pp.Word(pp.alphas, max=2)
 FORM_VAL = ppc.signed_integer
 FORM_ENTRY = pp.Group(FORM_KEY + FORM_VAL)
 FORM_ENTRIES = pp.OneOrMore(FORM_ENTRY)
