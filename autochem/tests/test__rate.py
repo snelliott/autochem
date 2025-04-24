@@ -111,11 +111,15 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     units = data.get("units")
     rxn_str0 = data.get("chemkin")
 
-    # Read
+    # Dictionary serialization/deserialization
     rxn = rate.from_chemkin_string(rxn_str0, units=units)
     rxn_ = rate.Reaction.model_validate(rxn.model_dump())
+    if check_roundtrip:
+        assert rxn == rxn_, f"\n   {rxn}\n!= {rxn_}"
 
-    # Check roundtrip
+    # Chemkin serialization/deserialization
+    rxn_str = rate.chemkin_string(rxn)
+    rxn_ = rate.from_chemkin_string(rxn_str)
     if check_roundtrip:
         assert rxn == rxn_, f"\n   {rxn}\n!= {rxn_}"
 
@@ -145,15 +149,6 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     assert numpy.shape(kT0P1) == (3,), kT0P1
     kT1P1 = rxn.rate(T1, P1)
     assert numpy.shape(kT1P1) == (4, 3), kT1P1
-
-    # Write
-    rxn_str = rate.chemkin_string(rxn)
-    print(rxn_str)
-    rxn_ = rate.from_chemkin_string(rxn_str)
-
-    # Check roundtrip
-    if check_roundtrip:
-        assert rxn == rxn_, f"\n   {rxn}\n!= {rxn_}"
 
     # Read with units and plot against another rate
     comp_units = SIMPLE.get("units")

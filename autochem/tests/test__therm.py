@@ -20,23 +20,28 @@ CH2O3(82)               H   2C   1O   3     G   100.000  5000.000  956.80      1
     ],
 )
 def test__from_chemkin_string(name, spc_str0):
+    # Dictionary serialization/deserialization
     spc = therm.from_chemkin_string(spc_str0)
     spc_ = therm.Species.model_validate(spc.model_dump())
     assert spc == spc_, f"\n   {spc}\n!= {spc_}"
 
+    # Chemkin serialization/deserialization
     spc_str = therm.chemkin_string(spc)
-    print(spc_str)
     spc_ = therm.from_chemkin_string(spc_str)
     assert spc == spc_, f"\n   {spc}\n!= {spc_}"
 
-    # Evaluate
-    print("Evaluation not yet tested")
-
     # Scale
-    print("Scaling not yet implemented")
+    spc_times_2 = spc * 2
+    spc_divided_by_2 = spc / 2
 
     # Plot
-    print("Plotting not yet implemented")
+    therm.display(spc)
+    therm.display(
+        spc,
+        label="original",
+        others=[spc_times_2, spc_divided_by_2],
+        others_labels=["doubled", "halved"],
+    )
 
 
 if __name__ == "__main__":
