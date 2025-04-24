@@ -5,11 +5,8 @@ Andreas V. Copan, Kevin B. Moore III, Sarah N. Elliott, and Stephen J. Klippenst
 
 ## Description
 
-This repository is a clean-up version of
-[AutoChem](https://github.com/avcopan/autochem), which implements the
-cheminformatics routines used by the AutoMech project.
-
-It consists of two primary modules:
+This repository implements the cheminformatics routines used by the AutoMech project.
+It consists of two independent modules:
  - AutoChem: A library for manipulating and interconverting kinetic and thermochemical data formats.
  - AutoMol: A library for manipulating and interconverting molecular representations.
 
@@ -31,12 +28,11 @@ pip install .
 
 This is a prototype of a planned revision of AutoMech's code for handling
 kinetic and thermochemical data.
-So far, it only implements handling of rate constant data, which can be found in `autochem.rate`.
 
-### Rates
+### Kinetic Data
 
 *Data storage.*
-One can generate a new rate constant object from a Chemkin string as follows.
+One can generate a reaction rate object from a Chemkin string as follows.
 ```
 >>> import autochem as ac
 >>>
@@ -69,18 +65,18 @@ One can generate a new rate constant object from a Chemkin string as follows.
     },
 }
 ```
-This `Reaction` object is a Pydantic model that includes all of the information
-needed to add this rate to a kinetic mechanism for simulation, including the
-reactants and products, whether or not the reaction is reversible, and the rate
-constant.
-The `rate` attribute stores either raw rate constant data or a rate
-constant parametrization, using one of several specific `RateConstant` subtypes.
-In this case, it stores a `PlogRateConstant`.
+This `Reaction` object is a Pydantic model that includes all of the information needed
+to add this reaction rate to a kinetic mechanism for simulation.
+The `rate` attribute can be either raw rate constant values, $k(T,P)$ stored in a `Rate`
+object or a kinetic parametrization, stored in one of several `RateFit` subtypes.
+In this case, it stores a `PlogRateFit`.
 ```
 >>> rxn.rate
 PlogRateFit(order=2, efficiencies={}, ..., type='plog')
 ```
-The dictionary above can be used to instantiate a new object.
+Pydantic makes serialization and deserialization very easy.
+The `rxn_dct` dictionary above can be used to instantiate a new object as follows,
+automatically instantiating the correct `RateFit` subtype.
 ```
 >>> ac.rate.Reaction.model_validate(rxn_dct)
 Reaction(reactants=['C2H4', 'OH'], products=['PC2H4OH'], ..., rate=PlogRateFit(...))
@@ -104,8 +100,9 @@ Rate objects can also be multiplied by scalars.
 }
 ```
 
-*Plotting.* One can generate Arrhenius plots of rate constants using the
-function `autochem.rate.display`.
+*Plotting.*
+One can generate Arrhenius plots of rate constants using the function
+`autochem.rate.display`.
 ```
 >>> ac.rate.display(rxn)
 ```
@@ -156,6 +153,74 @@ For example, the activation energies might be given in kcal.
 <dictionary from above>
 ```
 Under the hood, the [Pint](https://pint.readthedocs.io/) library is used for unit handling.
+
+### Thermodynamic Data
+
+*Data storage.*
+One can generate a species thermodynamics object from a Chemkin string as follows.
+```
+>>> import autochem as ac
+>>>
+>>> spc = ac.therm.from_chemkin_string(
+>>>     """
+>>>     CH2O3(82)               H   2C   1O   3     G   100.000  5000.000  956.75      1
+>>>      1.18953474E+01 1.71602859E-03-1.47932622E-07 9.25919346E-11-1.38613705E-14    2
+>>>     -7.81027323E+04-3.82545468E+01 2.98116506E+00 1.14388942E-02 2.77945768E-05    3
+>>>     -4.94698411E-08 2.07998858E-11-7.51362668E+04 1.09457245E+01                   4
+>>>     """
+>>> )
+>>> spc_dct = spc.model_dump()
+>>> spc_dct
+{
+    "name": "CH2O3(82)",
+    "therm": {
+        "T_min": 100.0,
+        "T_max": 5000.0,
+        "formula": {"H": 2, "C": 1, "O": 3},
+        "charge": 0,
+        "T_mid": 956.8,
+        "coeffs_low": [
+            2.98116506,
+            0.0114388942,
+            2.77945768e-05,
+            -4.94698411e-08,
+            2.07998858e-11,
+            -75136.2668,
+            10.9457245,
+        ],
+        "coeffs_high": [
+            11.8953474,
+            0.00171602859,
+            -1.47932622e-07,
+            9.25919346e-11,
+            -1.38613705e-14,
+            -78102.7323,
+            -38.2545468,
+        ],
+        "type": "nasa7",
+    },
+}
+```
+As for reactions above, this `Species` object is a Pydantic model that includes all of
+the information needed to add this species thermodynamics to a kinetic mechanism for
+simulation.
+The `therm` attribute can be either raw partition function values, $ln(Q(T))$, stored in
+a `Therm` object or a thermodynamic parametrization, stored in one of several `ThermFit`
+subtyptes.
+In this case, it stores a `Nasa7ThermFit`.
+```
+>>> spc.therm
+Nasa7ThermFit(T_min=100.0, T_max=5000.0, ..., type='nasa7')
+```
+Again, through Pydantic it is very easy to deserialize the `spc_dct` dictionary above.
+```
+>>> ac.therm.Species.model_validate(spc_dct)
+Species(name='CH2O3(82)', therm=Nasa7ThermFit(...))
+```
+
+*Plotting.*
+One can generate plots of thermodynamic functions using the function
+`autochem.therm.display`.
 
 ## AutoMol
 
