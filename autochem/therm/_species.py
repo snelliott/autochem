@@ -1,25 +1,32 @@
 """Thermodynamic data."""
 
 import datetime
+from collections.abc import Sequence
+from typing import ClassVar, Literal
 
+import altair
 import pyparsing as pp
 
 from ..unit_ import UnitsData
 from ..util import FormulaData, chemkin, form, pac99
-from ..util.type_ import Frozen
+from ..util.type_ import Scalable, Scalers
 from . import data
 from .data import Nasa7ThermFit, Therm, Therm_
 
 
 # TODO: Make it so that the `therm` type can be indicated as `Species[Therm]` or
 # `Species[ThermFit]`, like with lists
-class Species(Frozen):
+class Species(Scalable):
     """A species with thermodynamic data."""
 
     name: str
     therm: Therm_
 
+    # Private attributes
+    _scalers: ClassVar[Scalers] = {"therm": (lambda c, x: c * x)}
 
+
+# Conversions
 def from_chemkin_string(spc_str: str) -> Species:
     """Read species thermo from Chemkin string.
 
@@ -157,6 +164,45 @@ def pac99_input_string(
     )
 
 
+# Display
+def display(
+    spc: Species,
+    props: Sequence[Literal["Cv", "Cp", "S", "H", "dH"]] = ("Cp", "S", "H"),
+    others: Sequence[Species] = (),
+    others_labels: Sequence[str] = (),
+    T_range: tuple[float, float] = (200, 3000),  # noqa: N803
+    units: UnitsData | None = None,
+    label: str = "This work",
+    x_label: str = "𝑇",  # noqa: RUF001
+    y_labels: Sequence[str | None] | None = None,
+    horizontal: bool = False,
+) -> altair.Chart:
+    """Display as an Arrhenius plot, optionally comparing to other rates.
+
+    :param spc: Species thermo
+    :param props: Thermodynamic properties to display
+    :param others: Other reaction rates for comparison
+    :param others_labels: Labels for other reaction rates
+    :param t_range: Temperature range
+    :param p: Pressure
+    :param units: Units
+    :param x_label: X-axis label
+    :param y_label: Y-axis label
+    :return: Chart
+    """
+    return spc.therm.display(
+        others=[o.therm for o in others],
+        others_labels=others_labels,
+        T_range=T_range,
+        units=units,
+        label=label,
+        x_label=x_label,
+        y_labels=y_labels,
+        horizontal=horizontal,
+    )
+
+
+# Helpers
 def pac99_input_line(
     key: str | None = None,
     label1: str | None = None,

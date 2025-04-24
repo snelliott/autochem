@@ -17,21 +17,10 @@ from pydantic_core import core_schema
 
 from .. import unit_
 from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, const
-from ..util import chemkin
+from ..util import chemkin, plot
 from ..util.type_ import Frozen, NDArray_, Scalable, Scalers, SubclassTyped
 from . import blend
 from .blend import BlendingFunction_
-
-COLOR_SEQUENCE = [
-    "#0066ff",  # blue
-    "#ff0000",  # red
-    "#1ab73a",  # green
-    "#ef7810",  # orange
-    "#8533ff",  # purple
-    "#d0009a",  # pink
-    "#ffcd00",  # yellow
-    "#916e6e",  # brown
-]
 
 
 class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
@@ -93,19 +82,19 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
     def display(
         self,
         others: "Sequence[BaseRate]" = (),
-        labels: Sequence[str] = (),
-        T_range: tuple[float, float] = (400.0, 1250.0),  # noqa: N803
+        others_labels: Sequence[str] = (),
+        T_range: tuple[float, float] = (400, 1250),  # noqa: N803
         P: float = 1,  # noqa: N803
         units: UnitsData | None = None,
         label: str = "This work",
-        x_label: str = "1000/T",
-        y_label: str = "k",
+        x_label: str = "1000/𝑇",  # noqa: RUF001
+        y_label: str = "𝑘",
     ) -> altair.Chart:
         """Display as an Arrhenius plot.
 
         :param others: Other rate constants
         :param others_labels: Labels for other rate constants
-        :param t_range: Temperature range
+        :param T_range: Temperature range
         :param P: Pressure
         :param units: Units
         :param x_label: X-axis label
@@ -121,15 +110,15 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         x_label = f"{x_label} ({x_unit})"
         y_label = f"{y_label} ({y_unit})"
 
-        # Gather rate constants and labels
-        assert len(others) == len(labels), f"{labels} !~ {others}"
-        all_ks = [self, *others]
-        all_labels = [label, *labels]
-        all_colors = COLOR_SEQUENCE[: len(all_labels)]
+        # Gather objects and labels
+        assert len(others) == len(others_labels), f"{others_labels} !~ {others}"
+        all_rates = [self, *others]
+        all_labels = [label, *others_labels]
+        all_colors = plot.COLORS[: len(all_labels)]
 
-        # Gether data from functons
+        # Gather data from functons
         T = numpy.linspace(*T_range, num=500)
-        data_dct = {lab: k(T, P) for lab, k in zip(all_labels, all_ks, strict=True)}
+        data_dct = {L: f(T, P) for L, f in zip(all_labels, all_rates, strict=True)}
         data = pandas.DataFrame({"x": numpy.divide(1000, T), **data_dct})
 
         # Determine exponent range
