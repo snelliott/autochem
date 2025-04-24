@@ -50,7 +50,7 @@ class BaseTherm(ThermCalculator, UnitManager, Frozen, Scalable, SubclassTyped, a
         T_range: tuple[float, float] = (200, 3000),  # noqa: N803
         units: UnitsData | None = None,
         label: str = "This work",
-        x_label: str = "T",
+        x_label: str = "𝑇",  # noqa: RUF001
         y_labels: Sequence[str | None] | None = None,
         horizontal: bool = False,
     ) -> altair.Chart:

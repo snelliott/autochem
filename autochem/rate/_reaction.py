@@ -186,8 +186,8 @@ def display(
     P: float = 1,  # noqa: N803
     units: UnitsData | None = None,
     label: str = "This work",
-    x_label: str = "1000/T",
-    y_label: str = "k",
+    x_label: str = "1000/𝑇",  # noqa: RUF001
+    y_label: str = "𝑘",
 ) -> altair.Chart:
     """Display as an Arrhenius plot, optionally comparing to other rates.
 
