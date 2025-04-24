@@ -18,8 +18,6 @@ from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
 from .func import Bounded, Nasa7Calculator, ThermCalculator
 
 
-# TODO: Add `ThermCalculator` ABC to `BaseTherm` to ensure that all therm objects act as
-# standardized therm calculators
 class BaseTherm(ThermCalculator, UnitManager, Frozen, SubclassTyped, abc.ABC):
     """Abstract base class for thermodynamic data."""
 
@@ -34,7 +32,7 @@ class Therm(BaseTherm):
     :param Z0s: Logs of one-particle partition function per volume, ln(Q_1' [cm^-3])
     :param Z1s: First temperature derivatives of Z0, d(ln(Q_1'))/dT [K^-1]
     :param Z2s: Second temperature derivatives of Z0, d^2(ln(Q_1'))/dT^2 [K^-2]
-    :param Hf: Enthalpy of formation at 0 K [cal/mol]
+    :param Hf: Enthalpy of formation at 298.15 K [cal/mol]
     """
 
     Ts: list[float]
@@ -72,23 +70,32 @@ class Therm(BaseTherm):
         self,
         formula: dict[str, int],
         Hf: float | None = None,  # noqa: N803
-        Tf: float = 0,  # noqa: N803
+        Tf: float = 298.15,  # noqa: N803
         **kwargs,
     ):
         """Initialize, handling enthalpy of formation.
 
-        :param Hf: Enthalpy of formation at 0 K or 298 K
-        :param Tf: Reference temperature for enthalpy of formation, 0 K or 298 K
+        :param Hf: Enthalpy of formation at 0 K or 298.15 K
+        :param Tf: Reference temperature for enthalpy of formation, 0 K or 298.15 K
         """
         super().__init__(formula=formula, Hf=Hf, **kwargs)
 
-        if int(Tf) == 298:
+        if int(Tf) == 0:
             frozen = self.model_config["frozen"]
             self.model_config["frozen"] = False
-            self.Hf -= self.delta_enthalpy_of_formation_room_temperature()
+            self.Hf += self.delta_enthalpy(
+                T=298, method="nearest"
+            ) - elemental_delta_enthalpy_room_temperature(self.formula)
             self.model_config["frozen"] = frozen
-        elif not int(Tf) == 0:
+        elif not int(Tf) == 298:
             raise ValueError(f"Invalid reference temperature Tf = {Tf}")
+
+    # Properties
+    @unit_.manage_units([], D.energy_per_substance)
+    def enthalpy_of_formation(self, units: UnitsData | None = None) -> float:
+        """Get enthalpy of formation at 298.15 K."""
+        assert self.Hf is not None, "Enthalpy of formation not set"
+        return self.Hf
 
     @property
     def data_set(self) -> xarray.Dataset:
@@ -99,7 +106,7 @@ class Therm(BaseTherm):
             "Z0": self.Z0s,
             "Z1": self.Z1s,
             "Z2": self.Z2s,
-            "H": self.delta_enthalpy_data(),
+            "dH": self.delta_enthalpy_data(),
             "S": self.entropy_data(),
             "Cv": self.heat_capacity_data(const="V"),
             "Cp": self.heat_capacity_data(const="P"),
@@ -109,6 +116,7 @@ class Therm(BaseTherm):
             coords={coord_key: coord_vals},
         )
 
+    # Thermodynamic function data points
     @unit_.manage_units([], D.energy_per_substance)
     def delta_enthalpy_data(
         self, units: UnitsData | None = None
@@ -120,8 +128,6 @@ class Therm(BaseTherm):
             dH = R (T^2 d(ln(Q_1'))/dT + T)
                = R (T^2 Z_1 + T)
 
-        :param T: Temperature for evaluation
-        :param H0: Reference enthalpy
         :param units: Units
         :return: Enthalpy
         """
@@ -133,53 +139,27 @@ class Therm(BaseTherm):
         return Hs
 
     @unit_.manage_units([], D.energy_per_substance)
-    def delta_enthalpy(
-        self,
-        T: ArrayLike,  # noqa: N803
-        method: str = "nearest",
-        units: UnitsData | None = None,
+    def enthalpy_data(
+        self, units: UnitsData | None = None
     ) -> NDArray[numpy.float64]:
-        """Calculate enthalpy.
+        """Calculate enthalpy data.
 
         Formula:
 
-            dH = R (T^2 d(ln(Q_1'))/dT + T)
-               = R (T^2 Z_1 + T)
+            H(T) = H0 + dH(T)
+            H0 = Hf(298.15 K) - dH(298.15 K)
 
-        :param T: Temperature for evaluation
-        :param method: Xarray data selection method
         :param units: Units
         :return: Enthalpy
         """
-        return self.data_set["H"].sel(T=T, method=method).data
-
-    @unit_.manage_units([], D.energy_per_substance / D.temperature)
-    def heat_capacity_data(
-        self,
-        const: Literal["P", "V"] = "P",
-        units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
-        """Calculate the heat capacity at constant volume or pressure.
-
-        Formula:
-
-            C_v = R (2 T d(ln(Q_1'))/dT + T^2 d^2(ln(Q_1'))/dT^2)
-                = R (2 T Z_1 + T^2 Z_2)
-            C_p = C_v + R = R (1 + 2 T Z_1 + T^2 Z_2)
-
-        :param units: Units
-        :param const: Whether to hold pressure ("P") or volume ("V") constant
-        :return: Heat capacity
-        """
         # Evaluate
         R = unit_.const.value(C.gas, UNITS)
-        T = numpy.array(self.Ts, dtype=numpy.float64)
-        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
-        Z2 = numpy.array(self.Z2s, dtype=numpy.float64)
-        C_ = R * (1 + 2 * T * Z1 + T**2 * Z2)
-        C_ -= R if const == "V" else 0.0
-        return C_
+        Ts = numpy.array(self.Ts, dtype=numpy.float64)
+        Z1s = numpy.array(self.Z1s, dtype=numpy.float64)
+        Hs = R * (Ts**2 * Z1s + Ts)
+        return Hs
 
+    # TODO: Fix unit manager to handle pressure keyword input
     @unit_.manage_units([], D.energy_per_substance / D.temperature)
     def entropy_data(
         self,
@@ -201,6 +181,7 @@ class Therm(BaseTherm):
 
         This must be converted to internal units.
 
+        :param P: Pressure
         :param units: Units
         :return: Entropy
         """
@@ -218,21 +199,57 @@ class Therm(BaseTherm):
         T = numpy.array(self.Ts, dtype=numpy.float64)
         Z0 = numpy.array(self.Z0s, dtype=numpy.float64)
         Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
-        entropy = R * (T * Z1 + Z0 - numpy.log(c) + 1)
-        return entropy
+        S = R * (T * Z1 + Z0 - numpy.log(c) + 1)
+        return S
 
-    def delta_enthalpy_of_formation_room_temperature(self):
-        """Calculate enthalpy difference from zero to room temperature."""
-        return self.delta_enthalpy(
-            T=298, method="nearest"
-        ) - elemental_delta_enthalpy_room_temperature(self.formula)
+    @unit_.manage_units([], D.energy_per_substance / D.temperature)
+    def heat_capacity_data(
+        self,
+        const: Literal["P", "V"] = "P",
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Calculate the heat capacity at constant volume or pressure.
 
+        Formula:
+
+            C_v = R (2 T d(ln(Q_1'))/dT + T^2 d^2(ln(Q_1'))/dT^2)
+                = R (2 T Z_1 + T^2 Z_2)
+            C_p = C_v + R = R (1 + 2 T Z_1 + T^2 Z_2)
+
+        :param const: Whether to hold pressure ("P") or volume ("V") constant
+        :param units: Units
+        :return: Heat capacity
+        """
+        # Evaluate
+        R = unit_.const.value(C.gas, UNITS)
+        T = numpy.array(self.Ts, dtype=numpy.float64)
+        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
+        Z2 = numpy.array(self.Z2s, dtype=numpy.float64)
+        C_ = R * (1 + 2 * T * Z1 + T**2 * Z2)
+        C_ -= R if const == "V" else 0.0
+        return C_
+
+    # Thermodynamic function calculators
     @unit_.manage_units([], D.energy_per_substance)
-    def enthalpy_of_formation_room_temperature(
-        self, units: UnitsData | None = None
-    ) -> float:
-        """Calculate enthalpy of formation at room temperature."""
-        return self.Hf + self.delta_enthalpy_of_formation_room_temperature()
+    def delta_enthalpy(
+        self,
+        T: ArrayLike,  # noqa: N803
+        method: str = "nearest",
+        units: UnitsData | None = None,
+    ) -> NDArray[numpy.float64]:
+        """Calculate enthalpy.
+
+        Formula:
+
+            dH = R (T^2 d(ln(Q_1'))/dT + T)
+               = R (T^2 Z_1 + T)
+
+        :param T: Temperature for evaluation
+        :param method: Xarray data selection method
+        :param units: Units
+        :return: Enthalpy
+        """
+        return self.data_set["dH"].sel(T=T, method=method).data
 
     def heat_capacity(
         self,

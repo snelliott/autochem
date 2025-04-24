@@ -125,7 +125,7 @@ def pac99_input_string(
     """
     assert isinstance(spc.therm, Therm)
     fml_str = form.string(spc.therm.formula, ones=True)
-    Hf298 = spc.therm.enthalpy_of_formation_room_temperature(units={"energy": "J"})
+    Hf298 = spc.therm.enthalpy_of_formation(units={"energy": "J"})
     Ts = spc.therm.Ts
     # Enthalpy units are set to kJ by "KJOULE" keyword below
     dH298 = spc.therm.delta_enthalpy(T=298, method="nearest", units={"energy": "kJ"})
