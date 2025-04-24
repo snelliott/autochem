@@ -111,7 +111,7 @@ One can generate Arrhenius plots of rate constants using the function
 ```
 ac.rate.display(rxn)
 ```
-<img src=".github/plog-rate.svg" height="360">
+<img src=".github/plog-rate.svg" width="400">
 
 For convenience, one can also plot multiple rates against each other with a legend.
 ```
@@ -125,7 +125,7 @@ ac.rate.display(
     others_labels=["doubled", "halved"],
 )
 ```
-<img src=".github/plog-rate-comparison.svg" height="360">
+<img src=".github/plog-rate-comparison.svg" width="400">
 
 *Units.* Above, we assumed that the rate constant data matches the internal units used by AutoChem, which are as follows (see `autochem.unit_.system`):
  - time: s
@@ -230,6 +230,19 @@ ac.therm.Species.model_validate(spc_dct)
 *Plotting.*
 One can generate plots of thermodynamic functions using the function
 `autochem.therm.display`.
+By default, this plots the constant-pressure heat capacity, entropy, and enthalpy.
+```
+spc_times_2 = spc * 2
+spc_divided_by_2 = spc / 2
+
+ac.therm.display(
+    spc,
+    label="original",
+    others=[spc_times_2, spc_divided_by_2],
+    others_labels=["doubled", "halved"],
+)
+```
+<img src=".github/nasa-therm-comparison.svg" width="400">
 
 ## AutoMol
 
