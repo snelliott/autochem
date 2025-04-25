@@ -5,9 +5,11 @@ from collections.abc import Sequence
 from typing import ClassVar, Literal
 
 import altair
+import numpy
 import pyparsing as pp
 
-from ..unit_ import UnitsData
+from .. import unit_
+from ..unit_ import UNITS, C, UnitsData
 from ..util import FormulaData, chemkin, form, pac99
 from ..util.type_ import Scalable, Scalers
 from . import data
@@ -162,6 +164,43 @@ def pac99_input_string(
             pac99_input_line("FINISH"),
         ]
     )
+
+
+def fit(
+    spc: Species,
+    T_min: float | None = None,  # noqa: N803
+    T_mid: float = 1000,  # noqa: N803
+    T_max: float | None = None,  # noqa: N803
+    type_: Literal["nasa7"] = "nasa7",
+) -> Species:
+    """Fit data to therm fit object.
+
+    :param spc: Species thermo with thermo data (not a fit)
+    :return: Species thermo with fitted data
+    """
+    # assert isinstance(spc.therm, Therm)
+    therm: Therm = spc.therm
+    T = therm.temperature_data()
+    Cp = therm.heat_capacity_data(const="P")
+    S = therm.entropy_data(P=1, units={"pressure": "bar"})
+    H = therm.enthalpy_data()
+
+    T_min = T_min or numpy.min(T)
+    T_max = T_max or numpy.max(T)
+
+    spc_fit = spc.model_copy()
+    spc_fit.therm = Nasa7ThermFit.fit(
+        T=T,
+        Cp=Cp,
+        S=S,
+        H=H,
+        formula=therm.formula,
+        charge=therm.charge,
+        T_min=T_min,
+        T_mid=T_mid,
+        T_max=T_max,
+    )
+    return spc_fit
 
 
 # Display

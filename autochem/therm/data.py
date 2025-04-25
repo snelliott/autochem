@@ -197,6 +197,16 @@ class Therm(BaseTherm):
         "Z2s": D.temperature**-2,
     }
 
+    @property
+    def T_min(self) -> float:  # noqa: N802
+        """Get minimum temperature."""
+        return min(self.Ts)
+
+    @property
+    def T_max(self) -> float:  # noqa: N802
+        """Get maximum temperature."""
+        return max(self.Ts)
+
     @pydantic.model_validator(mode="after")
     def sort_by_temperature(self):
         """Sort arrays by temperature."""
@@ -263,11 +273,13 @@ class Therm(BaseTherm):
         )
 
     # Thermodynamic function data points
+    def temperature_data(self) -> NDArray[numpy.float64]:
+        """Get temperature data."""
+        return numpy.array(self.Ts, dtype=numpy.float64)
+
     @unit_.manage_units([], D.energy_per_substance / D.temperature)
     def heat_capacity_data(
-        self,
-        const: Literal["P", "V"] = "P",
-        units: UnitsData | None = None,
+        self, const: Literal["P", "V"] = "P", units: UnitsData | None = None
     ) -> NDArray[numpy.float64]:
         """Calculate the heat capacity at constant volume or pressure.
 
@@ -344,7 +356,8 @@ class Therm(BaseTherm):
         :param units: Units
         :return: Enthalpy
         """
-        return self.Hf + self.delta_enthalpy_data() - self.delta_enthalpy(T=298.15)
+        H = self.Hf + self.delta_enthalpy_data() - self.delta_enthalpy(T=298.15)
+        return H
 
     @unit_.manage_units([], D.energy_per_substance)
     def delta_enthalpy_data(
@@ -364,8 +377,8 @@ class Therm(BaseTherm):
         R = unit_.const.value(C.gas, UNITS)
         Ts = numpy.array(self.Ts, dtype=numpy.float64)
         Z1s = numpy.array(self.Z1s, dtype=numpy.float64)
-        Hs = R * (Ts**2 * Z1s + Ts)
-        return Hs
+        dH = R * (Ts**2 * Z1s + Ts)
+        return dH
 
     # Thermodynamic function calculators
     def heat_capacity(
@@ -449,7 +462,7 @@ class ThermFit(BaseTherm, Bounded, abc.ABC):
     pass
 
 
-class Nasa7ThermFit(ThermFit, ThermCalculator):
+class Nasa7ThermFit(ThermFit):
     """Fitted thermodynamic data."""
 
     T_mid: float
@@ -468,16 +481,11 @@ class Nasa7ThermFit(ThermFit, ThermCalculator):
 
         :return: Pair of calculators
         """
-        coeff_keys = ("a0", "a1", "a2", "a3", "a4", "a5", "a6")
-        calc_low = Nasa7Calculator(
-            T_min=self.T_min,
-            T_max=self.T_mid,
-            **dict(zip(coeff_keys, self.coeffs_low, strict=True)),
+        calc_low = Nasa7Calculator.from_coefficients(
+            T_min=self.T_min, T_max=self.T_mid, coeffs=self.coeffs_low
         )
-        calc_high = Nasa7Calculator(
-            T_min=self.T_mid,
-            T_max=self.T_max,
-            **dict(zip(coeff_keys, self.coeffs_high, strict=True)),
+        calc_high = Nasa7Calculator.from_coefficients(
+            T_min=self.T_mid, T_max=self.T_max, coeffs=self.coeffs_high
         )
         return [calc_low, calc_high]
 
@@ -557,6 +565,71 @@ class Nasa7ThermFit(ThermFit, ThermCalculator):
         conds = self.piecewise_conditions(T)
         funcs = [calc.delta_enthalpy for calc in self.piecewise_calculators()]
         return numpy.piecewise(T, conds, funcs)
+
+    @classmethod
+    def fit(
+        cls,
+        T: ArrayLike,  # noqa: N803
+        Cp: ArrayLike,  # noqa: N803
+        S: ArrayLike,  # noqa: N803
+        H: ArrayLike,  # noqa: N803
+        formula: FormulaData,
+        charge: int = 0,
+        T_mid: float = 1000,  # noqa: N803
+        T_min: float | None = None,  # noqa: N803
+        T_max: float | None = None,  # noqa: N803
+    ) -> "Nasa7ThermFit":
+        """Fit data to Nasa-7 therm fit object.
+
+        Construct a matrix mapping (unknown) polynomial coefficients to property values.
+
+            Cp/R = a1 + a2 T + a3 T^2 + a4 T^3 + a5 T^4
+            S/R = a1 ln(T) + a2 T + (a3/2) T^2 + (a4/3) T^3 + (a5/4) T^4 + a7
+            H/R = a1 T + (a2/2) T^2 + (a3/3) T^3 + (a4/4) T^4 + (a5/5) T^5 + a6
+
+
+        The matrix is solved using least squares to find the polynomial coefficients:
+
+            [     1,    T1,      T1^2,      T1^3,      T1^4, 0, 0]        [Cp(T1)/R]
+            [     1,    T2,      T2^2,      T2^3,      T2^4, 0, 0] [a1]   [Cp(T2)/R]
+            [   ...,   ...,       ...,       ...,       ..., 0, 0] [a2]   [   ...  ]
+            [ln(T1),    T1, (1/2)T1^2, (1/3)T1^3, (1/4)T1^4, 0, 1] [a3]   [ S(T1)/R]
+            [ln(T2),    T2, (1/2)T2^2, (1/3)T2^3, (1/4)T2^4, 0, 1] [a4] = [ S(T2)/R]
+            [   ...,   ...,       ...,       ...,       ..., 0, 1] [a5]   [   ...  ]
+            [    T1,  T1^2, (1/3)T1^3, (1/4)T1^4, (1/5)T1^5, 1, 0] [a6]   [ H(T1)/R]
+            [    T2,  T2^2, (1/3)T2^3, (1/4)T2^4, (1/5)T2^5, 1, 0] [a7]   [ H(T2)/R]
+            [   ...,   ...,       ...,       ...,       ..., 1, 0]        [   ...  ]
+
+            Dimension: 3*n_T x 7    (n_T = number of temperature values)
+
+        :param T: Temperatures
+        :param Cp: Constant-pressure heat capacities
+        :param S: Entropies
+        :param H: Enthalpies
+        :param T_mid: Middle temperature
+        :param T_min: Minimum temperature
+        :param T_max: Maximum temperature
+        :return: Fitted object
+        """
+        T = numpy.array(T, dtype=numpy.float64)
+        Cp = numpy.array(Cp, dtype=numpy.float64)
+        S = numpy.array(S, dtype=numpy.float64)
+        H = numpy.array(H, dtype=numpy.float64)
+        T_min = T_min or numpy.min(T)
+        T_max = T_max or numpy.max(T)
+        low = (T >= T_min) & (T <= T_mid)
+        high = (T >= T_mid) & (T <= T_max)
+        calc_low = Nasa7Calculator.fit(T=T[low], Cp=Cp[low], S=S[low], H=H[low])
+        calc_high = Nasa7Calculator.fit(T=T[high], Cp=Cp[high], S=S[high], H=H[high])
+        return cls(
+            formula=formula,
+            charge=charge,
+            T_min=calc_low.T_min,
+            T_mid=T_mid,
+            T_max=calc_high.T_max,
+            coeffs_low=calc_low.coefficients,
+            coeffs_high=calc_high.coefficients,
+        )
 
 
 Therm_ = Annotated[
