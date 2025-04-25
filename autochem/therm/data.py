@@ -17,7 +17,7 @@ from pydantic_core import core_schema
 from .. import unit_
 from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, dim
 from ..util import FormulaData, chemkin, form, pac99, plot
-from ..util.type_ import Frozen, Scalable, Scalers, SubclassTyped
+from ..util.type_ import Formula_, Frozen, Scalable, Scalers, SubclassTyped
 from .func import Bounded, Nasa7Calculator, ThermCalculator
 
 
@@ -39,7 +39,7 @@ class Key:
 class BaseTherm(ThermCalculator, UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
     """Abstract base class for thermodynamic data."""
 
-    formula: dict[str, int]
+    formula: Formula_
     charge: int = 0
 
     def display(

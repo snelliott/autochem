@@ -10,6 +10,9 @@ import pydantic
 from numpy.typing import ArrayLike, NDArray
 from pydantic_core import core_schema
 
+from . import form
+from .form import Formula
+
 # Type variables
 T = TypeVar("T")
 S = TypeVar("S", bound="SubclassTyped")
@@ -161,6 +164,14 @@ NDArray_ = Annotated[
     pydantic.PlainSerializer(lambda x: numpy.array(x).tolist()),
     pydantic.GetPydanticSchema(
         lambda _, handler: core_schema.with_default_schema(handler(list[float]))
+    ),
+]
+
+Formula_ = Annotated[
+    Formula,
+    pydantic.BeforeValidator(form.normalize_input),
+    pydantic.GetPydanticSchema(
+        lambda _, handler: core_schema.with_default_schema(handler(Formula))
     ),
 ]
 
