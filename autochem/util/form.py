@@ -26,7 +26,7 @@ def normalize_input(fml: FormulaData) -> Formula:
         for sym, count in fml_lst:
             fml[sym.title()] += int(count)
 
-    fml = {k.title(): int(v) for k, v in fml.items() if v != 0}
+    fml = {k.title(): int(v) for k, v in fml.items() if v}
     return fml
 
 
