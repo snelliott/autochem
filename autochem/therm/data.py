@@ -175,47 +175,47 @@ class BaseTherm(ThermCalculator, UnitManager, Frozen, Scalable, SubclassTyped, a
 class Therm(BaseTherm):
     """Raw thermodynamic data.
 
-    :param Ts: Temperatures (K)
-    :param Z0s: Logs of one-particle partition function per volume, ln(Q_1' [cm^-3])
-    :param Z1s: First temperature derivatives of Z0, d(ln(Q_1'))/dT [K^-1]
-    :param Z2s: Second temperature derivatives of Z0, d^2(ln(Q_1'))/dT^2 [K^-2]
+    :param T: Temperatures (K)
+    :param Z0: Logs of one-particle partition function per volume, ln(Q_1' [cm^-3])
+    :param Z1: First temperature derivatives of Z0, d(ln(Q_1'))/dT [K^-1]
+    :param Z2: Second temperature derivatives of Z0, d^2(ln(Q_1'))/dT^2 [K^-2]
     :param Hf: Enthalpy of formation at 298.15 K [cal/mol]
     """
 
-    Ts: list[float]
-    Z0s: list[float]
-    Z1s: list[float]
-    Z2s: list[float]
+    T: list[float]
+    Z0: list[float]
+    Z1: list[float]
+    Z2: list[float]
     Hf: float | None = None
 
     # Private attributes
     type_: ClassVar[str] = "data"
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "Ts": D.temperature,
-        "Z0s": dim.log(D.volume),
-        "Z1s": D.temperature**-1,
-        "Z2s": D.temperature**-2,
+        "T": D.temperature,
+        "Z0": dim.log(D.volume),
+        "Z1": D.temperature**-1,
+        "Z2": D.temperature**-2,
     }
 
     @property
     def T_min(self) -> float:  # noqa: N802
         """Get minimum temperature."""
-        return min(self.Ts)
+        return min(self.T)
 
     @property
     def T_max(self) -> float:  # noqa: N802
         """Get maximum temperature."""
-        return max(self.Ts)
+        return max(self.T)
 
     @pydantic.model_validator(mode="after")
     def sort_by_temperature(self):
         """Sort arrays by temperature."""
         frozen = self.model_config["frozen"]
         self.model_config["frozen"] = False
-        self.Ts, self.Z0s, self.Z1s, self.Z2s = map(
+        self.T, self.Z0, self.Z1, self.Z2 = map(
             list,
             zip(
-                *sorted(zip(self.Ts, self.Z0s, self.Z1s, self.Z2s, strict=True)),
+                *sorted(zip(self.T, self.Z0, self.Z1, self.Z2, strict=True)),
                 strict=True,
             ),
         )
@@ -257,11 +257,11 @@ class Therm(BaseTherm):
     def data_set(self) -> xarray.Dataset:
         """Access data as an xarray Dataset."""
         coord_key = Key.T
-        coord_vals = self.Ts
+        coord_vals = self.T
         data_arrs = {
-            Key.Z0: self.Z0s,
-            Key.Z1: self.Z1s,
-            Key.Z2: self.Z2s,
+            Key.Z0: self.Z0,
+            Key.Z1: self.Z1,
+            Key.Z2: self.Z2,
             Key.Cv: self.heat_capacity_data(const="V"),
             Key.Cp: self.heat_capacity_data(const="P"),
             Key.S: self.entropy_data(),
@@ -275,7 +275,7 @@ class Therm(BaseTherm):
     # Thermodynamic function data points
     def temperature_data(self) -> NDArray[numpy.float64]:
         """Get temperature data."""
-        return numpy.array(self.Ts, dtype=numpy.float64)
+        return numpy.array(self.T, dtype=numpy.float64)
 
     @unit_.manage_units([], D.energy_per_substance / D.temperature)
     def heat_capacity_data(
@@ -295,9 +295,9 @@ class Therm(BaseTherm):
         """
         # Evaluate
         R = unit_.const.value(C.gas, UNITS)
-        T = numpy.array(self.Ts, dtype=numpy.float64)
-        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
-        Z2 = numpy.array(self.Z2s, dtype=numpy.float64)
+        T = numpy.array(self.T, dtype=numpy.float64)
+        Z1 = numpy.array(self.Z1, dtype=numpy.float64)
+        Z2 = numpy.array(self.Z2, dtype=numpy.float64)
         C_ = R * (1 + 2 * T * Z1 + T**2 * Z2)
         C_ -= R if const == "V" else 0.0
         return C_
@@ -328,7 +328,7 @@ class Therm(BaseTherm):
         :param units: Units
         :return: Entropy
         """
-        T = numpy.array(self.Ts, dtype=numpy.float64)
+        T = numpy.array(self.T, dtype=numpy.float64)
 
         # Evaluate standard concentration (molecules* / volume) from pressure  *implicit
         units = Units.model_validate(units) if units is not None else UNITS
@@ -339,9 +339,9 @@ class Therm(BaseTherm):
 
         # Evaluate
         R = unit_.const.value(C.gas, UNITS)
-        T = numpy.array(self.Ts, dtype=numpy.float64)
-        Z0 = numpy.array(self.Z0s, dtype=numpy.float64)
-        Z1 = numpy.array(self.Z1s, dtype=numpy.float64)
+        T = numpy.array(self.T, dtype=numpy.float64)
+        Z0 = numpy.array(self.Z0, dtype=numpy.float64)
+        Z1 = numpy.array(self.Z1, dtype=numpy.float64)
         S = R * (T * Z1 + Z0 - numpy.log(c) + 1)
         return S
 
@@ -375,9 +375,9 @@ class Therm(BaseTherm):
         """
         # Evaluate
         R = unit_.const.value(C.gas, UNITS)
-        Ts = numpy.array(self.Ts, dtype=numpy.float64)
-        Z1s = numpy.array(self.Z1s, dtype=numpy.float64)
-        dH = R * (Ts**2 * Z1s + Ts)
+        T = numpy.array(self.T, dtype=numpy.float64)
+        Z1 = numpy.array(self.Z1, dtype=numpy.float64)
+        dH = R * (T**2 * Z1 + T)
         return dH
 
     # Thermodynamic function calculators
@@ -754,11 +754,11 @@ def from_messpf_output_string(
     lines = list(map(str.strip, pf_str.strip().splitlines()))
     lines = list(itertools.dropwhile(lambda s: not s.startswith("Z_0"), lines))
     data = [list(map(float, line.split())) for line in lines[1:]]
-    Ts, Z0s, Z1s, Z2s, *_ = map(list, zip(*data, strict=True))
+    T, Z0, Z1, Z2, *_ = map(list, zip(*data, strict=True))
     # Replace 298.2 with 298.15 (needed for PAC99 input to run)
-    Ts = [298.15 if round(T) == 298 else T for T in Ts]
+    T = [298.15 if round(T) == 298 else T for T in T]
     return Therm(
-        Ts=Ts, Z0s=Z0s, Z1s=Z1s, Z2s=Z2s, Hf=Hf, Tf=Tf, formula=formula, charge=charge
+        T=T, Z0=Z0, Z1=Z1, Z2=Z2, Hf=Hf, Tf=Tf, formula=formula, charge=charge
     )
 
 

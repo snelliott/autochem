@@ -23,6 +23,14 @@ from . import blend
 from .blend import BlendingFunction_
 
 
+class Key:
+    # Independent variables
+    T = "T"
+    P = "P"
+    # Dependent variables
+    k = "k"
+
+
 class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
     """Abstract base class for rate constants."""
 
@@ -156,25 +164,23 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
 
 
 class Rate(BaseRate):
-    Ts: list[float]
-    Ps: list[float]
+    T: list[float]
+    P: list[float]
     data: NDArray_
 
     # Private attributes
-    _T_key = "T"
-    _P_key = "P"
-    type_: ClassVar[str] = "raw"
-    _scalers: ClassVar[Scalers] = {"k_array": numpy.multiply}
+    type_: ClassVar[str] = "data"
+    _scalers: ClassVar[Scalers] = {"data": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
-        "Ts": D.temperature,
-        "Ps": D.pressure,
+        "T": D.temperature,
+        "P": D.pressure,
         "data": D.rate_constant,
     }
 
     @property
     def kTP(self):  # noqa: N802
         return xarray.DataArray(
-            data=self.data, coords={self._T_key: self.Ts, self._P_key: self.Ps}
+            data=self.data, coords={Key.T: self.T, Key.P: self.P}
         )
 
     @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
