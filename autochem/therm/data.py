@@ -781,7 +781,7 @@ def from_chemkin_string(
 
 def from_chemkin_parse_results(
     res: chemkin.ChemkinThermoParseResults,
-    T_mid: float = 1000,  # noqa: N803
+    T_mid: float | None = None,  # noqa: N803
 ) -> ThermFit:
     """Extract thermo data from Chemkin parse results.
 
@@ -789,6 +789,8 @@ def from_chemkin_parse_results(
     :param T_mid: Default mid-point temperature
     :return: Thermo data fit
     """
+    T_mid = T_mid or 1000.0
+
     # Determine charge, if any
     charge = 0
     formula = res.formula.copy()

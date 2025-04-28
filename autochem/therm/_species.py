@@ -28,18 +28,64 @@ class Species(Scalable):
     _scalers: ClassVar[Scalers] = {"therm": (lambda c, x: c * x)}
 
 
+# Properties
+def temperature_minimum(spc: Species) -> float:
+    """Get the minimum temperature of the species.
+
+    :param spc: Species
+    :return: Minimum temperature
+    """
+    if isinstance(spc.therm, Nasa7ThermFit):
+        return spc.therm.T_min
+    raise NotImplementedError(
+        f"Species {spc.name} has no minimum temperature for {type(spc.therm)}"
+    )
+
+
+def temperature_middle(spc: Species) -> float:
+    """Get the middle temperature of the species.
+
+    :param spc: Species
+    :return: Middle temperature
+    """
+    if isinstance(spc.therm, Nasa7ThermFit):
+        return spc.therm.T_mid
+    raise NotImplementedError(
+        f"Species {spc.name} has no middle temperature for {type(spc.therm)}"
+    )
+
+
+def temperature_maximum(spc: Species) -> float:
+    """Get the maximum temperature of the species.
+
+    :param spc: Species
+    :return: Maximum temperature
+    """
+    if isinstance(spc.therm, Nasa7ThermFit):
+        return spc.therm.T_max
+    raise NotImplementedError(
+        f"Species {spc.name} has no maximum temperature for {type(spc.therm)}"
+    )
+
+
 # Conversions
-def from_chemkin_string(spc_str: str) -> Species:
+def from_chemkin_string(
+    spc_str: str,
+    T_mid: float | None = None,  # noqa: N803
+) -> Species:
     """Read species thermo from Chemkin string.
 
     :param spc_str: Chemkin species therm string
+    :param T_min: Default minimum temperature
+    :param T_mid: Default middle temperature
+    :param T_max: Default maximum temperature
     :return: Species thermo
     """
     # Parse string
     res = chemkin.parse_thermo(spc_str)
 
     # Extract thermo data
-    therm_fit = data.from_chemkin_parse_results(res)
+    therm_fit = data.from_chemkin_parse_results(res, T_mid=T_mid)
 
     return Species(name=res.name, therm=therm_fit)
 
