@@ -104,36 +104,33 @@ def isomorphic(gra1, gra2, backbone_only=False, stereo=True, dummy=True):
     )
 
 
-def unique(gras, backbone_only=False, stereo=True, dummy=True):
-    """Get the subset of non-isomorphic graphs from a list with redundancies
+def unique(gras, backbone_only=False, stereo=True, dummy=True) -> tuple[Any, ...]:
+    """Get the subset of non-isomorphic graphs from a list with redundancies.
 
     :param backbone_only: Compare backbone atoms only?
-    :type backbone_only: bool
     :param stereo: Consider stereo?
-    :type stereo: bool
     :param dummy: Consider dummy atoms?
-    :type dummy: bool
-    :returns: The isomorphism mapping `gra1` onto `gra2`
-    :rtype: dict
+    :returns: Unique graphs
     """
     gras_with_counts = unique_with_counts(
         gras, backbone_only=backbone_only, stereo=stereo, dummy=dummy
     )
-    gras, *_ = zip(*gras_with_counts)
-    return gras
+    if gras_with_counts:
+        gras, *_ = zip(*gras_with_counts, strict=True)
+        return gras
+
+    return ()
 
 
-def unique_with_counts(gras, backbone_only=False, stereo=True, dummy=True):
-    """Get the subset of non-isomorphic graphs from a list with redundancies
+def unique_with_counts(
+    gras, backbone_only=False, stereo=True, dummy=True
+) -> list[tuple[Any, int]]:
+    """Get the subset of non-isomorphic graphs from a list with redundancies.
 
     :param backbone_only: Compare backbone atoms only?
-    :type backbone_only: bool
     :param stereo: Consider stereo?
-    :type stereo: bool
     :param dummy: Consider dummy atoms?
-    :type dummy: bool
-    :returns: The isomorphism mapping `gra1` onto `gra2`
-    :rtype: dict
+    :returns: Unique graphs along with their counts.
     """
 
     def _equiv(gra1, gra2):
@@ -145,8 +142,8 @@ def unique_with_counts(gras, backbone_only=False, stereo=True, dummy=True):
     return gras_with_counts
 
 
-def _unique_with_counts(items, equiv):
-    """unique items from a list, according to binary comparison `equiv`"""
+def _unique_with_counts(items, equiv) -> list[tuple[Any, int]]:
+    """Get unique items from a list, according to binary comparison `equiv`."""
     items0 = items
     items = []
     counts = []
