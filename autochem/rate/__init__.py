@@ -26,23 +26,33 @@ from .data import (
 )
 
 __all__ = [
-    "blend",
-    "data",
-    "ArrheniusRateFit",
-    "BaseRate",
-    "BlendingFunction",
-    "ChebRateFit",
-    "FalloffRateFit",
-    "LindemannBlendingFunction",
-    "PlogRateFit",
+    # Types
+    #  - Main
     "Reaction",
+    #  - Data
+    "BaseRate",
     "Rate",
     "RateFit",
+    "ArrheniusRateFit",
+    "FalloffRateFit",
+    "PlogRateFit",
+    "ChebRateFit",
+    #  - Blend
+    "BlendingFunction",
+    "LindemannBlendingFunction",
     "SriBlendingFunction",
     "TroeBlendingFunction",
+    # Functions
+    #  - Properties
     "chemkin_equation",
+    #  - Conversions
     "chemkin_string",
-    "display",
-    "expand_lumped",
     "from_chemkin_string",
+    #  - Expansions
+    "expand_lumped",
+    #  - Display
+    "display",
+    # Submodules
+    "blend",
+    "data",
 ]

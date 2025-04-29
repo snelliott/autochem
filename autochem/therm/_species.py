@@ -8,8 +8,7 @@ import altair
 import numpy
 import pyparsing as pp
 
-from .. import unit_
-from ..unit_ import UNITS, C, UnitsData
+from ..unit_ import UnitsData
 from ..util import FormulaData, chemkin, form, pac99
 from ..util.type_ import Scalable, Scalers
 from . import data
@@ -181,7 +180,7 @@ def pac99_input_string(
     assert isinstance(spc.therm, Therm)
     fml_str = form.string(spc.therm.formula, ones=True)
     Hf298 = spc.therm.enthalpy_of_formation(units={"energy": "J"})
-    Ts = spc.therm.Ts
+    Ts = spc.therm.T
     # Enthalpy units are set to kJ by "KJOULE" keyword below
     dH298 = spc.therm.delta_enthalpy(T=298, method="nearest", units={"energy": "kJ"})
     dHs = spc.therm.delta_enthalpy_data(units={"energy": "kJ"})
