@@ -1,5 +1,4 @@
-""" test automol.graph
-"""
+"""test automol.graph"""
 
 import itertools
 
@@ -743,6 +742,30 @@ C4H10_GRA = (
         frozenset({2, 11}): (1, None),
         frozenset({2, 12}): (1, None),
         frozenset({3, 13}): (1, None),
+    },
+)
+
+# C2H5 + H2
+C2H7_CGR = (
+    {
+        0: ("C", 0, None),
+        1: ("C", 0, None),
+        2: ("H", 0, None),
+        3: ("H", 0, None),
+        4: ("H", 0, None),
+        5: ("H", 0, None),
+        6: ("H", 0, None),
+        7: ("H", 0, None),
+        8: ("H", 0, None),
+    },
+    {
+        frozenset({0, 1}): (1, None),
+        frozenset({0, 2}): (1, None),
+        frozenset({0, 3}): (1, None),
+        frozenset({0, 4}): (1, None),
+        frozenset({1, 6}): (1, None),
+        frozenset({1, 7}): (1, None),
+        frozenset({8, 5}): (1, None),
     },
 )
 
@@ -1633,7 +1656,9 @@ def test__align_with_geometry():
     args = sorted(graph.atom_keys(zgra))
 
     # Check the alignment
-    gra1, geo1, args1, key_dct, idx_dct = graph.align_with_geometry(zgra, geo, args, geo_idx_dct)
+    gra1, geo1, args1, key_dct, idx_dct = graph.align_with_geometry(
+        zgra, geo, args, geo_idx_dct
+    )
     assert graph.geometry_matches(gra1, geo1)
     assert args1.count(None) == 4
     assert [k for k in args1 if k is not None] == list(range(16))
@@ -1644,7 +1669,9 @@ def test__align_with_geometry():
 
     # Check that the alignment works with dummy atoms included
     zgeo = automol.zmat.geometry(zma, dummy=True)
-    zgra1, zgeo1, zargs1, zkey_dct, zidx_dct = graph.align_with_geometry(zgra, zgeo, args)
+    zgra1, zgeo1, zargs1, zkey_dct, zidx_dct = graph.align_with_geometry(
+        zgra, zgeo, args
+    )
     assert graph.geometry_matches(zgra1, zgeo1)
     assert zargs1 == list(range(20))
     zgra0 = automol.graph.relabel(zgra1, zkey_dct)
@@ -1960,7 +1987,7 @@ def test__expand_stereo():
         ("C1C2OC2CC1", 3, 1, {1: False, 3: True}),
         ("C1(O2)CC2CC1", 3, 1, {0: False, 3: True}),
         ("C=1C2CC(C=1)O2", 3, 1, {1: False, 3: True}),
-    ]
+    ],
 )
 def test__expand_stereo__strained(smi, npars1, npars2, par_dct):
     """test removal of strained stereoisomers from stereoexpansion"""
@@ -2565,6 +2592,20 @@ def test__atom_hypervalencies():
     assert automol.util.dict_.by_value(nhyp_dct2) == {}
 
 
+@pytest.mark.parametrize(
+    "gra, lin_keys, extend, lin_cap_dct0",
+    [
+        (C2H7_CGR, (5,), False, {(5,): (8, 5)}),
+    ],
+)
+def test__linear_segments_cap_keys(gra, lin_keys, extend, lin_cap_dct0):
+    """Test graph.linear_segments_cap_keys."""
+    lin_cap_dct = graph.linear_segment_cap_keys(
+        gra=gra, lin_keys=lin_keys, extend=extend
+    )
+    assert lin_cap_dct == lin_cap_dct0, f"{lin_cap_dct} != {lin_cap_dct0}"
+
+
 if __name__ == "__main__":
     # test__to_local_stereo()
 
@@ -2599,4 +2640,5 @@ if __name__ == "__main__":
     # test__align_with_geometry()
     # test__embed__clean_geometry()
     # test__expand_stereo__strained("C=1C2CC(C=1)O2", 3, 1, {1: False, 3: True})
-    test__expand_stereo()
+    # test__expand_stereo()
+    test__linear_segments_cap_keys(C2H7_CGR, (5,), False, {(5,): (8, 5)})

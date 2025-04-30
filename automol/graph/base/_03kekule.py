@@ -360,8 +360,9 @@ def linear_segment_cap_keys(
     :returns: A dictionary mapping linear segments onto their in-line neighbors
     :rtype: Dict[List[int], Tuple[Optional[int], Optional[int]]]
     """
-    err_msg = f"gra = {gra}\n  lin_keys = {lin_keys}\n  extend = {extend}"
+    err_msg = f"gra = {gra}\nlin_keys = {lin_keys}\nextend = {extend}"
 
+    nkeys_dct = atoms_neighbor_atom_keys(gra)
     lin_nkeys_dct = linear_atoms_neighbor_atom_keys(gra, dummy=True)
     lin_keys = frozenset(lin_nkeys_dct.keys()) if lin_keys is None else lin_keys
 
@@ -391,16 +392,19 @@ def linear_segment_cap_keys(
         end_key1 = keys[0]
         end_key2 = keys[-1]
 
+        # We fill in the remaining atoms, in case we are determining caps from
+        # pre-defined linear keys
+        ext_nkeys_dct = {**nkeys_dct, **lin_nkeys_dct}
+
         # Identify in-line neighbors
         excl_keys = set(keys)
-        ext_nkey1s = lin_nkeys_dct[end_key1] - excl_keys
+        ext_nkey1s = ext_nkeys_dct[end_key1] - excl_keys
 
         excl_keys |= ext_nkey1s
-        ext_nkey2s = lin_nkeys_dct[end_key2] - excl_keys
+        ext_nkey2s = ext_nkeys_dct[end_key2] - excl_keys
 
         # Split up neighbor keys if this is a single-atom segment
-        if end_key1 == end_key2:
-            assert len(ext_nkey1s) == 2, f"{err_msg}\n  ext_nkey1s = {ext_nkey1s}"
+        if end_key1 == end_key2 and len(ext_nkey1s) > 1:
             ext_nkeys = sorted(ext_nkey1s)
             ext_nkey1s = ext_nkeys[:1]
             ext_nkey2s = ext_nkeys[1:]
@@ -408,11 +412,11 @@ def linear_segment_cap_keys(
         # Add in-line neighbors to the extended keys list, if not None
         ext_keys = keys
         if ext_nkey1s:
-            assert len(ext_nkey1s) == 1, f"{err_msg}\n  ext_nkey1s = {ext_nkey1s}"
+            assert len(ext_nkey1s) == 1, f"{err_msg}\next_nkey1s = {ext_nkey1s}"
             ext_keys = (*ext_nkey1s, *ext_keys)
 
         if ext_nkey2s:
-            assert len(ext_nkey1s) == 1, f"{err_msg}\n  ext_nkey2s = {ext_nkey2s}"
+            assert len(ext_nkey1s) == 1, f"{err_msg}\next_nkey2s = {ext_nkey2s}"
             ext_keys = (*ext_keys, *ext_nkey2s)
 
         if extend:
