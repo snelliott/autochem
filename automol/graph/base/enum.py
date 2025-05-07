@@ -21,6 +21,9 @@ from ._12rdkit import to_graph as from_rdkit
 A_ = "Cv4,Ov2"
 C_ = "Cv4"
 O_ = "Ov2"
+As = "CX4,OX2"
+Cs = "CX4"
+Os = "OX2"
 Ar = "Cv3,Ov1"
 Cr = "Cv3"
 Or = "Ov1"
@@ -42,7 +45,7 @@ class ReactionSmarts:
     pi2_addition = f"[*:1]=[*:2].[{Or}:3]>>[*:1]-[*:2]-[*:3]"
     o2_addition = f"[{Ar}:1].[O:2]=[O:3]>>[*:1]-[*:2]-[*:3]"
     qooh_formation = (
-        f"([{C_}:1]-[O:2]-[{Or}:3].[{A_}:4][H:5])>>([{C_}:1][O:2][O:3][H:5].[{Ar}:4])"
+        f"([{C_}:1]-[O:2]-[{Or}:3].[{As}:4][H:5])>>([{C_}:1][O:2][O:3][H:5].[{Ar}:4])"
     )
     ho2_elimination = f"[H:5][C:1][C:2][O:3][{Or}:4]>>[C:1]=[C:2].[{Or}:3][O:4][H:5]"
     qooh_beta_scission = (
