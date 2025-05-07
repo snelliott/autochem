@@ -1,5 +1,4 @@
-""" reaction-class specific functionality
-"""
+"""reaction-class specific functionality"""
 
 # base reaction class
 # tunneling treatments
@@ -39,6 +38,7 @@ from ._0core import (
     set_ts_graph,
     string,
     structure_type,
+    ts_conversion_info,
     ts_graph,
     ts_structure,
     undo_zmatrix_conversion,
@@ -143,6 +143,7 @@ __all__ = [
     "reactant_structures",
     "product_structures",
     "structure_type",
+    "ts_conversion_info",
     # # setters
     "set_ts_graph",
     "set_reactants_keys",

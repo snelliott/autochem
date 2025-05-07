@@ -60,7 +60,9 @@ def from_geometry(vma, geo):
     :type geo: automol molecular geometry data structure
     :rtype: automol Z-Matrix data structure
     """
-    assert vmat.symbols(vma) == vmat.symbols(geo)
+    assert vmat.symbols(vma) == vmat.symbols(geo), (
+        f"\n{vmat.symbols(vma)} !=\n{vmat.symbols(geo)}"
+    )
 
     symbs = vmat.symbols(vma)
     key_mat = vmat.key_matrix(vma)
