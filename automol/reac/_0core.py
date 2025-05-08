@@ -12,7 +12,6 @@ import dataclasses
 import itertools
 
 import yaml
-
 from phydat import ptab
 
 from .. import const, geom, graph, zmat
@@ -120,9 +119,9 @@ def from_data(
     prds_keys = tuple(map(tuple, prds_keys))
 
     # Check the reaction class
-    assert (
-        const.ReactionClass.is_defined(cla) or cla is None
-    ), f"{cla} is not a reaction class"
+    assert const.ReactionClass.is_defined(cla) or cla is None, (
+        f"{cla} is not a reaction class"
+    )
 
     # Check the structures, if there are any
     struc_info = [ts_struc, rct_strucs, prd_strucs]
@@ -171,9 +170,9 @@ def from_data(
         no_zmats = struc_typ == "geom" or all(x is None for x in struc_info)
         c_ok = zmat_conv.count(ts_zc, typ=struc_typ) == graph.count(tsg)
         d_ok = no_zmats or zmat_conv.dummy_keys(ts_zc) == zmat.dummy_keys(ts_struc)
-        assert (
-            c_ok and d_ok
-        ), f"TS conversion info doesn't match structure:{ts_zc}\n{ts_struc}"
+        assert c_ok and d_ok, (
+            f"TS conversion info doesn't match structure:{ts_zc}\n{ts_struc}"
+        )
 
         zcs = rct_zcs + prd_zcs
         keys_lst = rcts_keys + prds_keys
@@ -181,9 +180,9 @@ def from_data(
         for zc_, keys, zma in zip(zcs, keys_lst, zmas):
             c_ok = zmat_conv.count(zc_, typ=struc_typ) == len(keys)
             d_ok = no_zmats or zmat_conv.dummy_keys(zc_) == zmat.dummy_keys(zma)
-            assert (
-                c_ok and d_ok
-            ), f"Reagent conversion info doesn't match structure:\n{zc_}\n{zma}"
+            assert c_ok and d_ok, (
+                f"Reagent conversion info doesn't match structure:\n{zc_}\n{zma}"
+            )
 
     return Reaction(
         ts_graph=tsg,
@@ -557,7 +556,7 @@ def set_products_keys(rxn: Reaction, prds_keys: list[list[int]]) -> Reaction:
 
 
 def set_reaction_class(rxn: Reaction, cla: str) -> Reaction:
-    """Set the reaction class
+    """Set the reaction class.
 
     :param rxn: The reaction object
     :type rxn: Reaction
@@ -571,6 +570,39 @@ def set_reaction_class(rxn: Reaction, cla: str) -> Reaction:
     return rxn
 
 
+def reset_conversion_info(rxn: Reaction) -> Reaction:
+    """Reset z-matrix conversion info.
+
+    For `geom` structures, this wipes out the conversion info.
+
+    For `zmat` structures, this replaces the conversion info with simple dummy atom
+    removal (no reordering).
+
+    :param rxn: Reaction
+    :return: Reaction
+    """
+    ts_zc = rct_zcs = prd_zcs = None
+
+    if structure_type(rxn) == "zmat":
+        ts_zc = zmat.conversion_info(ts_structure(rxn))
+        rct_zcs = list(map(zmat.conversion_info, reactant_structures(rxn)))
+        prd_zcs = list(map(zmat.conversion_info, product_structures(rxn)))
+
+    return from_data(
+        tsg=ts_graph(rxn),
+        rcts_keys=reactants_keys(rxn),
+        prds_keys=products_keys(rxn),
+        cla=class_(rxn),
+        struc_typ=structure_type(rxn),
+        ts_struc=ts_structure(rxn),
+        rct_strucs=reactant_structures(rxn),
+        prd_strucs=product_structures(rxn),
+        ts_zc=ts_zc,
+        rct_zcs=rct_zcs,
+        prd_zcs=prd_zcs,
+    )
+
+
 def set_structures(
     rxn: Reaction,
     ts_struc,
@@ -581,7 +613,7 @@ def set_structures(
     rct_zcs: list[ZmatConv] = None,
     prd_zcs: list[ZmatConv] = None,
 ) -> Reaction:
-    """Set the structures for the Reaction
+    """Set the structures for the Reaction.
 
     Structure type will be inferred if not passed in
 
@@ -1034,24 +1066,24 @@ def apply_zmatrix_conversion(
     :returns: The converted reaction object
     :rtype: Reaction
     """
-    assert not has_structures(
-        rxn, complete=False
-    ), f"This should not be done for a reaction with structures:\n{rxn}"
+    assert not has_structures(rxn, complete=False), (
+        f"This should not be done for a reaction with structures:\n{rxn}"
+    )
 
     # Read in pre-existing z-matrix conversion info, if there is some
     ts_zc = ts_conversion_info(rxn) if ts_zc is None else ts_zc
     rct_zcs = reactants_conversion_info(rxn) if rct_zcs is None else rct_zcs
     prd_zcs = products_conversion_info(rxn) if prd_zcs is None else prd_zcs
 
-    assert not any(
-        x is None for x in [ts_zc, rct_zcs, prd_zcs]
-    ), f"Missing conversion info:\nts_zc:{ts_zc}\nrct_zcs:{rct_zcs}\nprd_zcs:{prd_zcs}"
+    assert not any(x is None for x in [ts_zc, rct_zcs, prd_zcs]), (
+        f"Missing conversion info:\nts_zc:{ts_zc}\nrct_zcs:{rct_zcs}\nprd_zcs:{prd_zcs}"
+    )
 
     # 0. Read in the current TS graph
     gtsg = ts_graph(rxn)
-    assert not graph.has_dummy_atoms(
-        gtsg
-    ), f"Cannot apply z-matrix conversion to a graph with dummy atoms:{gtsg}"
+    assert not graph.has_dummy_atoms(gtsg), (
+        f"Cannot apply z-matrix conversion to a graph with dummy atoms:{gtsg}"
+    )
 
     # 1. Transform the TS graph
     ztsg = graph.apply_zmatrix_conversion(gtsg, ts_zc)
@@ -1130,9 +1162,9 @@ def undo_zmatrix_conversion(
     :returns: The original reaction object
     :rtype: Reaction
     """
-    assert not has_structures(
-        rxn, complete=False
-    ), f"This should not be done for a reaction with structures:\n{rxn}"
+    assert not has_structures(rxn, complete=False), (
+        f"This should not be done for a reaction with structures:\n{rxn}"
+    )
 
     # Read in pre-existing z-matrix conversion info, if there is some
     ts_zc = ts_conversion_info(rxn) if ts_zc is None else ts_zc
@@ -1302,7 +1334,6 @@ def filter_viable_reactions(rxns: list[Reaction]) -> list[Reaction]:
         # Add more conditions here, as needed ...
 
         if not ((sep_rad and sing_spin) or hi_spin):
-
             rxns.append(rxn)
 
     return tuple(rxns)
@@ -1319,5 +1350,7 @@ def _identify_sequence_structure_type(strucs):
     return (
         "geom"
         if all(map(geom.is_valid, strucs))
-        else "zmat" if all(map(zmat.is_valid, strucs)) else None
+        else "zmat"
+        if all(map(zmat.is_valid, strucs))
+        else None
     )

@@ -35,6 +35,7 @@ from ._0core import (
     set_reactants_keys,
     set_reaction_class,
     set_structures,
+    reset_conversion_info,
     set_ts_graph,
     string,
     structure_type,
@@ -150,6 +151,7 @@ __all__ = [
     "set_products_keys",
     "set_reaction_class",
     "set_structures",
+    "reset_conversion_info",
     "update_structures",
     # # others
     "reverse_without_recalculating",
