@@ -1,5 +1,4 @@
-""" TS geometries for specific reaction classes
-"""
+"""TS geometries for specific reaction classes"""
 
 from typing import List
 
@@ -15,6 +14,7 @@ from ._0core import (
     reactant_graphs,
     reactant_structures,
     reactants_conversion_info,
+    reset_conversion_info,
     reverse_without_recalculating,
     set_structures,
     string,
@@ -51,6 +51,7 @@ def clean_ts_structure(rxn, ts_struc, struc_typ: str) -> object:
 def with_structures(
     rxn: Reaction,
     struc_typ: str,
+    ignore_zc: bool = False,
     rct_strucs=None,
     prd_strucs=None,
     rct_zcs=None,
@@ -58,7 +59,7 @@ def with_structures(
     log: bool = False,
 ) -> Reaction:
     """Convert 'geom' structures to 'zmat', or convert 'zmat' structures to 'geom',
-    updating graphs and reagent keys accordingly
+    updating graphs and reagent keys accordingly.
 
     Dummy atoms will be added for 'zmat' structures, and removed for 'geom' structures,
     so there is no guarantee that the TS graph will stay the same, but all information
@@ -68,6 +69,7 @@ def with_structures(
     :type rxn: Reaction
     :param struc_type: The new structure type ('zmat' or 'geom')
     :type struc_type: str
+    :param ignore_zc: Whether to ignore z-matrix conversion info.
     :param rct_strucs: Specify the reactant structures
     :type rct_strucs: List[automol geom or zmat data structure]
     :param prd_strucs: Specify the product structures
@@ -93,6 +95,10 @@ def with_structures(
     # problems
     if orig_struc_typ is None:
         rxn = without_dummy_atoms(rxn)
+
+    # If requested to ignore z-matrix conversion info, re-set it
+    if ignore_zc:
+        rxn = reset_conversion_info(rxn)
 
     # If a structure type of `None` was requested, simply update with the structures
     # passed in
@@ -223,9 +229,7 @@ def _with_geom_structures(
         print(f"Building geometry for TS graph:\n{tsg}")
         print(f"... using these reactant geometries:\n{rct_geos}")
 
-    ts_geo = graph.geometry(
-        tsg, rct_geos=rct_geos, geo_idx_dct=geo_idx_dct, log=log
-    )
+    ts_geo = graph.geometry(tsg, rct_geos=rct_geos, geo_idx_dct=geo_idx_dct, log=log)
 
     grxn = set_structures(
         rxn,
@@ -295,7 +299,7 @@ def _convert_geom_to_zmat_structures(
     prd_zcs: List[ZmatConv] = None,
     log: bool = False,
 ) -> Reaction:
-    """Convert a reaction with 'geom' structures to 'zmat' structures
+    """Convert a reaction with 'geom' structures to 'zmat' structures.
 
     :param rxn: The reaction object
     :type rxn: Reaction
