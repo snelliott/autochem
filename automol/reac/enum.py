@@ -15,7 +15,7 @@ def from_smiles(
     Reactants can be given as lists or dictionaries by position in the SMARTS template.
 
     :param smarts: Reaction SMARTS string
-    :param rct_chis: Reactant ChIs
+    :param rct_smis: Reactant SMILES
     :return: List of Reaction objects
     """
     rct_gras = reactants(smarts, rct_smis, conv_=smiles.graph)
