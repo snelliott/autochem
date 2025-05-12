@@ -1,4 +1,4 @@
-""" canonicalization functions
+"""canonicalization functions
 
 BEFORE ADDING ANYTHING, SEE IMPORT HIERARCHY IN __init__.py!!!!
 
@@ -7,7 +7,8 @@ Schneider, Sayle, Landrum. J. Chem. Inf. Model. 2015, 55, 10, 2111–2120
 """
 
 import itertools
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy
 from phydat import ptab
@@ -194,23 +195,36 @@ def smiles_graph(
     :param dummy: Retain dummy atoms? Defaults to False
     :return: The graph, kekulized with appropriate implicit/explicit hydrogens
     """
+    # Find a dominant resonance
+    kgr = kekule(gra, max_stereo_overlap=True)
+    return smiles_graph_from_kekule(kgr, res_stereo=res_stereo, exp=exp, dummy=dummy)
+
+
+def smiles_graph_from_kekule(
+    kgr: Any, res_stereo: bool = True, exp: bool = False, dummy: bool = False
+) -> Any:
+    """Put a connected graph in a form appropriate for writing SMILES strings.
+
+    :param gra: molecular graph
+    :param exp: Include explicit hydrogens that aren't needed for stereochemistry?
+    :param res_stereo: allow resonant double-bond stereo?
+    :param dummy: Retain dummy atoms? Defaults to False
+    :return: The graph, kekulized with appropriate implicit/explicit hydrogens
+    """
     if not dummy:
-        gra = without_dummy_atoms(gra)
+        kgr = without_dummy_atoms(kgr)
 
     # Add in missing explicit hydrogens (connected to H or needed for stereo)
-    gra = explicit(gra, atm_keys=atom_keys(gra, symb="H"), neg=True)
-    gra = with_explicit_stereo_hydrogens(gra, all_=False, neg=True)
+    kgr = explicit(kgr, atm_keys=atom_keys(kgr, symb="H"), neg=True)
+    kgr = with_explicit_stereo_hydrogens(kgr, all_=False, neg=True)
 
     # Make all other hydrogens implicit
     if not exp:
-        bbn_keys = backbone_keys(gra, hyd=False)
-        ste_keys = set(itertools.chain(*bond_stereo_keys(gra)))
-        nbnd_dct = atom_bond_counts(gra, bond_order=False, with_implicit=True)
+        bbn_keys = backbone_keys(kgr, hyd=False)
+        ste_keys = set(itertools.chain(*bond_stereo_keys(kgr)))
+        nbnd_dct = atom_bond_counts(kgr, bond_order=False, with_implicit=True)
         imp_keys = {k for k in bbn_keys if not (k in ste_keys and nbnd_dct[k] <= 2)}
-        gra = implicit(gra, atm_keys=imp_keys)
-
-    # Find a dominant resonance
-    kgr = kekule(gra, max_stereo_overlap=True)
+        kgr = implicit(kgr, atm_keys=imp_keys)
 
     # Remove stereo parities at single bonds if requested
     if not res_stereo:
