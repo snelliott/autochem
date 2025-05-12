@@ -8,6 +8,7 @@ from automol import graph, reac
     "smarts, rct_smis, nrxns",
     [
         (graph.enum.ReactionSmarts.abstraction, ["C1=CCCC1", "[OH]"], 3),
+        (graph.enum.ReactionSmarts.o2_addition, ["C1=C[CH]CO1", "[O][O]"], 2),
     ],
 )
 def test__from_smiles(smarts, rct_smis, nrxns):
