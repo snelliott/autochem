@@ -1,5 +1,6 @@
 """Functions for enumerating reactions."""
 
+import itertools
 from collections.abc import Sequence
 
 from rdkit import Chem
@@ -15,7 +16,8 @@ from ._00core import (
     without_stereo,
 )
 from ._02algo import connected_components, unique
-from ._12rdkit import from_graph as to_rdkit
+from ._03kekule import kekules
+from ._12rdkit import from_kekule_graph as to_rdkit
 from ._12rdkit import to_graph as from_rdkit
 
 A_ = "Cv4,Ov2"
@@ -77,14 +79,26 @@ def products(smarts: str, gra: object) -> list[object]:
     """
     assert gra == explicit(gra), f"Graph must be explicit\ngra = {gra}"
     assert gra == without_stereo(gra), f"Cannot handle stereochemistry\ngra = {gra}"
+    kgrs = kekules(gra)
+    return list(
+        itertools.chain.from_iterable(products_from_kekule(smarts, kgr) for kgr in kgrs)
+    )
 
+
+def products_from_kekule(smarts: str, kgr: object) -> list[object]:
+    """Enumerate products for a given SMARTS reaction template.
+
+    :param smarts: SMARTS pattern for the reaction
+    :param gra: Molecular graph representing the reactants
+    :returns: Products graphs
+    """
     # Form the reaction object
     rxn = AllChem.ReactionFromSmarts(smarts)
 
     # Form the reactant graphs
-    rct_gras = connected_components(gra)
+    rct_kgrs = connected_components(kgr)
     # (label=True) stores the current graph keys to the `molAtomMapNumber` property
-    rct_rdms = [to_rdkit(g, exp=True, label=True) for g in rct_gras]
+    rct_rdms = [to_rdkit(kgr, exp=True, label=True) for kgr in rct_kgrs]
 
     # Enumerate the products
     pos_dct = _template_map_number_to_reactant_position(rxn)

@@ -25,7 +25,7 @@ from ._05stereo import stereocenter_candidates
 from ._08canon import (
     bad_stereo_bond_keys_from_kekule,
     from_local_stereo,
-    smiles_graph,
+    smiles_graph_from_kekule,
     to_local_stereo,
 )
 
@@ -51,8 +51,8 @@ BOND_ORDER_DCT = {
 BOND_TYPE_DCT = dict(map(reversed, BOND_ORDER_DCT.items()))
 
 
-def from_graph(
-    gra, stereo=False, exp=False, local_stereo=False, label=False, label_dct=None
+def from_kekule_graph(
+    kgr, stereo=False, exp=False, local_stereo=False, label=False, label_dct=None
 ):
     """Generate an RDKit rdmecule object from a connected molecular graph.
 
@@ -70,19 +70,19 @@ def from_graph(
         `True`, the atom keys themselves will be used as labels.
     :param label_dct: bool
     """
-    gra = without_bonds_by_orders(gra, ords=[0], skip_dummies=False)
-    gra = smiles_graph(gra, res_stereo=True, exp=exp, dummy=True)
+    kgr = without_bonds_by_orders(kgr, ords=[0], skip_dummies=False)
+    kgr = smiles_graph_from_kekule(kgr, res_stereo=True, exp=exp, dummy=True)
     rdm, idx_from_key = _from_graph_without_stereo(
-        gra, label=label, label_dct=label_dct
+        kgr, label=label, label_dct=label_dct
     )
 
     # If there's not stereo, return early
-    if not stereo or not has_stereo(gra):
+    if not stereo or not has_stereo(kgr):
         return rdm
 
     # Otherwise, handle stereo
-    gra = gra if local_stereo else to_local_stereo(gra)
-    egra = explicit(gra)
+    kgr = kgr if local_stereo else to_local_stereo(kgr)
+    egra = explicit(kgr)
     bad_bkeys = bad_stereo_bond_keys_from_kekule(egra)
     egra = without_stereo(egra, bnd_keys=bad_bkeys)
     erdm, idx_from_key = _from_graph_without_stereo(egra)
@@ -106,7 +106,7 @@ def from_graph(
             rda.SetChiralTag(ATOM_STEREO_TAG_FROM_BOOL[par1])
 
     # Set bond stereo
-    bnd_ste_dct = bond_stereo_parities(gra)
+    bnd_ste_dct = bond_stereo_parities(kgr)
     for rdb in rdm.GetBonds():
         idxs = (rdb.GetBeginAtomIdx(), rdb.GetEndAtomIdx())
         keys = tuple(map(key_from_idx.get, idxs))
