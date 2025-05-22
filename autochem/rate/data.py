@@ -49,7 +49,7 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         T: ArrayLike,  # noqa: N803
         P: ArrayLike = 1,  # noqa: N803
         units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Evaluate rate constant.
 
         :param T: Temperature(s)
@@ -63,13 +63,15 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         self,
         T: ArrayLike,  # noqa: N803
         P: ArrayLike,  # noqa: N803
-    ) -> tuple[NDArray[numpy.float64], NDArray[numpy.float64]]:
+    ) -> tuple[NDArray[numpy.float128], NDArray[numpy.float128]]:
         """Normalize rate constant input.
 
         :param T: Temperature(s)
         :param P: Pressure(s)
         :return: Temperature(s) and pressure(s)
         """
+        T = numpy.array(T, dtype=numpy.float128)
+        P = numpy.array(P, dtype=numpy.float128)
         T, P = numpy.meshgrid(T, P)
         return T, P
 
@@ -78,7 +80,7 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         kTP: ArrayLike,  # noqa: N803
         T: ArrayLike,  # noqa: N803
         P: ArrayLike,  # noqa: N803
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Normalize rate constant output, clipping unphyiscal negative values.
 
         :param ktp: Rate constant values
@@ -189,10 +191,10 @@ class Rate(BaseRate):
         T: ArrayLike,  # noqa: N803
         P: ArrayLike = 1,  # noqa: N803
         units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Evaluate rate constant."""
         T_, P_ = self.process_input(T, P)
-        kTP: NDArray[numpy.float64] = self.kTP.sel(T=T_, P=P_, method="ffill").data
+        kTP: NDArray[numpy.float128] = self.kTP.sel(T=T_, P=P_, method="ffill").data
         return self.process_output(kTP, T, P)
 
 
@@ -248,7 +250,7 @@ class ArrheniusRateFit(RateFit):
         T: ArrayLike,  # noqa: N803
         P: ArrayLike = 1,  # noqa: N803
         units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Evaluate rate constant."""
         T_, P_ = self.process_input(T, P)
         R = const.value(C.gas, UNITS)
@@ -282,7 +284,7 @@ class FalloffRateFit(RateFit, abc.ABC):  # type: ignore[misc]
         T: ArrayLike,  # noqa: N803
         P: ArrayLike = 1,  # noqa: N803
         units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Evaluate rate constant."""
         T_, P_ = self.process_input(T, P)
         P_r = self.effective_reduced_pressure(T_, P_)
@@ -308,9 +310,9 @@ class FalloffRateFit(RateFit, abc.ABC):  # type: ignore[misc]
 
     def effective_concentration(
         self,
-        T: NDArray[numpy.float64],  # noqa: N803
-        P: NDArray[numpy.float64],  # noqa: N803
-    ) -> NDArray[numpy.float64]:
+        T: NDArray[numpy.float128],  # noqa: N803
+        P: NDArray[numpy.float128],  # noqa: N803
+    ) -> NDArray[numpy.float128]:
         """Get effective concentration(s) from temperature(s) and pressure(s).
 
         effective [M] = P / R T  (ideal gas law)
@@ -330,9 +332,9 @@ class FalloffRateFit(RateFit, abc.ABC):  # type: ignore[misc]
 
     def effective_reduced_pressure(
         self,
-        T: NDArray[numpy.float64],  # noqa: N803
-        P: NDArray[numpy.float64],  # noqa: N803
-    ) -> NDArray[numpy.float64]:
+        T: NDArray[numpy.float128],  # noqa: N803
+        P: NDArray[numpy.float128],  # noqa: N803
+    ) -> NDArray[numpy.float128]:
         """Get effective concentration(s) from temperature(s) and pressure(s).
 
         effective P_r = k_low [M] / k_high  (ideal gas law)
@@ -367,7 +369,7 @@ class PlogRateFit(RateFit):
         T: ArrayLike,  # noqa: N803
         P: ArrayLike = 1,  # noqa: N803
         units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Evaluate rate constant for a single pressure."""
         T_, P_ = self.process_input(T, P)
         P0 = self.nearest_pressure(P_, which=0)
@@ -395,9 +397,9 @@ class PlogRateFit(RateFit):
         ]
 
     @property
-    def pressures(self) -> NDArray[numpy.float64]:
+    def pressures(self) -> NDArray[numpy.float128]:
         """Pressures."""
-        return numpy.array(self.Ps, dtype=numpy.float64)
+        return numpy.array(self.Ps, dtype=numpy.float128)
 
     @property
     def pressure_indices(self) -> list[int]:
@@ -409,7 +411,7 @@ class PlogRateFit(RateFit):
         T: ArrayLike,  # noqa: N803
         P: ArrayLike,  # noqa: N803
         which: int = 0,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Get nearest lower or higher pressure.
 
         :param P: Pressure(s)
@@ -428,7 +430,7 @@ class PlogRateFit(RateFit):
         self,
         P: ArrayLike,  # noqa: N803
         which: int = 0,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Get nearest lower or higher pressure.
 
         :param P: Pressure(s)
@@ -477,7 +479,7 @@ class ChebRateFit(RateFit):
         T: ArrayLike,  # noqa: N803
         P: ArrayLike = 1,  # noqa: N803
         units: UnitsData | None = None,
-    ) -> NDArray[numpy.float64]:
+    ) -> NDArray[numpy.float128]:
         """Evaluate rate constant for a single pressure."""
         # Skip input processing, since chebgrid2d automatically forms the grid
         T0, T1 = self.T_range
