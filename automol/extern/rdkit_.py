@@ -1,5 +1,4 @@
-""" RDKit interface
-"""
+"""RDKit interface"""
 
 import numbers
 
@@ -146,7 +145,7 @@ def to_geometry(rdm, seed: int = -1):
     else:
         ps = rdDistGeom.ETKDGv3()
         ps.randomSeed = seed
-        ps.maxAttempts = 10000
+        ps.maxIterations = 10000
 
         ret = AllChem.EmbedMolecule(rdm, ps)
         if ret < 0:
