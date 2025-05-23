@@ -42,6 +42,9 @@ class ReactionSmarts:
     h_migration = f"([{Ar}:1].[{A_}:2][H:3])>>([H:3][{A_}:1].[{Ar}:2])"
     h_migration_12 = f"[{Ar}:1][{A_}:2][H:3]>>[H:3][{A_}:1][{Ar}:2]"
     beta_scission = f"[{A_}:1]-!@[{A_}:2]-[{Ar}:3]>>([{Ar}:1]).([{A_}:2]=[{A_}:3])"
+    vinyl_beta_scission = (
+        f"[{A_}:1]-!@[{A_}:2]=[{Ar}:3]>>([{Ar}:1]).([{A_}:2]#[{A_}:3])"
+    )
     ring_beta_scission = f"[{A_}:1]-@[{A_}:2]-[{Ar}:3]>>([{Ar}:1].[{A_}:2]=[{A_}:3])"
     # Specific
     pi2_addition = f"[*:1]=[*:2].[{Or}:3]>>[*:1]-[*:2]-[*:3]"
