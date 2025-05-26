@@ -1271,7 +1271,6 @@ def remove_atoms(rxn: Reaction, keys: list[int], stereo: bool = False) -> Reacti
     ts_struc = ts_structure(rxn)
     if ts_struc is not None:
         ts_struc = geom.remove(ts_struc, keys)
-        geom.display(ts_struc, gra=tsg)
 
     rct_strucs = reactant_structures(rxn)
     if rct_strucs is not None:

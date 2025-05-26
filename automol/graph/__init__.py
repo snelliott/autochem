@@ -1,4 +1,4 @@
-""" molecular graphs
+"""molecular graphs
 
 Import hierarchy:
     vmat        no dependencies
@@ -326,6 +326,8 @@ from .base._06heur import (
 from .base._07geom import (
     geometries_parity_mismatches,
     geometry_correct_linear_vinyls,
+    geometry_correct_nonplanar_pi_bonds,
+    geometry_correct_nonplanar_ring_pi_bond,
     geometry_dihedrals_near_value,
     geometry_local_parity,
     geometry_rotate_bond,
@@ -670,6 +672,8 @@ __all__ = [
     "geometry_local_parity",
     "geometries_parity_mismatches",
     # # corrections
+    "geometry_correct_nonplanar_ring_pi_bond",
+    "geometry_correct_nonplanar_pi_bonds",
     "geometry_correct_linear_vinyls",
     "geometry_pseudorotate_atom",
     "geometry_rotate_bond",
