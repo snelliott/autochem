@@ -1,4 +1,4 @@
-""" working with geometries
+"""working with geometries
 
 BEFORE ADDING ANYTHING, SEE IMPORT HIERARCHY IN __init__.py!!!!
 """
@@ -7,7 +7,6 @@ import itertools
 import numbers
 
 import numpy
-
 from phydat import phycon
 
 from ... import util
@@ -16,10 +15,12 @@ from ._00core import (
     align_with_geometry,
     atoms_neighbor_atom_keys,
     backbone_bond_keys,
+    bond_neighbor_atom_keys,
     ts_reactants_graph_without_stereo,
 )
 from ._02algo import (
     branch_atom_keys,
+    rings_atom_keys,
     rings_bond_keys,
 )
 from ._03kekule import (
@@ -85,7 +86,7 @@ def geometry_correct_nonplanar_pi_bonds(
     pert: float = 5.0 * phycon.DEG2RAD,
     excl_keys: frozenset[int] = frozenset(),
 ):
-    """correct a geometry for non-planar pi-bonds
+    """Correct a geometry for non-planar pi-bonds.
 
     :param gra: molecular graph
     :type gra: automol graph data structure
@@ -120,6 +121,35 @@ def geometry_correct_nonplanar_pi_bonds(
 
     # Restore the original atom ordering of the geometry
     return geom_base.reorder(geo, idx_dct)
+
+
+def geometry_correct_nonplanar_ring_pi_bond(gra, geo, bkey):
+    """Correct a geometry for a non-planar ring pi-bond.
+
+    :param gra: molecular graph
+    :param geo: molecular geometry
+    :param bkey: The bond key of the pi-bond to be corrected
+    """
+    rkeys_lst = list(map(set, rings_atom_keys(gra)))
+    key1, key2 = sorted(bkey)
+    rkeys = next(ks for ks in rkeys_lst if {key1, key2} <= ks)
+    nkey1s, nkey2s = bond_neighbor_atom_keys(gra, key1, key2)
+    rnkey = next(iter(nkey1s & rkeys), None)
+    nkey1 = next(iter(nkey1s - rkeys), None)
+    nkey2 = next(iter(nkey2s - rkeys), None)
+
+    assert rnkey is not None, "No ring neighbor key found for pi-bond"
+    xyz1, xyz2 = geom_base.coordinates(geo, idxs=(key1, key2))
+    rot_axis = numpy.subtract(xyz2, xyz1)
+
+    for key, nkey, xyz in [(key1, nkey1, xyz1), (key2, nkey2, xyz2)]:
+        if nkey is not None:
+            dih_ang = geom_base.dihedral_angle(geo, rnkey, key1, key2, nkey)
+            rot_ang = numpy.pi - dih_ang
+            rot_keys = branch_atom_keys(gra, key, nkey)
+            geo = geom_base.rotate(geo, rot_axis, rot_ang, orig_xyz=xyz, idxs=rot_keys)
+
+    return geo
 
 
 def geometry_correct_linear_vinyls(
@@ -184,8 +214,9 @@ def geometry_correct_linear_vinyls(
     # Restore the original atom ordering of the geometry
     return geom_base.reorder(geo, idx_dct)
 
+
 def geometry_rotate_bond(gra, geo, key, ang, degree=False, geo_idx_dct=None):
-    """Rotate a bond in a molecular geometry by a certain amount
+    """Rotate a bond in a molecular geometry by a certain amount.
 
     If no angle is passed in, the bond will be rotated to flip stereochemistry
 
