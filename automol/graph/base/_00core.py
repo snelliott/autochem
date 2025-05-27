@@ -1,4 +1,4 @@
-""" core graph functions
+"""core graph functions
 
 Data structure:
     gra = (atm_dct, bnd_dct)
@@ -454,7 +454,7 @@ def ts_graph_from_reactants_and_products(rct_gra: object, prd_gra: object) -> ob
 
 # # TS graph getters
 def ts_forming_bond_keys(tsg):
-    """Get the forming bonds from a TS graph
+    """Get the forming bonds from a TS graph.
 
     :param tsg: TS graph
     :type tsg: automol graph data structure
@@ -467,7 +467,7 @@ def ts_forming_bond_keys(tsg):
 
 
 def ts_breaking_bond_keys(tsg):
-    """Get the breaking bonds from a TS graph
+    """Get the breaking bonds from a TS graph.
 
     :param tsg: TS graph
     :type tsg: automol graph data structure
@@ -479,15 +479,32 @@ def ts_breaking_bond_keys(tsg):
     return frozenset(map(frozenset, brk_bnd_keys))
 
 
+def ts_unstable_bond_keys(tsg):
+    """Get the unstable bonds from a TS graph.
+
+    :param tsg: TS graph
+    :type tsg: automol graph data structure
+    :returns: The keys to breaking bonds
+    :rtype: frozenset[frozenset[{int, int}]]
+    """
+    ord_dct = bond_orders(tsg)
+    brk_bnd_keys = [k for k, o in ord_dct.items() if round(o % 1, 1) == 0.8]
+    return frozenset(map(frozenset, brk_bnd_keys))
+
+
 def ts_reacting_bond_keys(tsg):
-    """Get all of the bonds involved in the reaction
+    """Get all of the bonds involved in the reaction.
 
     :param tsg: TS graph
     :type tsg: automol graph data structure
     :returns: The keys to bonds involved in the reaction
     :rtype: frozenset[frozenset[{int, int}]]
     """
-    bnd_keys = ts_forming_bond_keys(tsg) | ts_breaking_bond_keys(tsg)
+    bnd_keys = (
+        ts_forming_bond_keys(tsg)
+        | ts_breaking_bond_keys(tsg)
+        | ts_unstable_bond_keys(tsg)
+    )
     return bnd_keys
 
 
@@ -669,6 +686,18 @@ def ts_reagents_graph_without_stereo(
         tsg = without_stereo(tsg)
 
     return tsg
+
+
+def clear_unstable_bond_orders(gra):
+    """Get a graph without unstable bond orders.
+
+    :param gra: Graph
+    :return: Graph
+    """
+    bnd_keys = ts_unstable_bond_keys(gra)
+    ord_dct = dict_.by_key(bond_orders(gra), bnd_keys)
+    ord_dct = dict_.transform_values(ord_dct, round)
+    return set_bond_orders(gra, ord_dct)
 
 
 # # setters
@@ -2291,7 +2320,7 @@ def without_pi_bonds(gra):
         (
             0
             if round(v, 1) == 0
-            else round(v % 1, 1) if round(v % 1, 1) in (0.1, 0.9) else 1
+            else round(v % 1, 1) if round(v % 1, 1) in (0.1, 0.9, 0.8) else 1
         )
         for v in map(bnd_ord_dct.__getitem__, bnd_keys)
     ]
@@ -2300,7 +2329,7 @@ def without_pi_bonds(gra):
 
 
 def without_reacting_bonds(gra):
-    """Get a copy of this graph without reacting bonds
+    """Get a copy of this graph without reacting bonds.
 
     :param gra: molecular graph
     :type gra: automol graph data structure
@@ -2311,7 +2340,7 @@ def without_reacting_bonds(gra):
 
 
 def without_bonds_by_orders(gra, ords=(0,), skip_dummies=True):
-    """Remove bonds of certain orders from the graph
+    """Remove bonds of certain orders from the graph.
 
     :param gra: molecular graph
     :type gra: automol graph data structure

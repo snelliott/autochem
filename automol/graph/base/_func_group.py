@@ -1,38 +1,41 @@
 """
-  Use graph structures to identify chemical functional groups
+Use graph structures to identify chemical functional groups
 
-  Note: Code requires explicit kekule graphs to work
+Note: Code requires explicit kekule graphs to work
 """
 
 import itertools
 
 from ._00core import (
-    implicit,
+    add_bonds,
     atom_keys,
-    atom_symbol_keys,
-    atoms_bond_keys,
-    atom_symbols,
     atom_neighbor_atom_keys,
+    atom_symbol_keys,
+    atom_symbols,
+    atoms_bond_keys,
     atoms_neighbor_atom_keys,
     # atom_unpaired_electrons,
     bond_keys,
     bond_orders,
     explicit,
+    # unsaturated_atom_keys
+    from_data,
+    implicit,
     remove_atoms,
     remove_bonds,
     subgraph,
     ts_reactants_graph_without_stereo,
-    # unsaturated_atom_keys
+    union,
 )
 from ._02algo import branches, isomorphism, rings_atom_keys
 from ._03kekule import (
+    atom_hybridizations_from_kekule,
     kekule,
     kekules,
+    kekules_bond_orders_collated,
     # kekules_bond_orders,
     radical_atom_keys,
     radical_atom_keys_from_kekule,
-    atom_hybridizations_from_kekule,
-    kekules_bond_orders_collated,
 )
 from ._08canon import from_local_stereo, to_local_stereo
 
@@ -236,13 +239,12 @@ def alkane_sites(gra, filterlst=()):
     :rtype: tuple
     """
     hyb_dct = atom_hybridizations_from_kekule(gra)
-    non_sp3 =  tuple(atm for atm in hyb_dct if hyb_dct[atm] != 3)
+    non_sp3 = tuple(atm for atm in hyb_dct if hyb_dct[atm] != 3)
     cc1_bnds = bonds_of_type(gra, symb1="C", symb2="C", mbond=1)
     cc1_bnds = _filter_idxs(cc1_bnds, filterlst=filterlst)
     # delete bond if both are non-sp3 carbons
     # maybe classify according to : primary, secondary, tertiary?
-    cc1_bnds = tuple(bnd for bnd in cc1_bnds
-                     if not all(atm in non_sp3 for atm in bnd))
+    cc1_bnds = tuple(bnd for bnd in cc1_bnds if not all(atm in non_sp3 for atm in bnd))
     return cc1_bnds
 
 
@@ -311,7 +313,7 @@ def alcohol_groups(gra, filterlst=()):
     alc_grps = _filter_idxs(alc_grps, filterlst=filterlst)
     # return only the OH group
     alc_grps = tuple((atms[1], atms[2]) for atms in alc_grps)
-    #tuple([(atms[1], atms[2]) for atms in alc_grps])
+    # tuple([(atms[1], atms[2]) for atms in alc_grps])
     return alc_grps
 
 
@@ -876,7 +878,7 @@ def allyl_groups(gra):
     check all resonant structures
     warning: in aromatic radicals, relatively unstable structures can also arise
     (e.g., in phenyl can also have an allylic-like form)
-    if you want only the most stable resonance structure analyzed, 
+    if you want only the most stable resonance structure analyzed,
     use allyl_groups_lowestspin
     Args:
     param gra: molecular graph (kekule)
@@ -886,7 +888,7 @@ def allyl_groups(gra):
     """
 
     def pairwise_bd_ords_check(bds_ords, ngb_rads):
-        """check pairwise bonds of type single-double, 
+        """check pairwise bonds of type single-double,
         and sigle has a res. radical on it"""
         flag = False
         for i, ord0 in enumerate(bds_ords[0]):
@@ -1121,7 +1123,7 @@ def cyclopentadienone_groups(gra):
 
 def fulvene_groups(gra):
     """Determine location of fulvalene-like groups as keys of heavy atoms
-       cpd rings with all sp2 carbons and first atom of 
+       cpd rings with all sp2 carbons and first atom of
        one lateral group is an sp2 carbon
 
     Args:
@@ -1482,6 +1484,40 @@ def radical_dissociation_products(gra, pgra1):
         pgra2 = from_local_stereo(idx_pgra2)
 
     return pgra1, pgra2
+
+
+def possible_radical_dissociation_sources(prd_gras):
+    """Given product graphs, determine possible radical dissociation sources that could
+    have produced them, if any.
+
+    :param gras: Product graphs
+    :return: Product graphs, with combined unstable product, if any
+    """
+    oh_gra0 = from_data({0: "O", 1: "H"}, [(0, 1)])
+
+    prd_gras0 = []
+    oh_gra = None
+    oh_key = None
+    for gra in prd_gras:
+        map_dct = isomorphism(oh_gra0, gra, backbone_only=True)
+        if map_dct and not oh_gra:
+            oh_gra = gra
+            oh_key = map_dct.get(0, None)
+        else:
+            prd_gras0.append(gra)
+
+    prds_gras = []
+    for idx, src_gra in enumerate(prd_gras0):
+        prd_gras = prd_gras0.copy()
+        co_bonds = bonds_of_type(kekule(src_gra), symb1="C", symb2="O", mbond=2)
+        for _, co_key in co_bonds:
+            oo_bkey = frozenset({oh_key, co_key})
+            src_gra = union(src_gra, oh_gra)
+            src_gra = add_bonds(src_gra, [oo_bkey], ord_dct={oo_bkey: 0.8})
+            prd_gras[idx] = src_gra
+            prds_gras.append(prd_gras)
+
+    return prds_gras
 
 
 # helpers

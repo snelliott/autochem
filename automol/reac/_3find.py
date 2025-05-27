@@ -1,4 +1,4 @@
-""" reaction finders
+"""reaction finders
 
 Function arguments:
     Each function takes a list of reactant graphs and a list of product graphs.
@@ -464,7 +464,7 @@ def additions(rct_gras, prd_gras):
     for atm1_key, atm2_key in frm_bnd_pairs:
         rcts_gra_ = graph.add_bonds(rcts_gra, [(atm1_key, atm2_key)])
 
-        iso_dct = graph.isomorphism(rcts_gra_, prds_gra, stereo=False)
+        iso_dct = graph.isomorphism(rcts_gra_, prds_gra, stereo=False, unstable=False)
         if iso_dct:
             f_frm_bnd_key = (atm1_key, atm2_key)
             b_brk_bnd_key0 = (iso_dct[atm1_key], iso_dct[atm2_key])
@@ -747,6 +747,52 @@ def find(
     rct_gras0, _ = graph.standard_keys_for_sequence(rct_gras)
     prd_gras0, _ = graph.standard_keys_for_sequence(prd_gras)
 
+    # 1. Try finding reactions with reactants and products as-is
+    #    If reactions are found, return
+    rxns = _find(
+        rct_gras0=rct_gras0,
+        prd_gras0=prd_gras0,
+        stereo=stereo,
+        enant=enant,
+        strained=strained,
+    )
+    if rxns:
+        rxns = unique(rxns)
+        return tuple(rxns)
+
+    # 2. Check for decomposition products of unstable species
+    prds_gras = graph.possible_radical_dissociation_sources(prd_gras0)
+    all_rxns = []
+    for prd_gras_ in prds_gras:
+        rxns = _find(
+            rct_gras0=rct_gras0,
+            prd_gras0=prd_gras_,
+            stereo=stereo,
+            enant=enant,
+            strained=strained,
+        )
+        all_rxns.extend(rxns)
+
+    all_rxns = unique(all_rxns)
+    return tuple(all_rxns)
+
+
+def _find(
+    rct_gras0,
+    prd_gras0,
+    stereo: bool = False,
+    enant: bool = True,
+    strained: bool = True,
+) -> tuple[Reaction, ...]:
+    """Find all reactions consistent with these reactants and products.
+
+    :param rct_gras: Graphs for the reactants
+    :param prd_gras: Graphs for the products
+    :param stereo: Find stereo-specified reaction objects?
+    :param enant: If expanding stereo, include enantiomers?
+    :param strained: If expanding stereo, include strained stereoisomers?
+    :returns: The reaction Reaction objects
+    """
     rct_gras = list(map(graph.without_stereo, rct_gras0))
     prd_gras = list(map(graph.without_stereo, prd_gras0))
 
@@ -791,9 +837,10 @@ def find(
                     prd_gras=prd_gras0,
                 )
                 all_rxns.extend(srxns)
+
     # Check for uniqueness *after* stereochemistry is assigned
-    all_rxns = unique(all_rxns)
-    return tuple(all_rxns)
+    # (Now, in wrapping function)
+    return all_rxns
 
 
 # helpers

@@ -29,6 +29,7 @@ from ._00core import (
     bond_induced_subgraph,
     bond_keys,
     bond_orders,
+    clear_unstable_bond_orders,
     frozen,
     implicit,
     remove_bonds,
@@ -50,9 +51,15 @@ from ._00core import (
 
 # # isomorphisms and equivalence
 def isomorphism(
-    gra1, gra2, backbone_only=False, stereo=True, dummy=True, subgraph=False
+    gra1,
+    gra2,
+    backbone_only=False,
+    stereo=True,
+    dummy=True,
+    subgraph=False,
+    unstable=True,
 ):
-    """Obtain an isomorphism between two graphs
+    """Obtain an isomorphism between two graphs.
 
     :param backbone_only: Compare backbone atoms only?
     :type backbone_only: bool
@@ -62,6 +69,7 @@ def isomorphism(
     :type dummy: bool
     :param subgraph: Test whether `gra2` is isomorphic to a subgraph of `gra1`?
     :type subgraph: bool
+    :param unstable: Whether to include unstable product bonds in the isomorphism
     :returns: The isomorphism mapping `gra1` onto `gra2`
     :rtype: dict
     """
@@ -76,6 +84,10 @@ def isomorphism(
     if not dummy:
         gra1 = without_dummy_atoms(gra1)
         gra2 = without_dummy_atoms(gra2)
+
+    if not unstable:
+        gra1 = clear_unstable_bond_orders(gra1)
+        gra2 = clear_unstable_bond_orders(gra2)
 
     nxg1 = _01networkx.from_graph(gra1)
     nxg2 = _01networkx.from_graph(gra2)
