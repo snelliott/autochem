@@ -145,7 +145,7 @@ class BaseTherm(ThermCalculator, UnitManager, Frozen, Scalable, SubclassTyped, a
         assert len(others) == len(others_labels), f"{others_labels} !~ {others}"
         all_objs = [self, *others]
         all_labels = [label, *others_labels]
-        all_colors = plot.COLORS[: len(all_labels)]
+        all_colors = plot.COLOR_CYCLE[: len(all_labels)]
 
         # Gather data from functons
         T = numpy.linspace(*T_range, num=500)

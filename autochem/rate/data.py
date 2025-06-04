@@ -111,57 +111,18 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         :param y_label: Y-axis label
         :return: Chart
         """
-        # Process units
-        units = UNITS if units is None else Units.model_validate(units)
-        x_unit = unit_.pretty_string(units.temperature**-1)
-        y_unit = unit_.pretty_string(units.rate_constant(self.order))
-
-        # Add units to labels
-        x_label = f"{x_label} ({x_unit})"
-        y_label = f"{y_label} ({y_unit})"
-
         # Gather objects and labels
         assert len(others) == len(others_labels), f"{others_labels} !~ {others}"
         all_rates = [self, *others]
         all_labels = [label, *others_labels]
-        all_colors = plot.COLORS[: len(all_labels)]
-
-        # Gather data from functons
-        T = numpy.linspace(*T_range, num=500)
-        data_dct = {L: f(T, P) for L, f in zip(all_labels, all_rates, strict=True)}
-        data = pandas.DataFrame({"x": numpy.divide(1000, T), **data_dct})
-
-        # Determine exponent range
-        vals_arr = numpy.array(list(data_dct.values()))
-        is_nan = numpy.isnan(vals_arr)
-        exp_arr = numpy.log10(vals_arr, where=~is_nan)
-        exp_arr[is_nan] = 0.0
-        exp_arr = numpy.rint(exp_arr).astype(int)
-        exp_max = numpy.max(exp_arr).item()
-        exp_min = numpy.min(exp_arr).item()
-        y_vals = [10**x for x in range(exp_min, exp_max + 2)]
-
-        # Prepare encoding parameters
-        x = altair.X("x", title=x_label)
-        y = (
-            altair.Y("value:Q", title=y_label)
-            .scale(type="log")
-            .axis(format=".1e", values=y_vals)
-        )
-        color = (
-            altair.Color(
-                "key:N", scale=altair.Scale(domain=all_labels, range=all_colors)
-            )
-            if others
-            else altair.value(all_colors[0])
-        )
-
-        # Create chart
-        return (
-            altair.Chart(data)
-            .mark_line()
-            .transform_fold(fold=list(data_dct.keys()))
-            .encode(x=x, y=y, color=color)
+        return plot.arrhenius(
+            ks=all_rates,
+            labels=all_labels,
+            T_range=T_range,
+            P=P,
+            units=units,
+            x_label=x_label,
+            y_label=y_label,
         )
 
 
@@ -181,9 +142,7 @@ class Rate(BaseRate):
 
     @property
     def kTP(self):  # noqa: N802
-        return xarray.DataArray(
-            data=self.data, coords={Key.T: self.T, Key.P: self.P}
-        )
+        return xarray.DataArray(data=self.data, coords={Key.T: self.T, Key.P: self.P})
 
     @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(

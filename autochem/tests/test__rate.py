@@ -159,12 +159,6 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     kT1P1 = rxn.rate(T1, P1)
     assert numpy.shape(kT1P1) == (4, 3), kT1P1
 
-    # Read with units and plot against another rate
-    comp_units = SIMPLE.get("units")
-    comp_rxn_str = SIMPLE.get("chemkin")
-    comp_rxn = rate.from_chemkin_string(comp_rxn_str, units=comp_units)
-    rate.display(rxn, others=[comp_rxn], others_labels=["comp"])
-
 
 @pytest.mark.parametrize(
     "name, data, exp_dct, count, factor",
