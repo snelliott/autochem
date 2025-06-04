@@ -57,7 +57,9 @@ class ReactionSmarts:
         f"[{Ar}:1]-[{A_}:2][O:3][O:4][H:5]>>([{Ar}:1]=[{A_}:2]).([O:3][O:4][H:5])"
     )
     qooh_ring_forming_scission = f"([{Cr}:1].[{O_}:2][O:3][H:4])>>[R:1][R:2].[O:3][H:4]"
-    qooh_instability = f"[{Cr}:1][O:2][O:3][H:4]>>[C:1]=[O:2].[O:3][H:4]"
+    qooh_instability = (
+        f"[{As}:5][{Cr}:1][O:2][O:3][H:4]>>[{As}:5][C:1]=[O:2].[O:3][H:4]"
+    )
 
 
 def reactions(smarts: str, gra: object, symeq: bool = False) -> list[object]:
