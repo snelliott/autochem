@@ -152,8 +152,9 @@ class Rate(BaseRate):
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float128]:
         """Evaluate rate constant."""
-        T_, P_ = self.process_input(T, P)
-        kTP: NDArray[numpy.float128] = self.kTP.sel(T=T_, P=P_, method="ffill").data
+        kTP: NDArray[numpy.float128] = self.kTP.sel(
+            {Key.T: T, Key.P: P}, method="ffill"
+        ).data
         return self.process_output(kTP, T, P)
 
 
