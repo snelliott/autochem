@@ -7,7 +7,6 @@ from typing import Annotated, ClassVar
 import altair
 import more_itertools as mit
 import numpy
-import pandas
 import pint
 import pydantic
 import xarray
