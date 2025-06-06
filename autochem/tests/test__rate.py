@@ -101,6 +101,25 @@ C5H9O(853)z = C5H9O(852)r0   9.153E-295  101.8  27424   ! pes.subpes.channel  1.
 """,
 }
 
+MESS1 = {
+    "order": 1,
+    "out": """
+W2->W14
+
+P\T           500       600       700       800       900     1e+03   1.1e+03   1.2e+03   1.3e+03   1.4e+03   1.5e+03   1.6e+03   1.7e+03   1.8e+03   1.9e+03     2e+03
+0.1           ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***
+1             ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***
+10            ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***
+100           ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***
+1e+03         ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***       ***
+1e+04    1.69e+04  3.77e+05  3.49e+06       ***  6.86e+07  1.96e+08  4.63e+08  9.47e+08  1.74e+09  2.92e+09  4.59e+09  6.78e+09  9.56e+09   1.3e+10   1.7e+10  2.16e+10
+1e+05    1.74e+04   3.8e+05  3.48e+06  1.85e+07  6.83e+07  1.95e+08  4.62e+08   9.5e+08  1.75e+09  2.97e+09  4.71e+09  7.04e+09  1.01e+10  1.38e+10  1.84e+10  2.38e+10
+1e+06    1.75e+04  3.81e+05  3.48e+06  1.85e+07  6.82e+07  1.95e+08  4.62e+08   9.5e+08  1.76e+09  2.98e+09  4.72e+09  7.07e+09  1.01e+10   1.4e+10  1.86e+10  2.41e+10
+1e+07    1.74e+04  3.81e+05  3.49e+06  1.85e+07  6.82e+07  1.95e+08  4.61e+08   9.5e+08  1.76e+09  2.98e+09  4.72e+09  7.08e+09  1.01e+10   1.4e+10  1.86e+10  2.42e+10
+O-O      1.75e+04  3.81e+05  3.49e+06  1.85e+07  6.83e+07  1.95e+08  4.62e+08  9.51e+08  1.76e+09  2.98e+09  4.72e+09  7.08e+09  1.01e+10   1.4e+10  1.86e+10  2.42e+10
+""",
+}
+
 
 @pytest.mark.parametrize(
     "name, data, check_roundtrip",
@@ -161,6 +180,21 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
 
 
 @pytest.mark.parametrize(
+    "name, data",
+    [
+        ("MESS1", MESS1)
+    ],
+)
+def test__from_mess_channel_output(name, data):
+    order = data.get("order")
+    mess_chan_out = data.get("out")
+    k = rate.data.from_mess_channel_output(mess_chan_out, order=order)
+    k.display(T_range=(500, 2000))
+    k.display(P=1e4, T_range=(500, 2000))
+    k.display(P=1e7, T_range=(500, 2000))
+
+
+@pytest.mark.parametrize(
     "name, data, exp_dct, count, factor",
     [
         (
@@ -185,9 +219,9 @@ def test__expand_lumped(name, data, exp_dct, count: int, factor: float):
     rxns = rate.expand_lumped(rxn, exp_dct)
     assert len(rxns) == count, f"{len(rxns)} != {count}"
 
-    assert all(rxn.rate * factor == r.rate for r in rxns), (
-        f"{rxn.rate} * {factor} != {rxns[0].rate}"
-    )
+    assert all(
+        rxn.rate * factor == r.rate for r in rxns
+    ), f"{rxn.rate} * {factor} != {rxns[0].rate}"
 
 
 if __name__ == "__main__":

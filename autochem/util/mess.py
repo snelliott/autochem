@@ -11,7 +11,7 @@ from .type_ import NDArray_
 class MessOutputChannelParseResults(pydantic.BaseModel):
     T: list[float]
     P: list[float]
-    k: NDArray_
+    k_data: NDArray_
     k_high: NDArray_ | None = None
     id1: str | None = None
     id2: str | None = None
@@ -48,7 +48,7 @@ def parse_output_channel(mess_chan_out: str) -> MessOutputChannelParseResults:
     return MessOutputChannelParseResults(
         T=res.get(Key.T).as_list(),
         P=[row[0] for row in data],
-        k=[row[1:] for row in data],
+        k_data=[row[1:] for row in data],
         k_high=res.get(Key.high),
         id1=res.get(Key.id1),
         id2=res.get(Key.id2),

@@ -16,7 +16,7 @@ from pydantic_core import core_schema
 
 from .. import unit_
 from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, const
-from ..util import chemkin, plot
+from ..util import chemkin, mess, plot
 from ..util.type_ import Frozen, NDArray_, Scalable, Scalers, SubclassTyped
 from . import blend
 from .blend import BlendingFunction_
@@ -128,20 +128,23 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
 class Rate(BaseRate):
     T: list[float]
     P: list[float]
-    data: NDArray_
+    k_data: NDArray_
+    k_high: list[float] | None = None
 
     # Private attributes
     type_: ClassVar[str] = "data"
-    _scalers: ClassVar[Scalers] = {"data": numpy.multiply}
+    _scalers: ClassVar[Scalers] = {"data": numpy.multiply, "high": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
         "T": D.temperature,
         "P": D.pressure,
         "data": D.rate_constant,
+        "high": D.rate_constant,
     }
 
     @property
-    def kTP(self):  # noqa: N802
-        return xarray.DataArray(data=self.data, coords={Key.T: self.T, Key.P: self.P})
+    def data_array(self):
+        """Return data as an xarray.DataArray."""
+        return xarray.DataArray(data=self.k_data, coords={Key.P: self.P, Key.T: self.T})
 
     @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(
@@ -151,7 +154,7 @@ class Rate(BaseRate):
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float128]:
         """Evaluate rate constant."""
-        kTP: NDArray[numpy.float128] = self.kTP.sel(
+        kTP: NDArray[numpy.float128] = self.data_array.sel(
             {Key.T: T, Key.P: P}, method="ffill"
         ).data
         return self.process_output(kTP, T, P)
@@ -531,7 +534,37 @@ def chemkin_string(rate_const: RateFit, eq_width: int = 0) -> str:
     return "\n".join(lines)
 
 
+def from_mess_channel_output(mess_chan_out: str, order: int) -> Rate:
+    """Extract rate data from MESS output.
+
+    :param mess_chan_out: MESS output channel string
+    :param order: Order
+    :return: Rate data
+    """
+    res = mess.parse_output_channel(mess_chan_out)
+    return from_mess_channel_output_parse_results(res, order=order)
+
+
 # Parse helpers
+def from_mess_channel_output_parse_results(
+    res: mess.MessOutputChannelParseResults, order: int
+) -> Rate:
+    """Extract rate data from MESS output parse results.
+
+    :param res: MESS output parse results
+    :param order: Order
+    :return: Rate data
+    """
+    return Rate(
+        order=order,
+        T=res.T,
+        P=res.P,
+        k_data=res.k_data,
+        k_high=res.k_high,
+        units={"substance": "molec"},
+    )
+
+
 def from_chemkin_parse_results(
     res: chemkin.ChemkinRateParseResults, units: UnitsData | None = None
 ) -> RateFit:
