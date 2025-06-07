@@ -102,7 +102,6 @@ C5H9O(853)z = C5H9O(852)r0   9.153E-295  101.8  27424   ! pes.subpes.channel  1.
 }
 
 MESS1 = {
-    "order": 1,
     "data": r"""
 W1->W2
 
@@ -130,7 +129,6 @@ C5H9(553) = C5H9(536)              1.000      0.000      0.000   # pes.subpes.ch
 }
 
 MESS2 = {
-    "order": 1,
     "data": r"""
 W2->W14
 
@@ -213,12 +211,9 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     ],
 )
 def test__from_mess_channel_output(name, data):
-    order = data.get("order")
     mess_chan_out = data.get("data")
     rxn_fit_str = data.get("fit")
     rxn = rate.from_mess_channel_output(mess_chan_out)
-
-    assert rxn.rate.order == order
 
     # Scale
     rxn_times_2 = rxn * 2
@@ -226,6 +221,7 @@ def test__from_mess_channel_output(name, data):
 
     # Plot
     rate.display(rxn)
+    rate.display(rxn, label="k")
     rate.display(
         [rxn, rxn_times_2, rxn_divided_by_2],
         label=["original", "doubled", "halved"],
@@ -251,6 +247,20 @@ def test__from_mess_channel_output(name, data):
     assert numpy.shape(kT0P1) == (3,), kT0P1
     kT1P1 = rxn.rate(T1, P1)
     assert numpy.shape(kT1P1) == (4, 3), kT1P1
+
+
+@pytest.mark.parametrize(
+    "name, data",
+    [
+        ("MESS1", MESS1),
+        ("MESS2", MESS2),
+    ],
+)
+def test__fit_high(name, data):
+    mess_chan_out = data.get("data")
+    rxn = rate.from_mess_channel_output(mess_chan_out)
+    rxn_fit = rate.fit_high(rxn)
+    rate.display([rxn, rxn_fit], label=["rate", "fit"])
 
 
 @pytest.mark.parametrize(

@@ -13,7 +13,7 @@ from ..unit_ import UnitsData
 from ..util import chemkin, mess, plot
 from ..util.type_ import Scalable, Scalers
 from . import data
-from .data import ArrheniusRateFit, Rate_, RateFit
+from .data import ArrheniusRateFit, Rate, Rate_, RateFit
 
 
 class Reaction(Scalable):
@@ -201,6 +201,20 @@ def chemkin_string(rxn: Reaction, eq_width: int = 55, dup: bool = False) -> str:
     rate_str = data.chemkin_string(rxn.rate, eq_width=eq_width)
     rxn_str = f"{eq:<{eq_width}} {rate_str}"
     return chemkin.write_with_dup(rxn_str, dup=dup)
+
+
+# Fitting
+def fit_high(rxn: Reaction) -> Reaction:
+    """Fit high-pressure limit rate data to single Arrhenius.
+
+    :param rxn: Reaction with rate data
+    :return: Reaction with rate fit
+    """
+    rxn = rxn.model_copy()
+    rate = rxn.rate
+    assert isinstance(rate, Rate), rate
+    rxn.rate = ArrheniusRateFit.fit(T=rate.T, k=rate.k_high, order=rate.order)
+    return rxn
 
 
 # Display

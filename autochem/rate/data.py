@@ -265,6 +265,31 @@ class ArrheniusRateFit(RateFit):
         kTP = self.A * (T_**self.b) * numpy.exp(-self.E / (R * T_))
         return self.process_output(kTP, T, P)
 
+    @classmethod
+    @unit_.manage_units([D.temperature, D.rate_constant])
+    def fit(
+        cls,
+        T: ArrayLike,  # noqa: N803
+        k: ArrayLike,
+        order: int = 1,
+        units: UnitsData | None = None,
+    ) -> "ArrheniusRateFit":
+        """Fit data to Arrhenius rate fit.
+
+        :param T: Temperatures
+        :param k: Rates
+        :return: Rate fit
+        """
+        T = numpy.array(T, dtype=numpy.float64)
+        _1 = numpy.ones_like(T)
+
+        R = unit_.const.value(C.gas, UNITS)
+        M = numpy.column_stack([_1, numpy.log(T), -1 / (R * T)])
+        v = numpy.log(k)
+
+        (lnA, b, E), *_ = numpy.linalg.lstsq(M, v, rcond=1e-24)
+        return cls(order=order, A=numpy.exp(lnA), b=b, E=E)
+
 
 class FalloffRateFit(RateFit, abc.ABC):  # type: ignore[misc]
     A_high: float

@@ -27,7 +27,7 @@ class UnitManager(Frozen, abc.ABC):
         super().__init__(**kwargs)
 
 
-def manage_units(arg_dims: Sequence[Dimension], ret_dim: Dimension):
+def manage_units(arg_dims: Sequence[Dimension], ret_dim: Dimension | None = None):
     """Transform function into a unit managing function.
 
     TODO: Fix handling of args vs kwargs for input. This is currently broken when the
@@ -64,8 +64,10 @@ def manage_units(arg_dims: Sequence[Dimension], ret_dim: Dimension):
             ret = func0(self, *args_, units=units, **kwargs)
 
             # Convert return
-            ret_ = dim.convert(UNITS, units0, ret_dim, ret, **self.model_dump())
-            return ret_
+            if ret_dim is not None:
+                ret = dim.convert(UNITS, units0, ret_dim, ret, **self.model_dump())
+
+            return ret
 
         return func
 

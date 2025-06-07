@@ -7,6 +7,7 @@ from ._reaction import (
     chemkin_string,
     display,
     expand_lumped,
+    fit_high,
     from_chemkin_string,
     from_mess_channel_output,
 )
@@ -50,6 +51,8 @@ __all__ = [
     "chemkin_string",
     "from_chemkin_string",
     "from_mess_channel_output",
+    #  - Fitting
+    "fit_high",
     #  - Expansions
     "expand_lumped",
     #  - Display
