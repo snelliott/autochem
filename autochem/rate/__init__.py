@@ -8,6 +8,7 @@ from ._reaction import (
     display,
     expand_lumped,
     from_chemkin_string,
+    from_mess_channel_output,
 )
 from .blend import (
     BlendingFunction,
@@ -48,6 +49,7 @@ __all__ = [
     #  - Conversions
     "chemkin_string",
     "from_chemkin_string",
+    "from_mess_channel_output",
     #  - Expansions
     "expand_lumped",
     #  - Display

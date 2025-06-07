@@ -6,10 +6,11 @@ from collections.abc import Mapping, Sequence
 from typing import ClassVar
 
 import altair
+import numpy
 import pydantic
 
 from ..unit_ import UnitsData
-from ..util import chemkin, plot
+from ..util import chemkin, mess, plot
 from ..util.type_ import Scalable, Scalers
 from . import data
 from .data import ArrheniusRateFit, Rate_, RateFit
@@ -46,7 +47,7 @@ def from_chemkin_string(
     res = chemkin.parse_rate(rxn_str)
 
     # Extract rate constant
-    rate = data.from_chemkin_parse_results(res, units=units)
+    rate_fit = data.from_chemkin_parse_results(res, units=units)
 
     # Check that all information was used
     if strict:
@@ -59,6 +60,31 @@ def from_chemkin_string(
         reactants=res.reactants,
         products=res.products,
         reversible=res.reversible,
+        rate=rate_fit,
+    )
+
+
+def from_mess_channel_output(mess_chan_out: str, reversible: bool = True) -> Reaction:
+    """Extract rate data from MESS output.
+
+    :param mess_chan_out: MESS output channel string
+    :param order: Order
+    :return: Rate data
+    """
+    res = mess.parse_output_channel(mess_chan_out)
+    assert res.id1 is not None, res
+    assert res.id2 is not None, res
+
+    order = 1 if res.id1.startswith("W") else 2
+    reactants = [res.id1]
+    products = [res.id2]
+    rate = data.from_mess_channel_output_parse_results(res, order=order)
+
+    # Instantiate object
+    return Reaction(
+        reactants=reactants,
+        products=products,
+        reversible=reversible,
         rate=rate,
     )
 
@@ -179,38 +205,78 @@ def chemkin_string(rxn: Reaction, eq_width: int = 55, dup: bool = False) -> str:
 
 # Display
 def display(
-    rxn: Reaction,
-    others: Sequence[Reaction] = (),
-    others_labels: Sequence[str] = (),
+    rxn: Reaction | Sequence[Reaction],
     T_range: tuple[float, float] = (400, 1250),  # noqa: N803
     P: float = 1,  # noqa: N803
     units: UnitsData | None = None,
-    label: str = "This work",
+    label: str | Sequence[str] | None = None,
+    color: str | Sequence[str] | None = None,
     x_label: str = "1000/𝑇",  # noqa: RUF001
-    y_label: str = "𝑘",
-) -> altair.Chart:
-    """Display as an Arrhenius plot, optionally comparing to other rates.
+    y_label: str = "𝑘",  # noqa: RUF001
+):
+    """Display one or more reaction rates on an Arrhenius plot.
 
-    :param rxn: Reaction rate
-    :param others: Other reaction rates for comparison
-    :param others_labels: Labels for other reaction rates
-    :param t_range: Temperature range
-    :param p: Pressure
-    :param units: Units
+    :param rxn_: Reaction rate(s)
+    :param T_range: Temperature range, defaults to (400, 1250)
+    :param P: Pressure
+    :param label_: Label(s), defaults to None
+    :param color_: Color(s), defaults to None
     :param x_label: X-axis label
     :param y_label: Y-axis label
-    :return: Chart
     """
-    for rxn_ in others:
-        assert rxn.rate.order == rxn_.rate.order, f"{rxn.rate} !~ {rxn_.rate}"
+    rxns = [rxn] if isinstance(rxn, Reaction) else rxn
+    labels = [label] if isinstance(label, str) else label
+    colors = [color] if isinstance(color, str) else color
 
-    return plot.arrhenius(
-        ks=[rxn.rate, *(o.rate for o in others)],
-        labels=[label, *others_labels],
-        T_range=T_range,
-        P=P,
-        order=rxn.rate.order,
-        units=units,
-        x_label=x_label,
-        y_label=y_label,
+    rates = [r.rate for r in rxns]
+    rate0, *rates_ = rates
+    for rate_ in rates_:
+        assert rate0.order == rate_.order, f"{rate0} !~ {rate_}"
+    order = rate0.order
+
+    nr = len(rates)
+    labels = labels or ([f"k{i+1}" for i in range(nr)] if nr > 1 else None)
+
+    def make_chart(
+        ixs: Sequence[int],
+        rates: Sequence[data.BaseRate],
+        labels: Sequence[str] | None,
+        colors: Sequence[str] | None,
+        mark: str,
+    ) -> altair.Chart:
+        rates_ = [rates[i] for i in ixs]
+        labels_ = None if labels is None else [labels[i] for i in ixs]
+        colors_ = None if colors is None else [colors[i] for i in ixs]
+        (T, *Ts), ks = zip(
+            *(r._plot_data(T_range=T_range, P=P, units=units) for r in rates_),
+            strict=True,
+        )
+        for T_ in Ts:
+            assert numpy.allclose(T, T_), f"{T} !~ {T_}"
+        return plot.arrhenius(
+            ks=ks,
+            T=T,
+            order=order,
+            units=units,
+            labels=labels_,
+            colors=colors_,
+            x_label=x_label,
+            y_label=y_label,
+            mark=mark,
+        )
+
+    charts = []
+    for mark in (plot.Mark.line, plot.Mark.point):
+        ixs = [i for i, r in enumerate(rates) if r._plot_mark == mark]
+        if ixs:
+            chart = make_chart(
+                ixs, rates=rates, labels=labels, colors=colors, mark=mark
+            )
+            charts.append(chart)
+
+    chart, *others = charts
+    return (
+        chart
+        if not others
+        else altair.layer(*charts).resolve_scale(color="independent")
     )

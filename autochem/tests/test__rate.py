@@ -104,6 +104,25 @@ C5H9O(853)z = C5H9O(852)r0   9.153E-295  101.8  27424   ! pes.subpes.channel  1.
 MESS1 = {
     "order": 1,
     "out": """
+W1->W2
+
+P\T           500       600       700       800       900     1e+03   1.1e+03   1.2e+03   1.3e+03   1.4e+03   1.5e+03   1.6e+03   1.7e+03   1.8e+03   1.9e+03     2e+03
+0.1       0.00978      3.87       257  5.19e+03       ***  1.98e+05  5.83e+05       ***       ***       ***       ***       ***       ***       ***       ***       ***
+1         0.00988      4.07       301  7.29e+03  7.46e+04  4.72e+05  1.77e+06  4.72e+06       ***       ***       ***       ***       ***       ***       ***       ***
+10        0.00989       4.1       310  8.01e+03  9.81e+04  7.07e+05   3.3e+06   1.1e+07  2.78e+07       ***       ***       ***       ***       ***       ***       ***
+100       0.00989       4.1       312  8.13e+03  1.03e+05  7.87e+05  4.09e+06  1.58e+07  4.74e+07  1.17e+08  2.43e+08  4.45e+08  7.33e+08  1.11e+09       ***       ***
+1e+03     0.00989       4.1       312  8.14e+03  1.04e+05     8e+05  4.26e+06  1.71e+07  5.52e+07  1.49e+08  3.47e+08  7.15e+08  1.33e+09  2.25e+09  3.54e+09  5.23e+09
+1e+04     0.00989       4.1       312  8.14e+03  1.04e+05  8.01e+05  4.28e+06  1.73e+07  5.64e+07  1.55e+08  3.73e+08  8.02e+08  1.57e+09  2.83e+09  4.78e+09   7.6e+09
+1e+05     0.00989       4.1       312  8.14e+03  1.04e+05  8.01e+05  4.28e+06  1.73e+07  5.65e+07  1.56e+08  3.77e+08  8.14e+08  1.61e+09  2.94e+09  5.04e+09  8.19e+09
+1e+06     0.00989       4.1       312  8.14e+03  1.04e+05  8.02e+05  4.28e+06  1.73e+07  5.66e+07  1.56e+08  3.77e+08  8.15e+08  1.61e+09  2.95e+09  5.07e+09  8.26e+09
+1e+07     0.00989       4.1       312  8.14e+03  1.04e+05  8.02e+05  4.28e+06  1.73e+07  5.66e+07  1.56e+08  3.77e+08  8.16e+08  1.61e+09  2.95e+09  5.08e+09  8.27e+09
+O-O       0.00991      4.11       312  8.15e+03  1.04e+05  8.02e+05  4.28e+06  1.73e+07  5.66e+07  1.56e+08  3.77e+08  8.16e+08  1.61e+09  2.95e+09  5.08e+09  8.28e+09
+""",
+}
+
+MESS2 = {
+    "order": 1,
+    "out": """
 W2->W14
 
 P\T           500       600       700       800       900     1e+03   1.1e+03   1.2e+03   1.3e+03   1.4e+03   1.5e+03   1.6e+03   1.7e+03   1.8e+03   1.9e+03     2e+03
@@ -158,10 +177,8 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
     # Plot
     rate.display(rxn)
     rate.display(
-        rxn,
-        label="original",
-        others=[rxn_times_2, rxn_divided_by_2],
-        others_labels=["doubled", "halved"],
+        [rxn, rxn_times_2, rxn_divided_by_2],
+        label=["original", "doubled", "halved"],
     )
 
     # Evaluate
@@ -182,16 +199,41 @@ def test__from_chemkin_string(name, data, check_roundtrip: bool):
 @pytest.mark.parametrize(
     "name, data",
     [
-        ("MESS1", MESS1)
+        ("MESS1", MESS1),
+        ("MESS2", MESS2),
     ],
 )
 def test__from_mess_channel_output(name, data):
     order = data.get("order")
     mess_chan_out = data.get("out")
-    k = rate.data.from_mess_channel_output(mess_chan_out, order=order)
-    k.display(T_range=(500, 2000))
-    k.display(P=1e4, T_range=(500, 2000))
-    k.display(P=1e7, T_range=(500, 2000))
+    rxn = rate.from_mess_channel_output(mess_chan_out)
+
+    assert rxn.rate.order == order
+
+    # Scale
+    rxn_times_2 = rxn * 2
+    rxn_divided_by_2 = rxn / 2
+
+    # Plot
+    rate.display(rxn)
+    rate.display(
+        [rxn, rxn_times_2, rxn_divided_by_2],
+        label=["original", "doubled", "halved"],
+    )
+
+    # Evaluate
+    T0 = 500
+    T1 = [500, 600, 700, 800]
+    P0 = 1.0
+    P1 = [0.1, 1.0, 10.0]
+    kT0P0 = rxn.rate(T0, P0)
+    assert numpy.shape(kT0P0) == (), kT0P0
+    kT1P0 = rxn.rate(T1, P0)
+    assert numpy.shape(kT1P0) == (4,), kT1P0
+    kT0P1 = rxn.rate(T0, P1)
+    assert numpy.shape(kT0P1) == (3,), kT0P1
+    kT1P1 = rxn.rate(T1, P1)
+    assert numpy.shape(kT1P1) == (4, 3), kT1P1
 
 
 @pytest.mark.parametrize(
