@@ -161,7 +161,12 @@ class Rate(BaseRate):
     @property
     def data_array(self):
         """Return data as an xarray.DataArray."""
-        return xarray.DataArray(data=self.k_data, coords={Key.P: self.P, Key.T: self.T})
+        P = self.P
+        k_data = self.k_data
+        if self.k_high is not None:
+            P = numpy.append(self.P, numpy.inf)
+            k_data = numpy.vstack((self.k_data, self.k_high))
+        return xarray.DataArray(data=k_data, coords={Key.P: P, Key.T: self.T})
 
     @property
     def _plot_mark(self) -> str:
