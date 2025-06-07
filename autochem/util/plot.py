@@ -2,7 +2,7 @@
 
 import itertools
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Literal, Protocol
 
 import altair
 import numpy
@@ -25,7 +25,7 @@ class RateFunction(Protocol):
 
 
 class Color:
-    black = "#000000"
+    # Line colors:
     blue = "#0066ff"
     red = "#ff0000"
     green = "#1ab73a"
@@ -33,10 +33,13 @@ class Color:
     purple = "#8533ff"
     pink = "#d0009a"
     yellow = "#ffcd00"
+    # Point colors:
+    black = "#000000"
+    gray = "#808080ff"
     brown = "#916e6e"
 
 
-COLOR_CYCLE = [
+LINE_COLOR_CYCLE = [
     Color.blue,
     Color.red,
     Color.green,
@@ -44,19 +47,34 @@ COLOR_CYCLE = [
     Color.purple,
     Color.pink,
     Color.yellow,
+]
+
+
+POINT_COLOR_CYCLE = [
+    Color.black,
+    Color.gray,
     Color.brown,
 ]
 
 
+class Mark:
+    point = "point"
+    line = "line"
+
+
+MARKS = (Mark.point, Mark.line)
+
+
 def arrhenius(
-    ks: Sequence[RateFunction] = (),
-    labels: Sequence[str] = (),
-    T_range: tuple[float, float] = (400, 1250),  # noqa: N803
-    P: float = 1,  # noqa: N803
+    ks: ArrayLike,
+    T: Sequence[float],  # noqa: N803
     order: int = 1,
     units: UnitsData | None = None,
+    labels: Sequence[str] | None = None,
+    colors: Sequence[str] | None = None,
     x_label: str = "1000/𝑇",  # noqa: RUF001
     y_label: str = "𝑘",
+    mark: str = Mark.line,
 ) -> altair.Chart:
     """Display as an Arrhenius plot.
 
@@ -67,11 +85,18 @@ def arrhenius(
     :param units: Units
     :param x_label: X-axis label
     :param y_label: Y-axis label
+    :param point: Whether to mark with points instead of a line
     :return: Chart
     """
-    assert len(ks) == len(labels), f"{labels} !~ {ks}"
-    nk = len(ks)
-    colors = list(itertools.islice(itertools.cycle(COLOR_CYCLE), nk))
+    assert mark in MARKS, f"{mark} not in {MARKS}"
+    color_cycle = LINE_COLOR_CYCLE if mark == Mark.line else POINT_COLOR_CYCLE
+
+    nk, nT = numpy.shape(ks)
+    colors = colors or list(itertools.islice(itertools.cycle(color_cycle), nk))
+    keep_legend = labels is not None
+    labels = labels or [f"k{i+1}" for i in range(nk)]
+    assert len(T) == nT, f"{T} !~ {ks}"
+    assert len(labels) == nk, f"{labels} !~ {ks}"
 
     # Process units
     units = UNITS if units is None else Units.model_validate(units)
@@ -83,8 +108,7 @@ def arrhenius(
     y_label = f"{y_label} ({y_unit})"
 
     # Gather data from functons
-    T = numpy.linspace(*T_range, num=500)
-    data_dct = {lb: k(T, P, units=units) for lb, k in zip(labels, ks, strict=True)}
+    data_dct = dict(zip(labels, ks, strict=True))
     data = pandas.DataFrame({"x": numpy.divide(1000, T), **data_dct})
 
     # Determine exponent range
@@ -98,7 +122,7 @@ def arrhenius(
     y_vals = [10**x for x in range(exp_min, exp_max + 2)]
 
     # Prepare encoding parameters
-    x = altair.X("x", title=x_label)
+    x = altair.X("x", title=x_label, scale=altair.Scale(zero=False))
     y = (
         altair.Y("value:Q", title=y_label)
         .scale(type="log")
@@ -106,14 +130,14 @@ def arrhenius(
     )
     color = (
         altair.Color("key:N", scale=altair.Scale(domain=labels, range=colors))
-        if nk > 1
+        if keep_legend
         else altair.value(colors[0])
     )
 
+    chart = altair.Chart(data)
+    chart = chart.mark_point(filled=True, opacity=1) if mark == Mark.point else chart.mark_line()
+
     # Create chart
-    return (
-        altair.Chart(data)
-        .mark_line()
-        .transform_fold(fold=list(data_dct.keys()))
-        .encode(x=x, y=y, color=color)
+    return chart.transform_fold(fold=list(data_dct.keys())).encode(
+        x=x, y=y, color=color
     )

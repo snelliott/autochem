@@ -7,7 +7,6 @@ from typing import Annotated, ClassVar
 import altair
 import more_itertools as mit
 import numpy
-import pandas
 import pint
 import pydantic
 import xarray
@@ -17,7 +16,7 @@ from pydantic_core import core_schema
 
 from .. import unit_
 from ..unit_ import UNITS, C, D, Dimension, UnitManager, Units, UnitsData, const
-from ..util import chemkin, plot
+from ..util import chemkin, mess, plot
 from ..util.type_ import Frozen, NDArray_, Scalable, Scalers, SubclassTyped
 from . import blend
 from .blend import BlendingFunction_
@@ -89,21 +88,39 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         kTP = numpy.reshape(kTP, numpy.shape(T) + numpy.shape(P))
         return numpy.where(numpy.less_equal(kTP, 0), numpy.nan, kTP)
 
-    def display(
+    @property
+    def _plot_mark(self) -> str:
+        return plot.Mark.line
+
+    def _plot_data(
         self,
-        others: "Sequence[BaseRate]" = (),
-        others_labels: Sequence[str] = (),
         T_range: tuple[float, float] = (400, 1250),  # noqa: N803
         P: float = 1,  # noqa: N803
         units: UnitsData | None = None,
-        label: str = "This work",
+    ) -> tuple[NDArray[numpy.float_], NDArray[numpy.float_]]:
+        """Display as an Arrhenius plot.
+
+        :param T_range: Temperature range
+        :param P: Pressure
+        :param units: Units
+        :return: Chart
+        """
+        T = numpy.linspace(*T_range, 1000)
+        k = self(T=T, P=P, units=units)
+        return T, k
+
+    def display(
+        self,
+        T_range: tuple[float, float] = (400, 1250),  # noqa: N803
+        P: float = 1,  # noqa: N803
+        units: UnitsData | None = None,
+        label: str | None = None,
+        color: str | None = None,
         x_label: str = "1000/𝑇",  # noqa: RUF001
         y_label: str = "𝑘",
     ) -> altair.Chart:
         """Display as an Arrhenius plot.
 
-        :param others: Other rate constants
-        :param others_labels: Labels for other rate constants
         :param T_range: Temperature range
         :param P: Pressure
         :param units: Units
@@ -111,38 +128,69 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         :param y_label: Y-axis label
         :return: Chart
         """
-        # Gather objects and labels
-        assert len(others) == len(others_labels), f"{others_labels} !~ {others}"
-        all_rates = [self, *others]
-        all_labels = [label, *others_labels]
+        T, k = self._plot_data(T_range=T_range, P=P, units=units)
         return plot.arrhenius(
-            ks=all_rates,
-            labels=all_labels,
-            T_range=T_range,
-            P=P,
+            ks=[k],
+            T=T,
+            order=self.order,
             units=units,
+            labels=[label] if label else None,
+            colors=[color] if color else None,
             x_label=x_label,
             y_label=y_label,
+            mark=self._plot_mark,
         )
 
 
 class Rate(BaseRate):
     T: list[float]
     P: list[float]
-    data: NDArray_
+    k_data: NDArray_
+    k_high: list[float] | None = None
 
     # Private attributes
     type_: ClassVar[str] = "data"
-    _scalers: ClassVar[Scalers] = {"data": numpy.multiply}
+    _scalers: ClassVar[Scalers] = {"k_data": numpy.multiply, "k_high": numpy.multiply}
     _dimensions: ClassVar[dict[str, Dimension]] = {
         "T": D.temperature,
         "P": D.pressure,
-        "data": D.rate_constant,
+        "k_data": D.rate_constant,
+        "k_high": D.rate_constant,
     }
 
     @property
-    def kTP(self):  # noqa: N802
-        return xarray.DataArray(data=self.data, coords={Key.T: self.T, Key.P: self.P})
+    def data_array(self):
+        """Return data as an xarray.DataArray."""
+        P = self.P
+        k_data = self.k_data
+        if self.k_high is not None:
+            P = numpy.append(self.P, numpy.inf)
+            k_data = numpy.vstack((self.k_data, self.k_high))
+        return xarray.DataArray(data=k_data, coords={Key.P: P, Key.T: self.T})
+
+    @property
+    def _plot_mark(self) -> str:
+        return plot.Mark.point
+
+    def _plot_data(
+        self,
+        T_range: tuple[float, float] = (400, 1250),  # noqa: N803
+        P: float = 1,  # noqa: N803
+        units: UnitsData | None = None,
+    ) -> tuple[NDArray[numpy.float_], NDArray[numpy.float_]]:
+        """Display as an Arrhenius plot.
+
+        :param T_range: Temperature range
+        :param P: Pressure
+        :param units: Units
+        :return: Chart
+        """
+        T_min, T_max = T_range
+        k = self(T=self.T, P=P, units=units)
+        (ix,) = numpy.where(
+            numpy.greater_equal(self.T, T_min) & numpy.less_equal(self.T, T_max)
+        )
+        return numpy.take(self.T, ix), numpy.take(k, ix)
 
     @unit_.manage_units([D.temperature, D.pressure], D.rate_constant)
     def __call__(
@@ -152,8 +200,9 @@ class Rate(BaseRate):
         units: UnitsData | None = None,
     ) -> NDArray[numpy.float128]:
         """Evaluate rate constant."""
-        T_, P_ = self.process_input(T, P)
-        kTP: NDArray[numpy.float128] = self.kTP.sel(T=T_, P=P_, method="ffill").data
+        kTP: NDArray[numpy.float128] = self.data_array.sel(
+            {Key.T: T, Key.P: P}, method="ffill"
+        ).data
         return self.process_output(kTP, T, P)
 
 
@@ -215,6 +264,31 @@ class ArrheniusRateFit(RateFit):
         R = const.value(C.gas, UNITS)
         kTP = self.A * (T_**self.b) * numpy.exp(-self.E / (R * T_))
         return self.process_output(kTP, T, P)
+
+    @classmethod
+    @unit_.manage_units([D.temperature, D.rate_constant])
+    def fit(
+        cls,
+        T: ArrayLike,  # noqa: N803
+        k: ArrayLike,
+        order: int = 1,
+        units: UnitsData | None = None,
+    ) -> "ArrheniusRateFit":
+        """Fit data to Arrhenius rate fit.
+
+        :param T: Temperatures
+        :param k: Rates
+        :return: Rate fit
+        """
+        T = numpy.array(T, dtype=numpy.float64)
+        _1 = numpy.ones_like(T)
+
+        R = unit_.const.value(C.gas, UNITS)
+        M = numpy.column_stack([_1, numpy.log(T), -1 / (R * T)])
+        v = numpy.log(k)
+
+        (lnA, b, E), *_ = numpy.linalg.lstsq(M, v, rcond=1e-24)
+        return cls(order=order, A=numpy.exp(lnA), b=b, E=E)
 
 
 class FalloffRateFit(RateFit, abc.ABC):  # type: ignore[misc]
@@ -531,7 +605,37 @@ def chemkin_string(rate_const: RateFit, eq_width: int = 0) -> str:
     return "\n".join(lines)
 
 
+def from_mess_channel_output(mess_chan_out: str, order: int) -> Rate:
+    """Extract rate data from MESS output.
+
+    :param mess_chan_out: MESS output channel string
+    :param order: Order
+    :return: Rate data
+    """
+    res = mess.parse_output_channel(mess_chan_out)
+    return from_mess_channel_output_parse_results(res, order=order)
+
+
 # Parse helpers
+def from_mess_channel_output_parse_results(
+    res: mess.MessOutputChannelParseResults, order: int
+) -> Rate:
+    """Extract rate data from MESS output parse results.
+
+    :param res: MESS output parse results
+    :param order: Order
+    :return: Rate data
+    """
+    return Rate(
+        order=order,
+        T=res.T,
+        P=res.P,
+        k_data=res.k_data,
+        k_high=res.k_high,
+        units={"substance": "molec"},
+    )
+
+
 def from_chemkin_parse_results(
     res: chemkin.ChemkinRateParseResults, units: UnitsData | None = None
 ) -> RateFit:
