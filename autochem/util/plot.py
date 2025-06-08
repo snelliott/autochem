@@ -44,10 +44,10 @@ LINE_COLOR_CYCLE = [
     Color.blue,
     Color.red,
     Color.green,
-    Color.orange,
     Color.purple,
     Color.pink,
     Color.yellow,
+    Color.orange,
 ]
 
 
