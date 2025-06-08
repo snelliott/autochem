@@ -1,7 +1,7 @@
 """Rate constant models."""
 
 import abc
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Annotated, ClassVar
 
 import altair
@@ -12,6 +12,7 @@ import pydantic
 import xarray
 from numpy.polynomial import chebyshev
 from numpy.typing import ArrayLike, NDArray
+from pydantic import BeforeValidator
 from pydantic_core import core_schema
 
 from .. import unit_
@@ -142,11 +143,20 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         )
 
 
+def nan_array_to_none(arr: ArrayLike | None) -> NDArray | None:
+    """Replace an array of NaNs with None.
+
+    :param arr: Array
+    :return: Array or None
+    """
+    return None if arr is None or numpy.all(numpy.isnan(arr)) else arr
+
+
 class Rate(BaseRate):
     T: list[float]
     P: list[float]
     k_data: NDArray_
-    k_high: list[float] | None = None
+    k_high: Annotated[list[float] | None, BeforeValidator(nan_array_to_none)] = None
 
     # Private attributes
     type_: ClassVar[str] = "data"
@@ -204,6 +214,24 @@ class Rate(BaseRate):
             {Key.T: T, Key.P: P}, method="ffill"
         ).data
         return self.process_output(kTP, T, P)
+
+    def __add__(self, other: "Rate") -> "Rate":
+        """Add rates."""
+        assert self.order == other.order, f"{self} !~ {other}"
+        assert numpy.allclose(self.T, other.T), f"{self.T} != {other.T}"
+        assert numpy.allclose(self.P, other.P), f"{self.P} != {other.P}"
+
+        k_high = None
+        if self.k_high is not None and other.k_high is not None:
+            k_high = numpy.add(self.k_high, other.k_high)
+
+        return self.__class__(
+            order=self.order,
+            T=self.T,
+            P=self.P,
+            k_data=numpy.add(self.k_data, other.k_data),
+            k_high=k_high,
+        )
 
 
 class RateFit(BaseRate):
@@ -490,6 +518,41 @@ class PlogRateFit(RateFit):
         :return: Nearest index (indices)
         """
         return numpy.searchsorted(self.Ps, P, side="right") - 1 + which
+
+    @classmethod
+    @unit_.manage_units([D.temperature, D.rate_constant])
+    def fit(
+        cls,
+        T: ArrayLike,  # noqa: N803
+        P: ArrayLike,  # noqa: N803
+        k_data: ArrayLike,
+        k_high: ArrayLike | None = None,
+        order: int = 1,
+        units: UnitsData | None = None,
+    ) -> "PlogRateFit":
+        """Fit data to Plog rate fit.
+
+        :param T: Temperatures
+        :param P: Temperatures
+        :param k_data: Finite pressure rates
+        :param k_high: High-pressure-limit rates
+        :return: Rate fit
+        """
+        k_data_fits = [
+            ArrheniusRateFit.fit(T=T, k=k, order=order, units=units) for k in k_data
+        ]
+        k_high_fit = None
+        if k_high is not None:
+            k_high_fit = ArrheniusRateFit.fit(T=T, k=k_high, order=order, units=units)
+            raise NotImplementedError(k_high_fit)
+
+        return cls(
+            order=order,
+            As=[f.A for f in k_data_fits],
+            bs=[f.b for f in k_data_fits],
+            Es=[f.E for f in k_data_fits],
+            Ps=P,
+        )
 
 
 class ChebRateFit(RateFit):

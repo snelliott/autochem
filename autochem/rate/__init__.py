@@ -8,6 +8,7 @@ from ._reaction import (
     display,
     expand_lumped,
     fit_high,
+    fit_plog,
     from_chemkin_string,
     from_mess_channel_output,
 )
@@ -53,6 +54,7 @@ __all__ = [
     "from_mess_channel_output",
     #  - Fitting
     "fit_high",
+    "fit_plog",
     #  - Expansions
     "expand_lumped",
     #  - Display
