@@ -247,9 +247,7 @@ class Rate(BaseRate):
             k_high2 = other.k_high[ixT2]
             k_high = numpy.add(k_high1, k_high2)
 
-        return self.__class__(
-            order=self.order, T=T, P=P, k_data=k_data, k_high=k_high
-        )
+        return self.__class__(order=self.order, T=T, P=P, k_data=k_data, k_high=k_high)
 
     def without_nan(self) -> "Rate":
         """Return a copy of the rate without temperatures giving NaNs.
@@ -347,6 +345,10 @@ class ArrheniusRateFit(RateFit):
         R = unit_.const.value(C.gas, UNITS)
         M = numpy.column_stack([_1, numpy.log(T), -1 / (R * T)])
         v = numpy.log(k)
+
+        ok = numpy.isfinite(v)
+        M = M[ok, :]
+        v = v[ok]
 
         (lnA, b, E), *_ = numpy.linalg.lstsq(M, v, rcond=1e-24)
         return cls(order=order, A=numpy.exp(lnA), b=b, E=E)

@@ -222,7 +222,7 @@ def fit_high(rxn: Reaction) -> Reaction:
     return rxn
 
 
-def fit_plog(rxn: Reaction) -> Reaction:
+def fit_plog(rxn: Reaction, sanitize: bool = False) -> Reaction:
     """Fit rate data to Plog.
 
     :param rxn: Reaction with rate data
@@ -231,7 +231,8 @@ def fit_plog(rxn: Reaction) -> Reaction:
     rxn = rxn.model_copy()
     rate = rxn.rate
     assert isinstance(rate, Rate), rate
-    rate = rate.without_nan()
+    if sanitize:
+        rate = rate.without_nan()
     rxn.rate = PlogRateFit.fit(
         T=rate.T, P=rate.P, k_data=rate.k_data, k_high=rate.k_high, order=rate.order
     )
