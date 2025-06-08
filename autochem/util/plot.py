@@ -36,6 +36,7 @@ class Color:
     # Point colors:
     black = "#000000"
     gray = "#808080ff"
+    light_gray = "#bfbfbfff"
     brown = "#916e6e"
 
 
@@ -53,6 +54,7 @@ LINE_COLOR_CYCLE = [
 POINT_COLOR_CYCLE = [
     Color.black,
     Color.gray,
+    Color.light_gray,
     Color.brown,
 ]
 
@@ -135,7 +137,11 @@ def arrhenius(
     )
 
     chart = altair.Chart(data)
-    chart = chart.mark_point(filled=True, opacity=1) if mark == Mark.point else chart.mark_line()
+    chart = (
+        chart.mark_point(filled=True, opacity=1)
+        if mark == Mark.point
+        else chart.mark_line()
+    )
 
     # Create chart
     return chart.transform_fold(fold=list(data_dct.keys())).encode(
