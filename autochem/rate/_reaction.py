@@ -231,6 +231,7 @@ def fit_plog(rxn: Reaction) -> Reaction:
     rxn = rxn.model_copy()
     rate = rxn.rate
     assert isinstance(rate, Rate), rate
+    rate = rate.without_nan()
     rxn.rate = PlogRateFit.fit(
         T=rate.T, P=rate.P, k_data=rate.k_data, k_high=rate.k_high, order=rate.order
     )
