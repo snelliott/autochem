@@ -1,6 +1,7 @@
 """Rate constant models."""
 
 import abc
+import warnings
 from collections.abc import Mapping
 from typing import Annotated, ClassVar
 
@@ -243,8 +244,8 @@ class Rate(BaseRate):
 
         k_high = None
         if self.k_high is not None and other.k_high is not None:
-            k_high1 = self.k_high[ixT1]
-            k_high2 = other.k_high[ixT2]
+            k_high1 = numpy.array(self.k_high)[ixT1]
+            k_high2 = numpy.array(other.k_high)[ixT2]
             k_high = numpy.add(k_high1, k_high2)
 
         return self.__class__(order=self.order, T=T, P=P, k_data=k_data, k_high=k_high)
@@ -579,7 +580,7 @@ class PlogRateFit(RateFit):
         k_high_fit = None
         if k_high is not None:
             k_high_fit = ArrheniusRateFit.fit(T=T, k=k_high, order=order, units=units)
-            raise NotImplementedError(k_high_fit)
+            warnings.warn(f"Currently not fitting high-pressure limit {k_high_fit}")
 
         return cls(
             order=order,
