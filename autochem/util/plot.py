@@ -36,6 +36,7 @@ class Color:
     # Point colors:
     black = "#000000"
     gray = "#808080ff"
+    light_gray = "#bfbfbfff"
     brown = "#916e6e"
 
 
@@ -43,16 +44,17 @@ LINE_COLOR_CYCLE = [
     Color.blue,
     Color.red,
     Color.green,
-    Color.orange,
     Color.purple,
     Color.pink,
     Color.yellow,
+    Color.orange,
 ]
 
 
 POINT_COLOR_CYCLE = [
     Color.black,
     Color.gray,
+    Color.light_gray,
     Color.brown,
 ]
 
@@ -75,6 +77,7 @@ def arrhenius(
     x_label: str = "1000/𝑇",  # noqa: RUF001
     y_label: str = "𝑘",
     mark: str = Mark.line,
+    domain: tuple[float, float] | None = None,
 ) -> altair.Chart:
     """Display as an Arrhenius plot.
 
@@ -112,20 +115,25 @@ def arrhenius(
     data = pandas.DataFrame({"x": numpy.divide(1000, T), **data_dct})
 
     # Determine exponent range
-    vals_arr = numpy.array(list(data_dct.values()))
-    is_nan = numpy.isnan(vals_arr)
-    exp_arr = numpy.log10(vals_arr, where=~is_nan)
-    exp_arr[is_nan] = 0.0
-    exp_arr = numpy.rint(exp_arr).astype(int)
-    exp_max = numpy.max(exp_arr).item()
-    exp_min = numpy.min(exp_arr).item()
-    y_vals = [10**x for x in range(exp_min, exp_max + 2)]
+    if domain is None:
+        vals_arr = numpy.array(list(data_dct.values()))
+        is_nan = numpy.isnan(vals_arr)
+        exp_arr = numpy.log10(vals_arr, where=~is_nan)
+        exp_arr[is_nan] = 0.0
+        exp_arr = numpy.rint(exp_arr).astype(int)
+        exp_max = numpy.max(exp_arr).item()
+        exp_min = numpy.min(exp_arr).item()
+        y_vals = [10**x for x in range(exp_min, exp_max + 2)]
+        domain = altair.Undefined
+    else:
+        y_vals = altair.Undefined
 
     # Prepare encoding parameters
     x = altair.X("x", title=x_label, scale=altair.Scale(zero=False))
     y = (
         altair.Y("value:Q", title=y_label)
-        .scale(type="log")
+        .scale(type="log", domain=domain)
+        .axis(format=".1e")
         .axis(format=".1e", values=y_vals)
     )
     color = (
@@ -135,7 +143,11 @@ def arrhenius(
     )
 
     chart = altair.Chart(data)
-    chart = chart.mark_point(filled=True, opacity=1) if mark == Mark.point else chart.mark_line()
+    chart = (
+        chart.mark_point(filled=True, opacity=1)
+        if mark == Mark.point
+        else chart.mark_line()
+    )
 
     # Create chart
     return chart.transform_fold(fold=list(data_dct.keys())).encode(

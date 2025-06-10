@@ -13,7 +13,7 @@ from ..unit_ import UnitsData
 from ..util import chemkin, mess, plot
 from ..util.type_ import Scalable, Scalers
 from . import data
-from .data import ArrheniusRateFit, Rate, Rate_, RateFit
+from .data import ArrheniusRateFit, PlogRateFit, Rate, Rate_, RateFit
 
 
 class Reaction(Scalable):
@@ -30,6 +30,11 @@ class Reaction(Scalable):
 
     # Private attributes
     _scalers: ClassVar[Scalers] = {"rate": (lambda c, x: c * x)}
+
+    def __add__(self, other: "Reaction") -> "Reaction":
+        res = self.model_copy()
+        res.rate = self.rate + other.rate
+        return res
 
 
 # Constructors
@@ -214,6 +219,23 @@ def fit_high(rxn: Reaction) -> Reaction:
     rate = rxn.rate
     assert isinstance(rate, Rate), rate
     rxn.rate = ArrheniusRateFit.fit(T=rate.T, k=rate.k_high, order=rate.order)
+    return rxn
+
+
+def fit_plog(rxn: Reaction, sanitize: bool = False) -> Reaction:
+    """Fit rate data to Plog.
+
+    :param rxn: Reaction with rate data
+    :return: Reaction with rate fit
+    """
+    rxn = rxn.model_copy()
+    rate = rxn.rate
+    assert isinstance(rate, Rate), rate
+    if sanitize:
+        rate = rate.without_nan()
+    rxn.rate = PlogRateFit.fit(
+        T=rate.T, P=rate.P, k_data=rate.k_data, k_high=rate.k_high, order=rate.order
+    )
     return rxn
 
 

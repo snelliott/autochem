@@ -1,7 +1,8 @@
 """Rate constant models."""
 
 import abc
-from collections.abc import Mapping, Sequence
+import warnings
+from collections.abc import Mapping
 from typing import Annotated, ClassVar
 
 import altair
@@ -12,6 +13,7 @@ import pydantic
 import xarray
 from numpy.polynomial import chebyshev
 from numpy.typing import ArrayLike, NDArray
+from pydantic import BeforeValidator
 from pydantic_core import core_schema
 
 from .. import unit_
@@ -142,11 +144,37 @@ class BaseRate(UnitManager, Frozen, Scalable, SubclassTyped, abc.ABC):
         )
 
 
+def nan_array_to_none(arr: ArrayLike | None) -> NDArray | None:
+    """Replace an array of NaNs with None.
+
+    :param arr: Array or None
+    :return: Array or None
+    """
+    return None if arr is None or numpy.all(numpy.isnan(arr)) else arr
+
+
+def negative_rates_to_none(arr: ArrayLike | None) -> NDArray | None:
+    """Replace negative rates with None.
+
+    :param arr: Array or None
+    :return: Array or None
+    """
+    if arr is None:
+        return None
+    arr = numpy.array(arr, copy=True)
+    arr[arr < 0] = numpy.nan
+    return arr
+
+
 class Rate(BaseRate):
     T: list[float]
     P: list[float]
-    k_data: NDArray_
-    k_high: list[float] | None = None
+    k_data: Annotated[NDArray_, BeforeValidator(negative_rates_to_none)]
+    k_high: Annotated[
+        list[float] | None,
+        BeforeValidator(nan_array_to_none),
+        BeforeValidator(negative_rates_to_none),
+    ] = None
 
     # Private attributes
     type_: ClassVar[str] = "data"
@@ -204,6 +232,38 @@ class Rate(BaseRate):
             {Key.T: T, Key.P: P}, method="ffill"
         ).data
         return self.process_output(kTP, T, P)
+
+    def __add__(self, other: "Rate") -> "Rate":
+        """Add rates."""
+        assert self.order == other.order, f"{self} !~ {other}"
+        T, ixT1, ixT2 = numpy.intersect1d(self.T, other.T, return_indices=True)
+        P, ixP1, ixP2 = numpy.intersect1d(self.P, other.P, return_indices=True)
+        k_data1 = self.k_data[numpy.ix_(ixP1, ixT1)]
+        k_data2 = other.k_data[numpy.ix_(ixP2, ixT2)]
+        k_data = numpy.add(k_data1, k_data2)
+
+        k_high = None
+        if self.k_high is not None and other.k_high is not None:
+            k_high1 = numpy.array(self.k_high)[ixT1]
+            k_high2 = numpy.array(other.k_high)[ixT2]
+            k_high = numpy.add(k_high1, k_high2)
+
+        return self.__class__(order=self.order, T=T, P=P, k_data=k_data, k_high=k_high)
+
+    def without_nan(self) -> "Rate":
+        """Return a copy of the rate without temperatures giving NaNs.
+
+        :return: Rate
+        """
+        k_data = self.k_data
+        k_all = k_data if self.k_high is None else numpy.vstack((k_data, self.k_high))
+        not_nan = numpy.all(numpy.isfinite(k_all), axis=0)
+        return self.__class__(
+            order=self.order,
+            T=numpy.array(self.T)[not_nan],
+            P=self.P,
+            k_data=self.k_data[:, not_nan],
+        )
 
 
 class RateFit(BaseRate):
@@ -286,6 +346,10 @@ class ArrheniusRateFit(RateFit):
         R = unit_.const.value(C.gas, UNITS)
         M = numpy.column_stack([_1, numpy.log(T), -1 / (R * T)])
         v = numpy.log(k)
+
+        ok = numpy.isfinite(v)
+        M = M[ok, :]
+        v = v[ok]
 
         (lnA, b, E), *_ = numpy.linalg.lstsq(M, v, rcond=1e-24)
         return cls(order=order, A=numpy.exp(lnA), b=b, E=E)
@@ -490,6 +554,41 @@ class PlogRateFit(RateFit):
         :return: Nearest index (indices)
         """
         return numpy.searchsorted(self.Ps, P, side="right") - 1 + which
+
+    @classmethod
+    @unit_.manage_units([D.temperature, D.rate_constant])
+    def fit(
+        cls,
+        T: ArrayLike,  # noqa: N803
+        P: ArrayLike,  # noqa: N803
+        k_data: ArrayLike,
+        k_high: ArrayLike | None = None,
+        order: int = 1,
+        units: UnitsData | None = None,
+    ) -> "PlogRateFit":
+        """Fit data to Plog rate fit.
+
+        :param T: Temperatures
+        :param P: Temperatures
+        :param k_data: Finite pressure rates
+        :param k_high: High-pressure-limit rates
+        :return: Rate fit
+        """
+        k_data_fits = [
+            ArrheniusRateFit.fit(T=T, k=k, order=order, units=units) for k in k_data
+        ]
+        k_high_fit = None
+        if k_high is not None:
+            k_high_fit = ArrheniusRateFit.fit(T=T, k=k_high, order=order, units=units)
+            warnings.warn(f"Currently not fitting high-pressure limit {k_high_fit}")
+
+        return cls(
+            order=order,
+            As=[f.A for f in k_data_fits],
+            bs=[f.b for f in k_data_fits],
+            Es=[f.E for f in k_data_fits],
+            Ps=P,
+        )
 
 
 class ChebRateFit(RateFit):
