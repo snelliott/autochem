@@ -31,7 +31,8 @@ def classify_species(gra):
     return fc_grps.dct_count_grps
     # returns dct: number of groups for each type
 
-RM_IF_OTHER_BASES = ["C3.DD-M", "C3.ST-M"] #perhaps unnecessary since we filter other groups?
+RM_IF_OTHER_BASES = ["C3.DD-M", "C3.ST-M"]
+#perhaps unnecessary since we filter other groups?
 # TO ADD
 # C3.D-M : C4H6, C3H6
 # C3.DD-RSR : C3H3
@@ -142,22 +143,20 @@ class SuperFunctionalGroup:
         if len(self.sup_grps.keys()) > 1:
             for key in RM_IF_OTHER_BASES:
                 self.sup_grps.pop(key, None)
-            
         base_grps_0 = list(itertools.chain(*[
             grp for grp in self.sup_grps.values() if len(grp) > 0]))
         # if -RSR found but also -M and -R found: delete RSR
         # should have fixed this directly in functional group assignment
         # rtypes = [kk.split('-')[1] for kk in base_grps_0]
         # rsrtypes = [kk for kk in base_grps_0 if kk.split('-')[1] == 'RSR']
-        # if len(rtypes) != len(rsrtypes): # 'RSR' but also other e.g., 'R' and 'M' present: remove RSR types
+        # if len(rtypes) != len(rsrtypes): # 'RSR' but also other
+        # e.g., 'R' and 'M' present: remove RSR types
         #     [self.sup_grps.pop(key, None) for key in rsrtypes]
         #     base_grps_0 = [base for base in base_grps_0 if '-RSR' not in base]
         # assign substituents
         subs_fct_dct = {}
         for key, fct in SUBSTITUENTS_GRP_DCT.items():
             subs_fct_dct[key] = self.grp_fct_dct[fct]
-
-        
         # CHECK C6H5C2H2, C6H5C2H4!!
         # assign composite
         heavy_atms = list(implicit(gra)[0].keys())

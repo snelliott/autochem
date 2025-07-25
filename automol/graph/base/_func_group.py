@@ -760,10 +760,8 @@ def benzyl_groups(gra, filterlst=()):
     rtype: tuple(tuple) with non-H keys
     """
     bzyl_grps = tuple()
-    
     if len(filterlst) > 0:
         return bzyl_grps
-    
     # multiple kekules to check for resonance
     all_bd_ords = kekules_bond_orders_collated(gra)
     # get sp2 rings
