@@ -1,235 +1,197 @@
-""" Level 4 functions depending on other basic types (graph, geom)
-"""
+"""Level 4 functions depending on other basic types (graph, geom)."""
 
-import functools
-from automol import error
-import automol.formula
-import automol.geom
-import automol.graph
-from automol.extern import rdkit_
-from automol.extern import pybel_
-from automol.inchi.base import standard_form
-from automol.inchi.base import split
-from automol.inchi.base import has_stereo
-from automol.inchi.base import same_connectivity
-from automol.inchi.base import equivalent
-from automol.inchi.base import hardcoded_object_from_inchi_by_key
+from .. import amchi as amchi_
+from .. import geom
+from .. import graph as graph_
+from ..extern import rdkit_
+from .base import equivalent, has_stereo, standard_form
 
 
 # # conversions
-def graph(ich, stereo=True):
-    """ Generate a molecular graph from an InChI string.
+def graph(ich: str, stereo: bool = True):
+    """Generate a molecular graph from an InChI string.
 
-        :param ich: InChI string
-        :type ich: str
-        :param stereo: parameter to include stereochemistry information
-        :type stereo: bool
-        :rtype: automol molecular graph
+    :param ich: InChI string
+    :param stereo: parameter to include stereochemistry information
+    :rtype: automol molecular graph
     """
-
-    # split it up to handle hard-coded molecules in multi-component inchis
-    ichs = split(ich)
-    gras = [_inchi_connected_graph(ich, stereo=stereo) for ich in ichs]
-    for idx, gra in enumerate(gras):
-        if idx == 0:
-            num = 0
-        else:
-            num = max(map(max, map(automol.graph.atom_keys, gras[:idx]))) + 1
-        gras[idx] = automol.graph.transform_keys(gra, num.__add__)
-    gra = functools.reduce(automol.graph.union, gras)
-    return gra
-
-
-def _inchi_connected_graph(ich, stereo=True):
-    """ Generate a molecular graph from an InChI string where
-        all all atoms are connected by at least one bond.
-
-        :param ich: InChI string
-        :type ich: str
-        :param remove_stereo: parameter to include stereochemistry information
-        :type remove_stereo: bool
-        :rtype: automol molecular graph
-    """
-
-    gra = hardcoded_object_from_inchi_by_key('graph', ich)
-    if gra is None:
-        ich = standard_form(ich)
-        if not stereo or not has_stereo(ich):
-            rdm = rdkit_.from_inchi(ich)
-            gra = rdkit_.to_connectivity_graph(rdm)
-        else:
-            geo = geometry(ich)
-            gra = automol.geom.graph(geo, stereo=stereo)
-
-    gra = automol.graph.implicit(gra)
+    gra = amchi_.graph(ich, stereo=stereo)
+    if stereo:
+        gra = graph_.with_explicit_stereo_hydrogens(gra)
     return gra
 
 
 def geometry(ich, check=True):
-    """ Generate a molecular geometry from an InChI string.
+    """Generate a molecular geometry from an InChI string.
 
-        :param ich: InChI string
-        :type ich: str
-        :param check: check stereo and connectivity?
-        :type check: bool
-        :rtype: automol molecular geometry data structure
+    :param ich: InChI string
+    :type ich: str
+    :param check: check stereo and connectivity?
+    :type check: bool
+    :rtype: automol molecular geometry data structure
     """
-
-    # rdkit fails for multi-component inchis, so we split it up and space out
-    # the geometries
-    ichs = split(ich)
-    geos = [_connected_geometry(ich, check=check) for ich in ichs]
-    geos = [automol.geom.translate(geo, [50. * idx, 0., 0.])
-            for idx, geo in enumerate(geos)]
-    geo = functools.reduce(automol.geom.join, geos)
+    geo = amchi_.geometry(ich, check=check)
     return geo
 
 
-def _connected_geometry(ich, check=True):
-    """ Generate a molecular geometry from an InChI string where
-        all atoms are connected by at least one bond.
+def zmatrix(ich, check=True):
+    """Generate a z-matrix from an InChI string.
 
-        :param ich: InChI string
-        :type ich: str
-        :param check: check stereo and connectivity?
-        :type check: bool
-        :rtype: automol molecular geometry data structure
+    :param ich: InChI string
+    :type ich: str
+    :param check: check stereo and connectivity?
+    :type check: bool
+    :rtype: automol z-matrix data structure
     """
-    # print("inchi in:", ich)
-
-    geo = hardcoded_object_from_inchi_by_key('geom', ich)
-    if geo is None:
-
-        def _gen1(ich):
-            rdm = rdkit_.from_inchi(ich)
-            geo, = rdkit_.to_conformers(rdm, nconfs=1)
-            return geo
-
-        def _gen2(ich):
-            pbm = pybel_.from_inchi(ich)
-            geo = pybel_.to_geometry(pbm)
-            return geo
-
-        def _gen3(ich):
-            if has_stereo(ich):
-                raise ValueError
-
-            gra = graph(ich, stereo=False)
-            gra = automol.graph.explicit(gra)
-            geo = automol.graph.embed.geometry(gra)
-            return geo
-
-        for gen_ in [_gen1, _gen1, _gen1, _gen2, _gen3]:
-            success = False
-            try:
-                geo = gen_(ich)
-                geo_ich = automol.geom.inchi(geo)
-                # Check connectivity
-                same_conn = same_connectivity(ich, geo_ich)
-                conn = automol.geom.connected(geo)
-                _has_stereo = has_stereo(ich)
-                ich_equiv = equivalent(ich, geo_ich)
-                checks_pass = ((same_conn and conn) and
-                               (not _has_stereo or ich_equiv))
-                # print('original inchi', ich)
-                # print('geometry inchi', geo_ich)
-                if not check or checks_pass:
-                    success = True
-                    break
-            except (RuntimeError, TypeError, ValueError):
-                continue
-
-        if not success:
-            raise error.FailedGeometryGenerationError('Failed InChI:', ich)
-
-    return geo
+    zma = amchi_.zmatrix(ich, check=check)
+    return zma
 
 
-def conformers(ich, nconfs=1):
-    """ Generate a list of molecular geometries for various conformers
-        of a species from an InChI string.
+def amchi(ich, stereo=True):
+    """Convert an InChI to an AMChI string.
 
-        :param ich: InChI string
-        :type ich: str
-        :param nconfs: number of conformer structures to generate
-        :type: int
-        :rtype: automol molecular geometry data structure
+    Only for good InChIs, where this can be done validly.
+
+    :param ich: InChI string
+    :type ich: str
+    :returns: AMChI string
+    :rtype: str
     """
+    gra = graph(ich, stereo=stereo)
 
-    geo = hardcoded_object_from_inchi_by_key('geom', ich)
-    if geo is None:
-        ich = standard_form(ich)
+    if stereo:
+        assert not is_bad(ich, gra=gra), (
+            "Don't use this function with bad InChIs if stereo=True. "
+            f"Bad InChI: {ich}"
+        )
 
-        def _gen1(ich):
-            rdm = rdkit_.from_inchi(ich)
-            geos = rdkit_.to_conformers(rdm, nconfs)
-            return geos
+    ach = graph_.amchi(gra)
+    return ach
 
-        for gen_ in [_gen1]:
-            success = False
-            try:
-                geos = gen_(ich)
-                for geo in geos:
-                    geo_ich = automol.geom.inchi(geo)
-                    if same_connectivity(ich, geo_ich) and (
-                            not has_stereo(ich) or
-                            equivalent(ich, geo_ich)):
-                        success = True  # fix
-                        break
-            except (RuntimeError, TypeError, ValueError):
-                continue
 
-        if not success:
-            raise error.FailedGeometryGenerationError
+def rdkit_molecule(ich, stereo=True):
+    """Convert a InChI string to an RDKit molecule.
 
-    return geos
+    This is mainly useful for quick visualization with IPython, which can
+    be done as follows:
+    >>> from IPython.display import display
+    >>> display(rdkit_molecule(ich))
+
+    :param ich: InChI string
+    :type ich: str
+    :param stereo: parameter to include stereochemistry information
+    :type stereo: bool
+    :returns: the RDKit molecule
+    """
+    rdkit_.turn_3d_visualization_off()
+    gra = graph(ich, stereo=stereo)
+    return graph_.rdkit_molecule(gra, stereo=stereo)
+
+
+def rdkit_reaction(richs, pichs, stereo=True, res_stereo=False):
+    """Convert reactant and product graphs to an RDKit reaction object.
+
+    This is mainly useful for quick visualization with IPython, which can be
+    done as follows:
+    >>> from IPython.display import display
+    >>> display(rdkit_reaction(pgras, rgras))
+
+        :param richs: InChI strings for the reactants
+        :param pichs: InChI strings for the products
+        :param stereo: Include stereo?
+        :type stereo: bool
+        :param res_stereo: allow resonant double-bond stereo?
+        :type res_stereo: bool
+        :returns: the RDKit reaction
+    """
+    rdkit_.turn_3d_visualization_off()
+    rgras = [graph(s, stereo=stereo) for s in richs]
+    pgras = [graph(s, stereo=stereo) for s in pichs]
+    return graph_.rdkit_reaction(rgras, pgras, stereo=stereo, res_stereo=res_stereo)
+
+
+def display(ich, stereo=True):
+    """Display graph to IPython using the RDKit visualizer.
+
+    :param ich: InChI string
+    :type ich: str
+    :param stereo: parameter to include stereochemistry information
+    :type stereo: bool
+    """
+    rdkit_.turn_3d_visualization_off()
+    gra = graph(ich, stereo=stereo)
+    graph_.display(gra, stereo=stereo)
+
+
+def display_reaction(richs, pichs, stereo=True):
+    """Display reaction to IPython using the RDKit visualizer.
+
+    :param richs: InChI strings for the reactants
+    :param pichs: InChI strings for the products
+    :param stereo: parameter to include stereochemistry information
+    :type stereo: bool
+    """
+    rdkit_.turn_3d_visualization_off()
+    rgras = [graph(s, stereo=stereo) for s in richs]
+    pgras = [graph(s, stereo=stereo) for s in pichs]
+    graph_.display_reaction(rgras, pgras, stereo=stereo)
 
 
 # # derived properties
 def is_complete(ich):
-    """ Determine if the InChI string is complete
-        (has all stereo-centers assigned).
+    """Determine if the InChI string is complete
+    (has all stereo-centers assigned).
 
-        Currently only checks species that does not have any
-        resonance structures.
-
-        :param ich: InChI string
-        :type ich: str
-        :rtype: bool
+    :param ich: InChI string
+    :type ich: str
+    :rtype: bool
     """
+    gra0 = graph(ich, stereo=False)
 
-    gra = graph(ich, stereo=False)
-    ste_atm_keys = automol.graph.stereogenic_atom_keys(gra)
-    ste_bnd_keys = automol.graph.stereogenic_bond_keys(gra)
-    graph_has_stereo = bool(ste_atm_keys or ste_bnd_keys)
+    needs_stereo = False
+    if bool(graph_.unassigned_stereocenter_keys(gra0)):
+        needs_stereo = not has_stereo(ich)
 
-    _complete = equivalent(ich, standard_form(ich)) and not (
-        has_stereo(ich) ^ graph_has_stereo)
+    return equivalent(ich, standard_form(ich)) and not needs_stereo
 
-    return _complete
+
+def is_bad(ich, gra=None):
+    """Determine if the InChI string is bad, i.e. one of the InChI failure
+    cases (resonance bond stereo, vinyl bond stereo, etc.
+
+    :param ich: InChI string
+    :type ich: str
+    :param gra: A graph version of the InChI, to avoid recalculating
+    :type gra: automol graph
+    :returns: True if it is a bad InChI
+    :rtype: bool
+    """
+    gra = graph(ich) if gra is None else gra
+    ret = graph_.base.inchi_is_bad(gra, ich)
+    return ret
 
 
 # # derived transformations
 def add_stereo(ich):
-    """ Add stereochemistry to an InChI string converting to/from geometry.
+    """Add stereochemistry to an InChI string converting to/from geometry.
 
-        :param ich: InChI string
-        :type ich: str
-        :rtype: str
+    :param ich: InChI string
+    :type ich: str
+    :rtype: str
     """
     geo = geometry(ich)
-    ich = automol.geom.inchi(geo, stereo=True)
+    ich = geom.inchi(geo, stereo=True)
     return ich
 
 
 def expand_stereo(ich):
-    """ Obtain all possible stereoisomers compatible with an InChI string.
+    """Obtain all possible stereoisomers of an InChI string.
 
-        :param ich: InChI string
-        :type ich: str
-        :rtype: list[str]
+    :param ich: InChI string
+    :type ich: str
+    :rtype: list[str]
     """
-    gra = graph(ich)
-    sgrs = automol.graph.stereomers(gra)
-    ste_ichs = [automol.graph.stereo_inchi(sgr) for sgr in sgrs]
+    gra = graph(ich, stereo=False)
+    sgrs = graph_.expand_stereo(gra)
+    ste_ichs = [graph_.inchi(sgr, stereo=True) for sgr in sgrs]
     return ste_ichs

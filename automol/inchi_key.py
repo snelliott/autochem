@@ -1,98 +1,67 @@
-""" InChIKeys
-"""
+"""Functions operating on InChI and AMChI keys."""
 
-import autoparse.pattern as app
-import autoparse.find as apf
+import pyparsing as pp
 
+DASH = pp.Suppress("-")
+HASH1 = pp.Combine(pp.Char(pp.alphas.upper()) * 14)
+HASH2 = pp.Combine(pp.Char(pp.alphas.upper()) * 8)
+VERSION = pp.Combine(pp.Char(pp.alphas.upper()) * 2)
+PROTONATION = pp.Char(pp.alphas.upper())
 
-class Parse():
-    """ InChIKey parser """
-    _HASH1 = app.UPPERCASE_LETTER * 14
-    _HASH2 = app.UPPERCASE_LETTER * 8
-    _VERSION = app.UPPERCASE_LETTER * 2
-    _PROT = app.UPPERCASE_LETTER
-
-    HASH1_KEY = 'hash1'
-    HASH2_KEY = 'hash2'
-    VERSION_KEY = 'version'
-    PROT_KEY = 'protonation'
-    PATTERN = (
-        app.STRING_START +
-        app.named_capturing(_HASH1, name=HASH1_KEY) + app.escape('-') +
-        app.named_capturing(_HASH2, name=HASH2_KEY) +
-        app.named_capturing(_VERSION, name=VERSION_KEY) + app.escape('-') +
-        app.named_capturing(_PROT, name=PROT_KEY) + app.STRING_END)
+CHI_KEY = (
+    HASH1("hash1")
+    + DASH
+    + HASH2("hash2")
+    + VERSION("version")
+    + DASH
+    + PROTONATION("protonation")
+)
 
 
-def is_valid(ick):
-    """ Determine if an InChIKey has the proper form.
+def first_hash(chk: str) -> str:
+    """Get the first hash block, indicating connectivity.
 
-        :param ick: InChIKey
-        :type ick: str
-        :rtype: bool
+    :param chk: An InChI or AMChI key
+    :return: The first hash block
     """
-    assert isinstance(ick, (str, bytes, bytearray))
-    return apf.has_match(Parse.PATTERN, ick)
+    return CHI_KEY.parseString(chk).get("hash1")
 
 
-def first_hash(ick):
-    """ Parse InChIKey for the first hash block, indicating connectivity.
+def second_hash(chk: str) -> str:
+    """Parse ChIKey for the second hash block, indicating stereochemistry.
 
-        :param ick: InChIKey
-        :type ick: str
-        :rtype: str
+    :param chk: A ChI key
+    :return: The second hash block
     """
-    assert is_valid(ick)
-    cap_dct = apf.first_named_capture(Parse.PATTERN, ick)
-    hash1 = cap_dct[Parse.HASH1_KEY]
-    return hash1
+    return CHI_KEY.parseString(chk).get("hash2")
 
 
-def second_hash(ick):
-    """ Parse InChIKey for the second hash block, indicating stereochemistry.
+def version_indicator(chk: str) -> str:
+    """Parse ChIKey second-hash block for the ChIKey version indicator.
 
-        :param ick: InChIKey
-        :type ick: str
-        :rtype: str
+    :param chk: A ChI key
+    :return: ChIKey version indicator
     """
-    assert is_valid(ick)
-    cap_dct = apf.first_named_capture(Parse.PATTERN, ick)
-    hash2 = cap_dct[Parse.HASH2_KEY]
-    return hash2
+    return CHI_KEY.parseString(chk).get("version")
 
 
-def version_indicator(ick):
-    """ Parse InChIKey second-hash block for the InChIKey version indicator.
+def protonation_indicator(chk: str) -> str:
+    """Parse final character of ChIKey for the protonation indicator.
 
-        :param ick: InChIKey
-        :type ick: str
-        :rtype: str
+    :param chk: A ChI key
+    :return: Final ChIKey protonation indicator character
     """
-    assert is_valid(ick)
-    cap_dct = apf.first_named_capture(Parse.PATTERN, ick)
-    ver = cap_dct[Parse.VERSION_KEY]
-    return ver
+    return CHI_KEY.parseString(chk).get("protonation")
 
 
-def protonation_indicator(ick):
-    """ Parse final character of InChIKey for the protonation indicator.
+def second_hash_with_extension(chk: str) -> str:
+    """Parse ChIKey second-hash block for version and protonation
+    indicators.
 
-        :param ick: InChIKey
-        :type ick: str
-        :rtype: str
+    :param chk: A ChI key
+    :return: Version and protonation indicators from second-hash block
     """
-    assert is_valid(ick)
-    cap_dct = apf.first_named_capture(Parse.PATTERN, ick)
-    prot = cap_dct[Parse.PROT_KEY]
-    return prot
-
-
-def second_hash_with_extension(ick):
-    """ Parse InChIKey second-hash block for version and protonation indicators.
-
-        :param ick: InChIKey
-        :type ick: str
-        :rtype: str
-    """
-    return (second_hash(ick) + version_indicator(ick) + '-' +
-            protonation_indicator(ick))
+    hash2 = CHI_KEY.parseString(chk).get("hash2")
+    vers = CHI_KEY.parseString(chk).get("version")
+    prot = CHI_KEY.parseString(chk).get("protonation")
+    return hash2 + vers + "-" + prot

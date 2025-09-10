@@ -3,9 +3,24 @@
 
 import pytest
 import numpy
-from automol import zmat
-# from automol import geom
+from automol import zmat, geom, smiles
 
+H_ZMA = geom.zmatrix(smiles.geometry('[H]'))
+C4H9Cl_ZMA = (
+    ('C', (None, None, None), (None, None, None), (None, None, None)),
+    ('C', (0, None, None), ('R1', None, None), (2.874139, None, None)),
+    ('H', (0, 1, None), ('R2', 'A2', None), (2.068404, 1.938152, None)),
+    ('H', (0, 1, 2), ('R3', 'A3', 'D3'), (2.067124, 1.946485, 2.113923)),
+    ('H', (0, 1, 2), ('R4', 'A4', 'D4'), (2.068836, 1.920692, 4.19662)),
+    ('C', (1, 0, 2), ('R5', 'A5', 'D5'), (2.891871, 1.980869, 5.320083)),
+    ('H', (1, 0, 5), ('R6', 'A6', 'D6'), (2.072228, 1.893902, 2.105771)),
+    ('H', (1, 0, 5), ('R7', 'A7', 'D7'), (2.071582, 1.910024, 4.133631)),
+    ('C', (5, 1, 0), ('R8', 'A8', 'D8'), (2.879211, 1.973247, 5.14005)),
+    ('H', (5, 1, 8), ('R9', 'A9', 'D9'), (2.073196, 1.910352, 2.052359)),
+    ('H', (5, 1, 8), ('R10', 'A10', 'D10'), (2.07375, 1.886055, 4.168646)),
+    ('Cl', (8, 5, 1), ('R11', 'A11', 'D11'), (3.364415, 1.925124, 3.054326)),
+    ('H', (8, 5, 11), ('R12', 'A12', 'D12'), (2.067368, 1.940624, 2.089928)),
+    ('H', (8, 5, 11), ('R13', 'A13', 'D13'), (2.065645, 1.94931, 4.356739)))
 CH4O2_ZMA = (
     ('C', (None, None, None), (None, None, None), (None, None, None)),
     ('O', (0, None, None), ('R1', None, None), (2.659, None, None)),
@@ -157,6 +172,16 @@ def test__from_data():
 
     assert not zmat.is_valid(zma1)
     assert not zmat.is_valid(zma2)
+
+    # Check that monatomic z-matrices are accepted
+    assert H_ZMA == zmat.from_data(
+        symbs=zmat.symbols(H_ZMA),
+        key_mat=zmat.key_matrix(H_ZMA),
+        val_mat=zmat.value_matrix(H_ZMA),
+        name_mat=zmat.name_matrix(H_ZMA),
+    )
+
+    assert zmat.is_valid(H_ZMA)
 
 
 def test__add_atom():
@@ -426,6 +451,14 @@ def test__string():
     zma = zmat.from_string(zmat.string(CH4O2_ZMA))
     assert zmat.almost_equal(zma, CH4O2_ZMA)
 
+    # Make sure we can handle monatomics correctly
+    assert H_ZMA == zmat.from_string(zmat.string(H_ZMA))
+
+    # Make sure we can parse Z-matrics with multi-character atom symbols
+    # (This was broken)
+    zma = zmat.from_string(zmat.string(C4H9Cl_ZMA))
+    assert zmat.almost_equal(zma, C4H9Cl_ZMA)
+
 
 def test__coord_values():
     """ test zmat.distance
@@ -449,50 +482,22 @@ def test__coord_values():
     assert numpy.isclose(dangle2, 277.31157284331846)
 
 
-def __dihedral():
-    """ test zmat.dihedral_axis_name
-    """
-
-    assert zmat.dihedral_axis_name(C2H5OH_ZMA, (0, 1)) == 'D3'
-    assert zmat.dihedral_axis_name(C2H5OH_ZMA, (5, 1)) == 'D8'
-    # wrong?
-
-
-def __linear_atom_keys():
-    """ test zmat.linear_atom_keys
-    """
-    assert zmat.linear_atom_keys(C5H8O_ZMA) == (5, 9)
-    assert zmat.linear_atom_keys(C5H8O_ZMA, geom_indexing=True) == (5, 8)
-    # wrong?
-
-
-def test__shift():
-    """ test zmat.shift_up
-    """
-    assert zmat.shift_up(C5H8O_ZMA, (3, 9, 12)) == (3, 10, 14)
-
-
 def test__extra():
     """ test zmat.bond_key_from_idxs
     """
 
-    assert zmat.bond_key_from_idxs(CH4O2_ZMA, [0, 1]) == 'R1'
-    assert zmat.bond_key_from_idxs(CH4O2_ZMA, [6, 2]) == 'R6'
+    assert zmat.distance_coordinate_name(CH4O2_ZMA, 0, 1) == 'R1'
+    assert zmat.distance_coordinate_name(CH4O2_ZMA, 6, 2) == 'R6'
 
     tors_names = (('D5',), ('D8',))
-    tors_names2 = ('D5', 'D8')
     assert zmat.set_constraint_names(C2H5OH_ZMA, tors_names, '1dhrf') == (
         'D5', 'D8')
     assert zmat.set_constraint_names(C2H5OH_ZMA, tors_names, '1dhrfa') == (
         'R1', 'R2', 'A2', 'R3', 'A3', 'D3', 'R4', 'A4', 'D4', 'R5', 'A5',
         'D5', 'R6', 'A6', 'D6', 'R7', 'A7', 'D7', 'R8', 'A8', 'D8')
 
-    ref_range = (0, 6.283185307179586)
-    tors_names2 = ('D5', 'D8')
-    ranges = zmat.torsional_sampling_ranges(tors_names2)
-    assert (numpy.allclose(ref_range, ranges[0]) and
-            numpy.allclose(ref_range, ranges[1]))
-
 
 if __name__ == '__main__':
-    test__extra()
+    # test__extra()
+    test__string()
+    test__from_data()

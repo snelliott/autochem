@@ -36,31 +36,31 @@ def test__from_data():
     """ test getters
     """
     assert AR_ICH == inchi.standard_form(inchi.from_data(
-        fml_slyr=inchi.formula_sublayer(AR_ICH),
+        fml_lyr=inchi.formula_layer(AR_ICH),
     ))
 
     assert CH2O2_ICH == inchi.standard_form(inchi.from_data(
-        fml_slyr=inchi.formula_sublayer(CH2O2_ICH),
-        main_lyr_dct=inchi.main_sublayers(CH2O2_ICH),
-        char_lyr_dct=inchi.charge_sublayers(CH2O2_ICH),
+        fml_lyr=inchi.formula_layer(CH2O2_ICH),
+        main_lyr_dct=inchi.main_layers(CH2O2_ICH),
+        char_lyr_dct=inchi.charge_layers(CH2O2_ICH),
     ))
 
     assert C2H6O_ICH == inchi.standard_form(inchi.from_data(
-        fml_slyr=inchi.formula_sublayer(C2H6O_ICH),
-        main_lyr_dct=inchi.main_sublayers(C2H6O_ICH),
-        iso_lyr_dct=inchi.isotope_sublayers(C2H6O_ICH),
+        fml_lyr=inchi.formula_layer(C2H6O_ICH),
+        main_lyr_dct=inchi.main_layers(C2H6O_ICH),
+        iso_lyr_dct=inchi.isotope_layers(C2H6O_ICH),
     ))
 
     assert C2H2F2_ICH == inchi.standard_form(inchi.from_data(
-        fml_slyr=inchi.formula_sublayer(C2H2F2_ICH),
-        main_lyr_dct=inchi.main_sublayers(C2H2F2_ICH),
-        ste_lyr_dct=inchi.stereo_sublayers(C2H2F2_ICH),
+        fml_lyr=inchi.formula_layer(C2H2F2_ICH),
+        main_lyr_dct=inchi.main_layers(C2H2F2_ICH),
+        ste_lyr_dct=inchi.stereo_layers(C2H2F2_ICH),
     ))
 
     assert C8H13O_ICH == inchi.standard_form(inchi.from_data(
-        fml_slyr=inchi.formula_sublayer(C8H13O_ICH),
-        main_lyr_dct=inchi.main_sublayers(C8H13O_ICH),
-        ste_lyr_dct=inchi.stereo_sublayers(C8H13O_ICH),
+        fml_lyr=inchi.formula_layer(C8H13O_ICH),
+        main_lyr_dct=inchi.main_layers(C8H13O_ICH),
+        ste_lyr_dct=inchi.stereo_layers(C8H13O_ICH),
     ))
 
 
@@ -68,10 +68,10 @@ def test__formula_string():
     """ inchi.formula_string
     """
 
-    assert inchi.formula_string(AR_ICH) == 'Ar'
-    assert inchi.formula_string(CH4O_CH_ICH) == 'CH4O.CH'
-    assert inchi.formula_string(CH2O2_ICH) == 'CH2O2'
-    assert inchi.formula_string(C2H6O_ICH) == 'C2H6O'
+    assert inchi.formula_layer(AR_ICH) == 'Ar'
+    assert inchi.formula_layer(CH4O_CH_ICH) == 'CH4O.CH'
+    assert inchi.formula_layer(CH2O2_ICH) == 'CH2O2'
+    assert inchi.formula_layer(C2H6O_ICH) == 'C2H6O'
 
 
 def test__version():
@@ -262,70 +262,31 @@ def test__stereo():
         'InChI=1S/H2N2/c1-2/h1-2H/b2-1+',
         'InChI=1S/H2N2/c1-2/h1-2H/b2-1-'}
     assert set(inchi.expand_stereo('InChI=1S/CH2N/c1-2/h1-2H')) == {
-        'InChI=1S/CH2N/c1-2/h1-2H',
         'InChI=1S/CH2N/c1-2/h1-2H'}
     assert set(inchi.expand_stereo('InChI=1S/C2/c1-2')) == {
         'InChI=1S/C2/c1-2'}
     assert set(inchi.expand_stereo('InChI=1S/C3H3/c1-3-2/h1-3H')) == {
-        'InChI=1S/C3H3/c1-3-2/h1-3H',
-        'InChI=1S/C3H3/c1-3-2/h1-3H',
-        'InChI=1S/C3H3/c1-3-2/h1-3H',
         'InChI=1S/C3H3/c1-3-2/h1-3H'}
 
 
-def test__filter_enantiomer_reactions():
-    """ test inchi.filter_enantiomer_reactions()
+def test__racemic():
+    """ test amchi.racemic
     """
-    ref_rxn_ichs_lst = (
-        (('InChI=1S/C4H9O4/c1-3(7-5)4(2)8-6/h3-5H,1-2H3/t3-,4-/m0/s1',),
-         ('InChI=1S/C4H8O2/c1-3-4(2)6-5/h3-5H,1H2,2H3/t4-/m0/s1',
-          'InChI=1S/HO2/c1-2/h1H')),
-        (('InChI=1S/C4H9O4/c1-3(7-5)4(2)8-6/h3-5H,1-2H3/t3-,4+/m0/s1',),
-         ('InChI=1S/C4H8O2/c1-3-4(2)6-5/h3-5H,1H2,2H3/t4-/m0/s1',
-          'InChI=1S/HO2/c1-2/h1H')),
-        (('InChI=1S/C4H9O4/c1-3(7-5)4(2)8-6/h3-5H,1-2H3/t3-,4+/m1/s1',),
-         ('InChI=1S/C4H8O2/c1-3-4(2)6-5/h3-5H,1H2,2H3/t4-/m1/s1',
-          'InChI=1S/HO2/c1-2/h1H')),
-        (('InChI=1S/C4H9O4/c1-3(7-5)4(2)8-6/h3-5H,1-2H3/t3-,4-/m1/s1',),
-         ('InChI=1S/C4H8O2/c1-3-4(2)6-5/h3-5H,1H2,2H3/t4-/m1/s1',
-          'InChI=1S/HO2/c1-2/h1H')),
-    )
+    chi = 'InChI=1S/C2H4F2O2/c3-1(5)2(4)6/h1-2,5-6H/t1-,2-/m0/s1'
+    assert (inchi.racemic(chi) ==
+            'InChI=1/C2H4F2O2/c3-1(5)2(4)6/h1-2,5-6H/t1-,2-/s3')
 
-    # normal usage:
-    rxn_ichs_lst = inchi.filter_enantiomer_reactions(ref_rxn_ichs_lst)
-    assert len(rxn_ichs_lst) == 2
-
-    # checking that order doesn't matter
-    print('before:')
-    for rct_ichs, prd_ichs in rxn_ichs_lst:
-        print('r', rct_ichs)
-        print('p', prd_ichs)
-    print()
-    rxn_ichs_lst = set(map(frozenset, rxn_ichs_lst))
-
-    ref_rxn_ichs_lst = numpy.array(ref_rxn_ichs_lst, dtype=object)
-    ref_rxn_ichs_lsts = [
-        [numpy.random.permutation(r)
-         for r in numpy.random.permutation(ref_rxn_ichs_lst)]
-        for _ in range(10)]
-    for ref_rxn_ich_lst_ in ref_rxn_ichs_lsts:
-        rxn_ichs_lst_ = inchi.filter_enantiomer_reactions(ref_rxn_ich_lst_)
-        rxn_ichs_lst_ = inchi.sort_reactions(rxn_ichs_lst_)
-        print('after:')
-        for rct_ichs, prd_ichs in rxn_ichs_lst_:
-            print('r', rct_ichs)
-            print('p', prd_ichs)
-        print()
-
-        rxn_ichs_lst_ = set(map(frozenset, rxn_ichs_lst))
-        assert rxn_ichs_lst_ == rxn_ichs_lst
+    assert inchi.racemic(AR_ICH) == AR_ICH
+    assert inchi.racemic(C8H13O_ICH_NO_STEREO) == C8H13O_ICH_NO_STEREO
 
 
 if __name__ == '__main__':
     # test__stereo_atoms()
     # test__stereo_bonds()
     # test__stereo()
-    test__are_diastereomers()
+    # test__are_diastereomers()
     # test__is_enantiomer()
     # test__reflect()
     # test__filter_enantiomer_reactions()
+    # test__stereo()
+    test__racemic()
