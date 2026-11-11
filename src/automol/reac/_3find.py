@@ -905,6 +905,30 @@ def single_ended_arbitrary_reactions(
             len(frm_bnd_set_flat & rad_incl_set) +
             len(brk_bnd_set_flat & rad_incl_set))
 
+    def _same_products(prd_gras1, prd_gras2):
+        if len(prd_gras1) != len(prd_gras2):
+            return False
+        unmatched = list(prd_gras2)
+        for gra1 in prd_gras1:
+            match = next(
+                (i for i, gra2 in enumerate(unmatched)
+                 if graph.isomorphic(gra1, gra2, stereo=False)), None)
+            if match is None:
+                return False
+            unmatched.pop(match)
+        return True
+
+    def _contains_found_transformation(prd_gras, frm_bnd_combo, brk_bnd_combo):
+        # combos are visited in order of increasing total transformations,
+        # so any strict subset has already been considered
+        frm_set = set(frm_bnd_combo)
+        brk_set = set(brk_bnd_combo)
+        for found_prd_gras, found_frm, found_brk in prd_info_lst:
+            if (set(found_frm) <= frm_set and set(found_brk) <= brk_set
+                    and _same_products(found_prd_gras, prd_gras)):
+                return True
+        return False
+
     prd_info_lst = ()
     rct_gra = graph.union_from_sequence(rct_gras)
     ngb_dct = graph.atoms_neighbor_atom_keys(rct_gra)
@@ -921,6 +945,19 @@ def single_ended_arbitrary_reactions(
     # not unimolecular, by enforcing that there is a forming
     # bond between species of bimoleculars
     connected_keys = graph.connected_components_atom_keys(rct_gra)
+
+    # reactant valences and bond-order sums, for the fast valence check
+    rct_vlc = graph.atomic_valences(rct_gra)
+    rct_bnd_ord = graph.bond_orders(rct_gra)
+    rct_ord_sum = {atm: 0 for atm in graph.atom_keys(rct_gra)}
+    for bnd, bnd_ord in rct_bnd_ord.items():
+        for atm in bnd:
+            rct_ord_sum[atm] += bnd_ord
+    # reactant atoms already outside the acceptable range must always be
+    # checked, since they may be unchanged in the product
+    bad_rct_ord_sum = {
+        atm: ord_sum for atm, ord_sum in rct_ord_sum.items()
+        if not 0 <= rct_vlc[atm] - int(ord_sum) <= 2}
 
     # build list of breakable bonds
     bnd_keys = graph.bond_keys(rct_gra)
@@ -980,29 +1017,33 @@ def single_ended_arbitrary_reactions(
                 if not _radical_is_involved(frm_bnd_combo, brk_bnd_combo):
                     continue
 
+                # Check that all product atoms have acceptable valences
+                # before building any graphs. Only the atoms in the
+                # changed bonds differ from the reactant, so update their
+                # bond-order sums directly. Unpaired electrons must be
+                # 0 (closed shell), 1 (radical) or 2 (carbene/diradical);
+                # negative means hypervalent.
+                chg_ord_sum = dict(bad_rct_ord_sum)
+                for bnd in brk_bnd_combo:
+                    for atm in bnd:
+                        chg_ord_sum[atm] = (
+                            chg_ord_sum.get(atm, rct_ord_sum[atm])
+                            - rct_bnd_ord[bnd])
+                for bnd in frm_bnd_combo:
+                    for atm in bnd:
+                        chg_ord_sum[atm] = (
+                            chg_ord_sum.get(atm, rct_ord_sum[atm]) + 1)
+                if any(not 0 <= rct_vlc[atm] - int(ord_sum) <= 2
+                       for atm, ord_sum in chg_ord_sum.items()):
+                    continue
+
                 pot_prd_gra = graph.remove_bonds(rct_gra, brk_bnd_combo)
                 pot_prd_gra = graph.add_bonds(pot_prd_gra, frm_bnd_combo)
                 prd_gras = graph.connected_components(pot_prd_gra)
                 if len(prd_gras) > max_species:
                     continue
-                # Check that all product graphs have acceptable valences
-                # (including radicals, carbenes, and diradicals)
                 all_valid = True
                 for prd_gra in prd_gras:
-                    # Check for hypervalency (negative unpaired electrons)
-                    atm_hyp_dct = graph.atom_hypervalencies(prd_gra, bond_order=True)
-                    if any(hyp > 0 for hyp in atm_hyp_dct.values()):
-                        all_valid = False
-                        break
-
-                    # Check that unpaired electrons are in acceptable range
-                    # 0: closed shell, 1: radical, 2: triplet carbene/diradical
-                    atm_unp_dct = graph.atom_unpaired_electrons(
-                        prd_gra, bond_order=True
-                    )
-                    if any(unp > 2 for unp in atm_unp_dct.values()):
-                        all_valid = False
-                        break
                     # avoid diradicals
                     kek_prd_gra = graph.kekule(prd_gra)
                     kek_atm_unp_dct = graph.atom_unpaired_electrons(
@@ -1020,6 +1061,12 @@ def single_ended_arbitrary_reactions(
                 if len(rct_gras) == len(prd_gras):
                     if graph.isomorphic(rct_gra, pot_prd_gra, stereo=True):
                         all_valid = False
+
+                # skip if a smaller, already-found transformation (subset of
+                # these breaking and forming bonds) yields the same products
+                if all_valid and _contains_found_transformation(
+                        prd_gras, frm_bnd_combo, brk_bnd_combo):
+                    all_valid = False
 
                 if all_valid:
                     prd_info_lst += ((prd_gras, frm_bnd_combo, brk_bnd_combo),)
