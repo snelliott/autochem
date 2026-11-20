@@ -865,22 +865,37 @@ def _partial_hydrogen_abstraction(qh_gra, q_gra):
 
 
 def single_ended_arbitrary_reactions(
-    rct_gras, max_brk=2, max_frm=2, min_brk=0, min_frm=0, max_trans=3, max_species=2):
-    """Find all transformations, and resulting product graphs, possible for a
-    reactant(s)
+        rct_gras, max_brk=2, max_frm=2, min_brk=0, min_frm=0, max_trans=3,
+        max_species=2, require_radical=True, require_local=None,
+        max_radicals=None, max_radicals_per_species=1):
+    """Find all transformations, and resulting product graphs, possible for
+    a reactant(s)
 
     :param rct_gras: graphs for the reactants without overlapping keys
-    :param prd_gras: graphs for the products without overlapping keys
-    :param max_brk: (int) maximum number of breakable bonds
+    :param max_brk: (int) maximum number of breaking bonds
     :param max_frm: (int) maximum number of forming bonds
-    :param min_brk: (int) minimum number of breakable bonds
+    :param min_brk: (int) minimum number of breaking bonds
     :param min_frm: (int) minimum number of forming bonds
     :param max_trans: (int) maximum number of combined transformations
-    :param max_species: (int) maximum number of reactant or product species
-    :returns: the isomorphism dictionary between reactants and products
-        alongwith the lists of breaking bond keys and forming keys
-    :rtype: tuple[dict, tuple[frozenset], tuple[frozenset]
+    :param max_species: (int) maximum number of product species
+    :param require_radical: (bool) if True, every transformation must
+        involve a radical site or one of its heavy-atom neighbors;
+        if False, no radical constraint is applied
+    :param require_local: (bool or None) require the reaction center
+        (changed bonds plus reactant bonds between reacting atoms) to be
+        connected; None -> on only when require_radical is False
+    :param max_radicals: (int or None) maximum total number of radical
+        sites summed over all products; e.g. 0 -> closed-shell products
+        only (allows R + R' -> RR'), 2 -> allows homolysis RR' -> R + R';
+        None -> no limit. 
+    :param max_radicals_per_species: (int) maximum number of radical sites
+        allowed per individual product species.
+    :returns: tuple of (product graphs, forming bond keys, breaking bond keys)
+    :rtype: tuple[tuple[tuple, tuple[frozenset], tuple[frozenset]]]
     """
+    if require_local is None:
+        require_local = not require_radical
+
     def _multiple_transitions_per_atom(bnd_lst):
         flat_bnds = [atm for bnd in bnd_lst for atm in bnd]
         return len(flat_bnds) - len(set(flat_bnds))
@@ -889,21 +904,37 @@ def single_ended_arbitrary_reactions(
         # Iterate over all pairs of groups
         atom_sets = [set(group) for group in connected_keys]
         for i, atom_set_i in enumerate(atom_sets):
-            for j in range(i + 1, len(atom_sets)):
-                if (frm_bnd & atom_set_i) and (frm_bnd & atom_sets[j]):
-                    return True
-                if (frm_bnd & atom_sets[j]) and (frm_bnd & atom_set_i):
+            for atom_set_j in atom_sets[i + 1:]:
+                if (frm_bnd & atom_set_i) and (frm_bnd & atom_set_j):
                     return True
         return False
 
     def _radical_is_involved(frm_bnd_lst, brk_bnd_lst):
         # include adjacent atoms to radical for beta-scission etc
         # rad_pos_lst = graph.radical_atom_keys(gra, sing_res=False)
-        frm_bnd_set_flat = frozenset().union(*frm_bnd_lst)
-        brk_bnd_set_flat = frozenset().union(*brk_bnd_lst)
-        return (
-            len(frm_bnd_set_flat & rad_incl_set) +
-            len(brk_bnd_set_flat & rad_incl_set))
+        rxn_atms = frozenset().union(*frm_bnd_lst, *brk_bnd_lst)
+        return bool(rxn_atms & rad_incl_set)
+
+    def _reaction_center_is_connected(frm_bnd_lst, brk_bnd_lst):
+        chg_bnds = set(frm_bnd_lst) | set(brk_bnd_lst)
+        if len(chg_bnds) < 2:
+            return True
+        rxn_atms = frozenset().union(*chg_bnds)
+        # adjacency: changed bonds + existing bonds among reacting atoms
+        adj = {atm: set() for atm in rxn_atms}
+        for bnd in chg_bnds:
+            atm1, atm2 = tuple(bnd)
+            adj[atm1].add(atm2)
+            adj[atm2].add(atm1)
+        for atm in rxn_atms:
+            adj[atm] |= ngb_dct[atm] & rxn_atms
+        start = next(iter(rxn_atms))
+        seen, stack = {start}, [start]
+        while stack:
+            for nxt in adj[stack.pop()] - seen:
+                seen.add(nxt)
+                stack.append(nxt)
+        return seen == rxn_atms
 
     def _same_products(prd_gras1, prd_gras2):
         if len(prd_gras1) != len(prd_gras2):
@@ -932,14 +963,20 @@ def single_ended_arbitrary_reactions(
     prd_info_lst = ()
     rct_gra = graph.union_from_sequence(rct_gras)
     ngb_dct = graph.atoms_neighbor_atom_keys(rct_gra)
-    rad_pos_lst = graph.unsaturated_atom_keys(rct_gra)
+    symb_dct = graph.atom_symbols(rct_gra)
+    # rad_pos_lst = graph.unsaturated_atom_keys(rct_gra)
 
-    # extended radical information set includes the radical positions
+    # If require_radical is True, we need to identify the radical positions
     # and their non-hydrogen neighbors (see _radical_is_involved)
-    rad_incl_set = rad_pos_lst.union(frozenset({
-        adj_atm for rad_atm in rad_pos_lst
-        for adj_atm in ngb_dct[rad_atm]
-        if graph.atom_symbols(rct_gra)[adj_atm] != 'H'}))
+    if require_radical:
+        rad_pos_lst = graph.radical_atom_keys(rct_gra, sing_res=False)
+        rad_incl_set = frozenset(rad_pos_lst).union(
+            adj_atm for rad_atm in rad_pos_lst
+            for adj_atm in ngb_dct[rad_atm]
+            if symb_dct[adj_atm] != 'H')
+        if not rad_incl_set:
+            # closed-shell reactant: nothing can satisfy the filter
+            return prd_info_lst
 
     # we can reduce dimensionality of bXfy matrix if it is
     # not unimolecular, by enforcing that there is a forming
@@ -961,7 +998,6 @@ def single_ended_arbitrary_reactions(
 
     # build list of breakable bonds
     bnd_keys = graph.bond_keys(rct_gra)
-    # brk_bnd_keys = [key for key in bnd_keys] if key not in stable_bnd_keys]
     brk_bnd_keys = list(bnd_keys)
     # build list of formable bonds
     # ... all possible formations between atoms
@@ -973,9 +1009,10 @@ def single_ended_arbitrary_reactions(
     # ... same neighbor if we want to equivalate methyl groups etc
 
     # remove equivalent atoms from forming considerations
-    frm_atm_keys_w_dups = graph.atom_keys(rct_gra)
+    # this may be something we want to update to allow for specific eliminations
+    # like H2 eliminating from CH3-R to make CH-R carbene
     frm_atm_keys = ()
-    for atm in frm_atm_keys_w_dups:
+    for atm in graph.atom_keys(rct_gra):
         atm_ngbs = ngb_dct[atm]
         equiv_atms = [
             equiv_atm for equiv_atm in graph.equivalent_atoms(rct_gra, atm)
@@ -985,9 +1022,7 @@ def single_ended_arbitrary_reactions(
     frm_bnd_keys = [
         frozenset({frm1_key, frm2_key})
         for frm1_key, frm2_key in itertools.combinations(frm_atm_keys, 2)
-        if (
-            frozenset({frm1_key, frm2_key}) not in bnd_keys
-        )]
+        if frozenset({frm1_key, frm2_key}) not in bnd_keys]
 
     # get allowed combinations of NUMBER of breaking/forming bonds
     max_brk = min(max_brk, len(brk_bnd_keys))
@@ -1014,15 +1049,15 @@ def single_ended_arbitrary_reactions(
             for brk_bnd_combo in itertools.combinations(brk_bnd_keys, num_brk):
                 if _multiple_transitions_per_atom(brk_bnd_combo):
                     continue
-                if not _radical_is_involved(frm_bnd_combo, brk_bnd_combo):
+                if require_radical and not _radical_is_involved(
+                        frm_bnd_combo, brk_bnd_combo):
+                    continue
+                if require_local and not _reaction_center_is_connected(
+                        frm_bnd_combo, brk_bnd_combo):
                     continue
 
-                # Check that all product atoms have acceptable valences
-                # before building any graphs. Only the atoms in the
-                # changed bonds differ from the reactant, so update their
-                # bond-order sums directly. Unpaired electrons must be
-                # 0 (closed shell), 1 (radical) or 2 (carbene/diradical);
-                # negative means hypervalent.
+                # fast valence check on changed atoms only; unpaired
+                # electrons must be 0, 1, or 2 (negative = hypervalent)
                 chg_ord_sum = dict(bad_rct_ord_sum)
                 for bnd in brk_bnd_combo:
                     for atm in bnd:
@@ -1043,6 +1078,7 @@ def single_ended_arbitrary_reactions(
                 if len(prd_gras) > max_species:
                     continue
                 all_valid = True
+                tot_rad = 0
                 for prd_gra in prd_gras:
                     # avoid diradicals
                     kek_prd_gra = graph.kekule(prd_gra)
@@ -1052,9 +1088,17 @@ def single_ended_arbitrary_reactions(
                     n_unp = sum(
                         1 if unp > 0 else 0 for unp in kek_atm_unp_dct.values()
                     )
-                    if n_unp > 1:
+                    # per-species limit on radical sites
+                    if (max_radicals_per_species is not None
+                            and n_unp > max_radicals_per_species):
                         all_valid = False
                         break
+                    tot_rad += n_unp
+
+                # cap on total radical sites across all products
+                if (all_valid and max_radicals is not None
+                        and tot_rad > max_radicals):
+                    all_valid = False
 
                 # ensure reactant is not identical to product (can happen
                 # with 1 break, 1 form)
